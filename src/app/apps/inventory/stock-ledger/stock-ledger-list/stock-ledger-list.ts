@@ -14,8 +14,6 @@ import { WarehouseOpsState } from '../../warehouse-ops-state';
 const TYPE_TONE: Record<StockLedgerMovementType, Tone> = {
   inbound: 'success',
   outbound: 'info',
-  adjustment: 'warning',
-  consumption: 'info',
 };
 
 const TYPE_OPTIONS: { value: StockLedgerMovementType; label: string }[] = (

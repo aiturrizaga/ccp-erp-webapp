@@ -49,13 +49,11 @@ export interface GoodsReceipt {
   supervisorSignature?: string;
 }
 
-export type StockLedgerMovementType = 'inbound' | 'outbound' | 'adjustment' | 'consumption';
+export type StockLedgerMovementType = 'inbound' | 'outbound';
 
 export const STOCK_LEDGER_MOVEMENT_LABEL: Record<StockLedgerMovementType, string> = {
   inbound: 'Entrada',
   outbound: 'Salida',
-  adjustment: 'Ajuste',
-  consumption: 'Consumo',
 };
 
 export type StockLedgerSourceDocument = 'PurchaseOrder' | 'GoodsReceipt' | 'WorkSheet' | 'OutputBundle' | 'Adjustment';

@@ -137,7 +137,7 @@ export class WarehouseOpsState {
       id: `SL-${String(seq).padStart(3, '0')}`,
       date: new Date().toISOString().slice(0, 10),
       itemId,
-      type: documentType === 'WorkSheet' ? 'consumption' : 'outbound',
+      type: 'outbound',
       documentNumber,
       documentType,
       warehouseId: WAREHOUSES[0]?.id ?? '',
