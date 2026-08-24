@@ -1,0 +1,95 @@
+<app-list-toolbar
+  [(search)]="search"
+  searchPlaceholder="Buscar por oportunidad o cliente..."
+  [views]="views"
+  [(view)]="view"
+  [groupByOptions]="view() === 'kanban' ? [] : groupByOptions"
+  [(groupBy)]="groupBy"
+  [hasFilters]="true"
+  [filterCount]="filterCount()"
+  actionLabel="Nueva oportunidad"
+>
+  <div filters class="flex flex-col gap-3">
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Etapa</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of stageOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="stageFilter().has(opt.value)" (checkedChange)="toggleStageFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    @if (filterCount() > 0) {
+      <button hlmBtn variant="ghost" size="sm" class="justify-start gap-1.5" (click)="clearFilters()">
+        <ng-icon name="tablerFilter" />
+        Limpiar filtros
+      </button>
+    }
+  </div>
+</app-list-toolbar>
+
+@if (view() === 'kanban') {
+  <app-data-kanban
+    [columns]="stageColumns"
+    [rows]="filteredRows()"
+    [groupKey]="stageKey"
+    [cardTemplate]="cardTpl"
+    [rowClickable]="true"
+    (rowClick)="openDetail($event)"
+  />
+} @else if (groupedSections(); as sections) {
+  <div class="flex flex-col gap-5">
+    @for (section of sections; track section.label) {
+      <div>
+        <h3 class="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{{ section.label }} · {{ section.rows.length }}</h3>
+        @if (view() === 'list') {
+          <app-data-table [columns]="columns" [rows]="section.rows" [rowClickable]="true" (rowClick)="openDetail($event)" [cellTemplate]="cellTpl" />
+        } @else {
+          <app-data-grid [rows]="section.rows" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" />
+        }
+      </div>
+    }
+  </div>
+} @else {
+  @if (view() === 'list') {
+    <app-data-table
+      [columns]="columns"
+      [rows]="paginatedRows()"
+      [rowClickable]="true"
+      (rowClick)="openDetail($event)"
+      emptyMessage="No se encontraron oportunidades."
+      [cellTemplate]="cellTpl"
+    />
+  } @else {
+    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron oportunidades." />
+  }
+  <app-list-pagination [total]="filteredRows().length" [(page)]="page" [(pageSize)]="pageSize" />
+}
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('customer') {
+      {{ customerName(row.customerId) }}
+    }
+    @case ('expectedAmount') {
+      {{ row.currency }} {{ row.expectedAmount | number: '1.0-0' }}
+    }
+    @case ('stage') {
+      <app-status-badge [label]="stageLabel(row.stage)" [tone]="stageTone(row.stage)" />
+    }
+    @default {
+      {{ row[key] }}
+    }
+  }
+</ng-template>
+
+<ng-template #cardTpl let-row>
+  <div class="flex items-start justify-between gap-2">
+    <p class="text-sm font-medium">{{ row.title }}</p>
+    <app-status-badge [label]="stageLabel(row.stage)" [tone]="stageTone(row.stage)" />
+  </div>
+  <p class="text-muted-foreground mt-1 text-xs">{{ customerName(row.customerId) }}</p>
+  <p class="text-muted-foreground mt-2 text-xs">{{ row.currency }} {{ row.expectedAmount | number: '1.0-0' }} · Cierre {{ row.estimatedCloseDate }}</p>
+</ng-template>

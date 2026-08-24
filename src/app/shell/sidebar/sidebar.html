@@ -1,0 +1,105 @@
+<div hlmSidebarWrapper class="h-svh min-h-0">
+<hlm-sidebar variant="inset" collapsible="icon">
+  <hlm-sidebar-header>
+    <ul hlmSidebarMenu>
+      <li hlmSidebarMenuItem>
+        <button hlmSidebarMenuButton size="lg" [hlmDropdownMenuTrigger]="companyMenu" tooltip="Cambiar de empresa">
+          <div class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
+            <ng-icon name="tablerBuilding" class="text-base" />
+          </div>
+          <div class="grid flex-1 text-left text-sm leading-tight">
+            <span class="truncate font-medium">{{ activeCompany().name }}</span>
+            <span class="truncate text-xs">{{ activeCompany().description }}</span>
+          </div>
+          <ng-icon name="tablerChevronDown" class="ms-auto" />
+        </button>
+      </li>
+    </ul>
+  </hlm-sidebar-header>
+
+  <hlm-sidebar-content>
+    <hlm-sidebar-group>
+      <div hlmSidebarGroupLabel>Navegación</div>
+      <ul hlmSidebarMenu>
+        @for (item of navItems(); track item.route) {
+          <li hlmSidebarMenuItem>
+            <a hlmSidebarMenuButton [routerLink]="item.route" [tooltip]="item.label" routerLinkActive #rla="routerLinkActive" [isActive]="rla.isActive">
+              <ng-icon [name]="item.icon" />
+              <span>{{ item.label }}</span>
+            </a>
+          </li>
+        } @empty {
+          <li hlmSidebarMenuItem>
+            <button hlmSidebarMenuButton tooltip="Elegir una App" (click)="appLauncher.show()">
+              <ng-icon name="tablerLayoutGrid" />
+              <span>Elegir una App</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </hlm-sidebar-group>
+  </hlm-sidebar-content>
+
+  <hlm-sidebar-footer>
+    <ul hlmSidebarMenu>
+      <li hlmSidebarMenuItem>
+        <button hlmSidebarMenuButton size="lg" [hlmDropdownMenuTrigger]="profileMenu" side="top" align="start">
+          <hlm-avatar class="rounded-lg" size="sm">
+            <span hlmAvatarFallback class="rounded-lg bg-[#FD005B] text-white">RI</span>
+          </hlm-avatar>
+          <div class="grid flex-1 text-left text-sm leading-tight">
+            <span class="truncate font-medium">Rosa Injante</span>
+            <span class="truncate text-xs">hello&#64;ccp.pe</span>
+          </div>
+          <ng-icon name="tablerChevronDown" class="ms-auto" />
+        </button>
+      </li>
+    </ul>
+  </hlm-sidebar-footer>
+
+  <button hlmSidebarRail></button>
+</hlm-sidebar>
+<ng-content />
+</div>
+
+<ng-template #companyMenu>
+  <hlm-dropdown-menu class="w-64">
+    <hlm-dropdown-menu-label>Empresas</hlm-dropdown-menu-label>
+    <hlm-dropdown-menu-separator />
+    @for (company of companies; track company.id) {
+      <button hlmDropdownMenuItem (click)="selectCompany(company)">
+        <ng-icon name="tablerBuilding" />
+        <div class="flex flex-col">
+          <span>{{ company.name }}</span>
+          <span class="text-muted-foreground text-xs">{{ company.description }}</span>
+        </div>
+        @if (company.id === activeCompany().id) {
+          <ng-icon name="tablerCheck" class="ms-auto" />
+        }
+      </button>
+    }
+  </hlm-dropdown-menu>
+</ng-template>
+
+<ng-template #profileMenu>
+  <hlm-dropdown-menu class="w-56">
+    <hlm-dropdown-menu-label>
+      <p class="font-medium">Rosa Injante</p>
+      <p class="text-muted-foreground text-xs font-normal">Compras / Almacén — Planta Lima</p>
+    </hlm-dropdown-menu-label>
+    <hlm-dropdown-menu-separator />
+    <button hlmDropdownMenuItem>
+      <ng-icon name="tablerUser" />
+      Perfil
+    </button>
+    <button hlmDropdownMenuItem>
+      <ng-icon name="tablerSettings" />
+      Configuración
+    </button>
+    <hlm-dropdown-menu-separator />
+    <button hlmDropdownMenuItem variant="destructive">
+      <ng-icon name="tablerLogout" />
+      Cerrar sesión
+    </button>
+  </hlm-dropdown-menu>
+</ng-template>

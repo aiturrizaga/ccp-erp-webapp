@@ -1,0 +1,70 @@
+@if (customer(); as c) {
+  <app-entity-header
+    [title]="c.legalName"
+    [subtitle]="'RUC ' + c.taxId"
+    [crumbs]="[{ label: 'Clientes', link: '/apps/crm/customers' }, { label: c.legalName }]"
+  >
+    <div actions class="flex gap-2">
+      <button hlmBtn size="sm" variant="outline">Editar</button>
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Datos legales</h3>
+      <dl class="grid grid-cols-2 gap-y-2 text-sm">
+        <dt class="text-muted-foreground">Razón social</dt><dd>{{ c.legalName }}</dd>
+        <dt class="text-muted-foreground">RUC</dt><dd>{{ c.taxId }}</dd>
+        <dt class="text-muted-foreground">Dirección</dt><dd>{{ c.address }}</dd>
+      </dl>
+    </div>
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Condiciones comerciales</h3>
+      <dl class="grid grid-cols-2 gap-y-2 text-sm">
+        <dt class="text-muted-foreground">Moneda</dt><dd>{{ c.currency }}</dd>
+        <dt class="text-muted-foreground">Condición de pago</dt><dd>{{ c.paymentTerms }}</dd>
+        <dt class="text-muted-foreground">Términos comerciales</dt><dd>{{ c.commercialTerms }}</dd>
+      </dl>
+    </div>
+  </div>
+
+  <div hlmCard class="p-4">
+    <h3 class="mb-3 text-sm font-semibold">Contactos</h3>
+    @if (contacts().length) {
+      <ul class="divide-y rounded-lg border text-sm">
+        @for (contact of contacts(); track contact.id) {
+          <li class="flex items-center justify-between px-4 py-2.5">
+            <div>
+              <p class="font-medium">{{ contact.name }}</p>
+              <p class="text-muted-foreground text-xs">{{ contact.position }}</p>
+            </div>
+            <span class="text-muted-foreground text-xs">{{ contact.email }} · {{ contact.phone }}</span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <app-empty-state icon="tablerUser" title="Sin contactos registrados" />
+    }
+  </div>
+
+  <div hlmCard class="p-4">
+    <h3 class="mb-3 text-sm font-semibold">Oportunidades relacionadas</h3>
+    @if (opportunities().length) {
+      <ul class="divide-y rounded-lg border text-sm">
+        @for (opp of opportunities(); track opp.id) {
+          <li class="flex items-center justify-between px-4 py-2.5">
+            <a [routerLink]="['/apps/crm/opportunities', opp.id]" class="text-primary hover:underline">{{ opp.title }}</a>
+            <div class="flex items-center gap-3">
+              <span class="text-muted-foreground text-xs">{{ opp.currency }} {{ opp.expectedAmount | number: '1.0-0' }}</span>
+              <app-status-badge [label]="stageLabel(opp.stage)" [tone]="stageTone(opp.stage)" />
+            </div>
+          </li>
+        }
+      </ul>
+    } @else {
+      <app-empty-state icon="tablerTargetArrow" title="Sin oportunidades registradas" />
+    }
+  </div>
+} @else {
+  <app-empty-state icon="tablerUsers" title="Cliente no encontrado" />
+}

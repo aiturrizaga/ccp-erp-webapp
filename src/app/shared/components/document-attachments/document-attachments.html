@@ -1,0 +1,15 @@
+@if (attachments().length) {
+  <ul class="divide-y rounded-lg border">
+    @for (file of attachments(); track file.id) {
+      <li class="flex items-center gap-3 p-3 text-sm">
+        <ng-icon [name]="icon(file.kind)" class="text-lg" />
+        <div class="min-w-0 flex-1">
+          <p class="truncate font-medium">{{ file.name }}</p>
+          <p class="text-muted-foreground text-xs">{{ file.uploadedBy }} · {{ file.uploadedAt }}</p>
+        </div>
+      </li>
+    }
+  </ul>
+} @else {
+  <p class="text-muted-foreground text-sm">{{ emptyMessage() }}</p>
+}

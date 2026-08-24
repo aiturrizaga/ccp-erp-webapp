@@ -1,0 +1,62 @@
+<div class="flex flex-wrap items-center gap-2 py-3">
+  <input hlmInput class="w-64" type="search" [placeholder]="searchPlaceholder()" [(ngModel)]="search" />
+
+  @if (hasFilters()) {
+    <hlm-popover align="start">
+      <button hlmPopoverTrigger hlmBtn variant="outline" size="sm" class="relative gap-1.5">
+        <ng-icon name="tablerFilter" />
+        Filtros
+        @if (filterCount() > 0) {
+          <span hlmBadge class="h-4 min-w-4 justify-center px-1 text-[10px]">{{ filterCount() }}</span>
+        }
+      </button>
+      <hlm-popover-content *hlmPopoverPortal class="w-72">
+        <ng-content select="[filters]" />
+      </hlm-popover-content>
+    </hlm-popover>
+  }
+
+  @if (groupByOptions().length) {
+    <div class="flex items-center gap-1.5">
+      <ng-icon name="tablerArrowsSort" class="text-muted-foreground text-sm" />
+      <app-select-filter [options]="groupByOptions()" [(value)]="groupBy" placeholder="Agrupar por" />
+    </div>
+  }
+
+  <div class="ms-auto flex items-center gap-2">
+    @if (views().length > 1) {
+      <div class="flex items-center rounded-lg border p-0.5">
+        @for (option of views(); track option.value) {
+          <button
+            hlmBtn
+            [variant]="view() === option.value ? 'secondary' : 'ghost'"
+            size="icon-sm"
+            [attr.aria-label]="option.label"
+            [title]="option.label"
+            (click)="view.set(option.value)"
+          >
+            <ng-icon [name]="option.icon" />
+          </button>
+        }
+      </div>
+    }
+
+    @if (hasSecondaryActions()) {
+      <hlm-popover align="end">
+        <button hlmPopoverTrigger hlmBtn variant="outline" size="icon-sm" aria-label="Más acciones">
+          <ng-icon name="tablerDots" />
+        </button>
+        <hlm-popover-content *hlmPopoverPortal class="w-56 !p-1">
+          <ng-content select="[secondaryActions]" />
+        </hlm-popover-content>
+      </hlm-popover>
+    }
+
+    @if (actionLabel(); as label) {
+      <button hlmBtn size="sm" (click)="action.emit()">
+        <ng-icon name="tablerPlus" />
+        {{ label }}
+      </button>
+    }
+  </div>
+</div>

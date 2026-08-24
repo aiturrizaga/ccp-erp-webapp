@@ -1,0 +1,40 @@
+<div hlmTableContainer class="min-w-0 border-t">
+  <table hlmTable>
+    <thead hlmTHead>
+      <tr hlmTr>
+        @for (col of columns(); track col.key) {
+          <th hlmTh [class]="alignClass(col.align)" [style.width]="col.width">{{ col.header }}</th>
+        }
+        @if (actionsTemplate()) {
+          <th hlmTh class="text-end">Acciones</th>
+        }
+      </tr>
+    </thead>
+    <tbody hlmTBody>
+      @for (row of rows(); track $index) {
+        <tr hlmTr [class.cursor-pointer]="rowClickable()" (click)="onRowClick(row)">
+          @for (col of columns(); track col.key) {
+            <td hlmTd [class]="alignClass(col.align)">
+              @if (cellTemplate(); as tpl) {
+                <ng-container *ngTemplateOutlet="tpl; context: { $implicit: row, key: col.key }" />
+              } @else {
+                {{ cellValue(row, col.key) }}
+              }
+            </td>
+          }
+          @if (actionsTemplate(); as actionsTpl) {
+            <td hlmTd class="text-end" (click)="$event.stopPropagation()">
+              <ng-container *ngTemplateOutlet="actionsTpl; context: { $implicit: row }" />
+            </td>
+          }
+        </tr>
+      } @empty {
+        <tr hlmTr>
+          <td hlmTd [attr.colspan]="columns().length + (actionsTemplate() ? 1 : 0)" class="text-muted-foreground p-6 text-center">
+            {{ emptyMessage() }}
+          </td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,140 @@
+@if (invoice(); as p) {
+  <app-entity-header
+    [title]="p.number"
+    [subtitle]="p.documentType === 'purchase' ? supplierName(p.supplierId) : p.customerName"
+    [statusLabel]="statusLabel(p.status)"
+    [statusTone]="statusTone(p.status)"
+    [crumbs]="[{ label: 'Facturas', link: '/apps/invoicing/invoices' }, { label: p.number }]"
+  >
+    <div actions class="flex gap-2">
+      @if (canRegisterPayment(p)) {
+        <hlm-dialog>
+          <button hlmDialogTrigger hlmBtn size="sm" (click)="openPaymentDialog(p)">Registrar pago</button>
+          <hlm-dialog-content *brnDialogContent="let ctx" class="sm:max-w-md">
+            <hlm-dialog-header>
+              <h3 hlmDialogTitle>Registrar pago</h3>
+              <p hlmDialogDescription>Factura {{ p.number }} · Saldo pendiente {{ p.currency }} {{ p.outstandingBalance | number: '1.2-2' }}</p>
+            </hlm-dialog-header>
+            <div class="flex flex-col gap-3">
+              <label class="flex flex-col gap-1 text-sm">
+                Monto
+                <input hlmInput type="number" min="0" step="0.01" [ngModel]="paymentAmount()" (ngModelChange)="paymentAmount.set($event)" />
+              </label>
+              <label class="flex flex-col gap-1 text-sm">
+                Fecha
+                <input hlmInput type="date" [ngModel]="paymentDate()" (ngModelChange)="paymentDate.set($event)" />
+              </label>
+              <label class="flex flex-col gap-1 text-sm">
+                Medio de pago
+                <select class="border-input h-9 rounded-md border bg-transparent px-3 text-sm" [ngModel]="paymentMethod()" (ngModelChange)="paymentMethod.set($event)">
+                  @for (opt of paymentMethodOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+            <hlm-dialog-footer>
+              <button hlmBtn variant="outline" hlmDialogClose>Cancelar</button>
+              <button hlmBtn hlmDialogClose (click)="confirmPayment(p.id)">Confirmar</button>
+            </hlm-dialog-footer>
+          </hlm-dialog-content>
+        </hlm-dialog>
+      }
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.6fr_1fr]">
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Líneas</h3>
+        <table class="w-full text-sm">
+          <thead class="text-muted-foreground border-b text-xs">
+            <tr>
+              <th class="py-1.5 text-start font-medium">Descripción</th>
+              <th class="py-1.5 text-end font-medium">Cantidad</th>
+              <th class="py-1.5 text-end font-medium">Precio unit.</th>
+              <th class="py-1.5 text-end font-medium">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            @for (line of p.lines; track line.description) {
+              <tr>
+                <td class="py-2">{{ line.description }}</td>
+                <td class="py-2 text-end">{{ line.quantity }}</td>
+                <td class="py-2 text-end">{{ p.currency }} {{ line.unitPrice | number: '1.2-2' }}</td>
+                <td class="py-2 text-end font-medium">{{ p.currency }} {{ line.subtotal | number: '1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot class="divide-y">
+            <tr>
+              <td colspan="3" class="text-muted-foreground py-1.5 text-end text-xs">Subtotal</td>
+              <td class="py-1.5 text-end">{{ p.currency }} {{ p.subtotal | number: '1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td colspan="3" class="text-muted-foreground py-1.5 text-end text-xs">IGV (18%)</td>
+              <td class="py-1.5 text-end">{{ p.currency }} {{ p.taxAmount | number: '1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td colspan="3" class="py-1.5 text-end text-sm font-semibold">Total</td>
+              <td class="py-1.5 text-end text-sm font-semibold">{{ p.currency }} {{ p.total | number: '1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td colspan="3" class="text-muted-foreground py-1.5 text-end text-xs">Pagado</td>
+              <td class="py-1.5 text-end">{{ p.currency }} {{ p.paidAmount | number: '1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td colspan="3" class="text-muted-foreground py-1.5 text-end text-xs">Saldo pendiente</td>
+              <td class="py-1.5 text-end font-medium">{{ p.currency }} {{ p.outstandingBalance | number: '1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Documento relacionado</h3>
+        @if (p.documentType === 'purchase') {
+          <dl class="grid grid-cols-1 gap-3 text-sm">
+            <div>
+              <dt class="text-muted-foreground text-xs">Proveedor</dt>
+              <dd><a [routerLink]="['/apps/purchasing/suppliers', p.supplierId]" class="text-primary hover:underline">{{ supplierName(p.supplierId) }}</a></dd>
+            </div>
+            @if (p.purchaseOrderId) {
+              <div>
+                <dt class="text-muted-foreground text-xs">Orden de compra</dt>
+                <dd><a [routerLink]="['/apps/purchasing/purchase-orders', p.purchaseOrderId]" class="text-primary hover:underline">{{ p.purchaseOrderId }}</a></dd>
+              </div>
+            }
+          </dl>
+        } @else {
+          <dl class="grid grid-cols-1 gap-3 text-sm">
+            <div>
+              <dt class="text-muted-foreground text-xs">Cliente</dt>
+              <!-- TODO: enlazar a /apps/sales cuando el cableado cruzado entre Apps se realice en la segunda oleada -->
+              <dd>{{ p.customerName }}</dd>
+            </div>
+            @if (p.salesOrderId) {
+              <div>
+                <dt class="text-muted-foreground text-xs">Pedido de venta</dt>
+                <dd>{{ p.salesOrderId }}</dd>
+              </div>
+            }
+          </dl>
+        }
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4 text-sm">
+        <dl class="grid grid-cols-2 gap-y-2">
+          <dt class="text-muted-foreground">Moneda</dt><dd>{{ p.currency }}</dd>
+          <dt class="text-muted-foreground">Emitida</dt><dd>{{ p.issuedAt }}</dd>
+          <dt class="text-muted-foreground">Vencimiento</dt><dd>{{ p.dueDate }}</dd>
+          <dt class="text-muted-foreground">Tipo</dt><dd>{{ p.documentType === 'purchase' ? 'Compra' : 'Venta' }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerReceipt2" title="Factura no encontrada" />
+}

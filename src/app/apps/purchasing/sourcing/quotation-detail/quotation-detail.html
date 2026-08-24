@@ -1,0 +1,71 @@
+@if (quotation(); as q) {
+  <app-entity-header
+    [title]="q.number"
+    subtitle="Matriz comparativa de ofertas por artículo"
+    [statusLabel]="statusLabel(q.status)"
+    [statusTone]="statusTone(q.status)"
+    [crumbs]="[{ label: 'Abastecimiento', link: '/apps/purchasing/sourcing' }, { label: q.number }]"
+  >
+    <div actions class="flex items-center gap-3">
+      <a [routerLink]="['/apps/purchasing/requisitions', q.requisitionId]" class="text-primary text-sm hover:underline">Ver solicitud de origen</a>
+      <button hlmBtn size="sm" variant="outline" (click)="goToComparison()">Comparar cotizaciones</button>
+    </div>
+  </app-entity-header>
+
+  <div class="flex flex-col gap-4">
+    @for (line of q.lines; track line.itemId) {
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">{{ itemLabel(line.itemId) }} — {{ line.quantity }} {{ line.unitOfMeasure }}</h3>
+
+        @if (line.offers.length) {
+          <table class="w-full text-sm">
+            <thead class="text-muted-foreground border-b text-xs">
+              <tr>
+                <th class="py-1.5 text-start font-medium">Proveedor</th>
+                <th class="py-1.5 text-end font-medium">Precio unitario</th>
+                <th class="py-1.5 text-end font-medium">Entrega</th>
+                <th class="py-1.5 text-start font-medium">Condición de pago</th>
+                <th class="py-1.5 text-start font-medium">Evidencia</th>
+                <th class="py-1.5"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              @for (offer of line.offers; track offer.supplierId) {
+                <tr [class.bg-emerald-50]="offer.selected" [class.dark:bg-emerald-950]="offer.selected">
+                  <td class="py-2">{{ supplierName(offer.supplierId) }}</td>
+                  <td class="py-2 text-end font-medium">{{ offer.currency }} {{ offer.unitPrice }}</td>
+                  <td class="py-2 text-end">{{ offer.deliveryDays }} días</td>
+                  <td class="py-2">{{ offer.paymentTerms }}</td>
+                  <td class="py-2">
+                    @if (offer.attachmentName) {
+                      <span class="text-primary inline-flex items-center gap-1 text-xs"><ng-icon name="tablerPaperclip" /> {{ offer.attachmentName }}</span>
+                    } @else {
+                      <span class="text-muted-foreground text-xs">—</span>
+                    }
+                  </td>
+                  <td class="py-2 text-end">
+                    @if (offer.selected) {
+                      <span class="text-xs font-medium text-emerald-600">Adjudicada</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="text-muted-foreground text-sm">Sin ofertas recibidas todavía.</p>
+        }
+      </div>
+    }
+
+    @if (q.awardedSupplierId) {
+      <div hlmCard class="p-4 text-sm">
+        <p class="font-medium">Motivo de adjudicación</p>
+        <p class="text-muted-foreground mt-1">{{ q.awardReason }}</p>
+        <p class="text-muted-foreground mt-2 text-xs">Autorizado por {{ q.authorizedBy }}</p>
+      </div>
+    }
+  </div>
+} @else {
+  <app-empty-state icon="tablerFileSearch" title="Cotización no encontrada" />
+}

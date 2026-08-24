@@ -1,0 +1,78 @@
+@if (requisition(); as r) {
+  <app-entity-header
+    [title]="r.number"
+    [subtitle]="r.area + ' · ' + r.plant"
+    [statusLabel]="statusLabel(r.status)"
+    [statusTone]="statusTone(r.status)"
+    [crumbs]="[{ label: 'Solicitudes de compra', link: '/apps/purchasing/requisitions' }, { label: r.number }]"
+  >
+    <div actions class="flex gap-2">
+      @if (r.status === 'pending_approval') {
+        <button hlmBtn size="sm" variant="outline">Observar</button>
+        <button hlmBtn size="sm">Aprobar</button>
+      }
+      @if (r.status === 'approved' && !quotation()) {
+        <button hlmBtn size="sm" (click)="generateQuotation()">Generar cotización</button>
+      }
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.6fr_1fr]">
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Artículos solicitados</h3>
+        <table class="w-full text-sm">
+          <thead class="text-muted-foreground border-b text-xs">
+            <tr>
+              <th class="py-1.5 text-start font-medium">Artículo</th>
+              <th class="py-1.5 text-end font-medium">Cantidad</th>
+              <th class="py-1.5 text-end font-medium">Stock disponible</th>
+              <th class="py-1.5 text-start font-medium">Fecha necesidad</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            @for (line of r.lines; track line.itemId) {
+              <tr>
+                <td class="py-2">{{ itemLabel(line.itemId) }}</td>
+                <td class="py-2 text-end">{{ line.quantity }} {{ line.unitOfMeasure }}</td>
+                <td class="py-2 text-end" [class.text-destructive]="line.availableStock < line.quantity">{{ line.availableStock }}</td>
+                <td class="py-2">{{ line.neededBy }}</td>
+              </tr>
+              @if (line.note) {
+                <tr><td colspan="4" class="text-muted-foreground pb-2 text-xs italic">{{ line.note }}</td></tr>
+              }
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div hlmCard class="p-4 text-sm">
+        <dl class="grid grid-cols-2 gap-y-2">
+          <dt class="text-muted-foreground">Origen</dt><dd>{{ r.origin === 'production' ? 'Producción' : r.origin === 'inventory' ? 'Almacén' : r.origin === 'forecast' ? 'Proyección de inventario' : 'Otro' }}</dd>
+          <dt class="text-muted-foreground">Solicitante</dt><dd>{{ r.requestedBy }}</dd>
+          <dt class="text-muted-foreground">Prioridad</dt><dd>{{ priorityLabel(r.priority) }}</dd>
+          <dt class="text-muted-foreground">Creado</dt><dd>{{ r.createdAt }}</dd>
+          @if (r.workSheetRef) {
+            <dt class="text-muted-foreground">Hoja de trabajo</dt>
+            <dd><a [routerLink]="['/apps/production/work-sheets']" class="text-primary hover:underline">{{ r.workSheetRef }}</a></dd>
+          }
+          @if (quotation(); as q) {
+            <dt class="text-muted-foreground">Cotización</dt>
+            <dd><a [routerLink]="['/apps/purchasing/sourcing', q.id]" class="text-primary hover:underline">{{ q.number }}</a></dd>
+          }
+        </dl>
+      </div>
+    </div>
+
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Aprobación</h3>
+      @if (approval(); as a) {
+        <app-approval-timeline [levels]="a.levels" />
+      } @else {
+        <app-empty-state icon="tablerClockHour4" title="Sin flujo de aprobación" description="Esta solicitud no requirió aprobación según las reglas configuradas." />
+      }
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerClipboardList" title="Solicitud no encontrada" />
+}

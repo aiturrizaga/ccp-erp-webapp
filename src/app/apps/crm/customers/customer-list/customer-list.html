@@ -1,0 +1,59 @@
+<app-list-toolbar
+  [(search)]="search"
+  searchPlaceholder="Buscar por razón social o RUC..."
+  [views]="views"
+  [(view)]="view"
+  [groupByOptions]="groupByOptions"
+  [(groupBy)]="groupBy"
+  [hasFilters]="true"
+  [filterCount]="filterCount()"
+  actionLabel="Nuevo cliente"
+>
+  <div filters class="flex flex-col gap-3">
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Moneda</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of currencyOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="currencyFilter().has(opt.value)" (checkedChange)="toggleCurrencyFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    @if (filterCount() > 0) {
+      <button hlmBtn variant="ghost" size="sm" class="justify-start gap-1.5" (click)="clearFilters()">
+        <ng-icon name="tablerFilter" />
+        Limpiar filtros
+      </button>
+    }
+  </div>
+</app-list-toolbar>
+
+@if (groupedSections(); as sections) {
+  <div class="flex flex-col gap-5">
+    @for (section of sections; track section.label) {
+      <div>
+        <h3 class="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{{ section.label }} · {{ section.rows.length }}</h3>
+        @if (view() === 'list') {
+          <app-data-table [columns]="columns" [rows]="section.rows" [rowClickable]="true" (rowClick)="openDetail($event)" />
+        } @else {
+          <app-data-grid [rows]="section.rows" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" />
+        }
+      </div>
+    }
+  </div>
+} @else {
+  @if (view() === 'list') {
+    <app-data-table [columns]="columns" [rows]="paginatedRows()" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron clientes." />
+  } @else {
+    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron clientes." />
+  }
+  <app-list-pagination [total]="filteredRows().length" [(page)]="page" [(pageSize)]="pageSize" />
+}
+
+<ng-template #cardTpl let-row>
+  <p class="text-sm font-medium">{{ row.legalName }}</p>
+  <p class="text-muted-foreground mt-1 text-xs">RUC {{ row.taxId }}</p>
+  <p class="text-muted-foreground mt-2 text-xs">{{ row.paymentTerms }} · {{ row.currency }}</p>
+</ng-template>

@@ -1,0 +1,17 @@
+<div class="flex flex-wrap items-center gap-2 py-3">
+  <input
+    hlmInput
+    class="w-64"
+    type="search"
+    [placeholder]="searchPlaceholder()"
+    [(ngModel)]="search"
+  />
+
+  <ng-content />
+
+  <div class="ms-auto">
+    @if (actionLabel(); as label) {
+      <button hlmBtn (click)="action.emit()">{{ label }}</button>
+    }
+  </div>
+</div>

@@ -1,0 +1,39 @@
+<ol class="flex flex-col gap-0">
+  @for (level of levels(); track level.order; let last = $last) {
+    <li class="flex gap-3">
+      <div class="flex flex-col items-center">
+        <span
+          class="flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-medium"
+          [class.bg-emerald-600]="level.status === 'approved'"
+          [class.border-emerald-600]="level.status === 'approved'"
+          [class.text-white]="level.status === 'approved'"
+          [class.bg-destructive]="level.status === 'rejected'"
+          [class.border-destructive]="level.status === 'rejected'"
+          [class.border-muted-foreground]="level.status === 'pending'"
+        >
+          {{ level.order }}
+        </span>
+        @if (!last) {
+          <span class="bg-border w-px flex-1"></span>
+        }
+      </div>
+      <div class="flex-1 pb-4">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-sm font-medium">{{ level.role }}</span>
+          <app-status-badge [label]="statusLabel(level.status)" [tone]="statusTone(level.status)" />
+          @if (level.date) {
+            <span class="text-muted-foreground text-xs">{{ level.date }}</span>
+          } @else {
+            <span class="text-muted-foreground text-xs">SLA {{ level.slaHours }}h</span>
+          }
+        </div>
+        @if (level.approver) {
+          <p class="text-muted-foreground text-sm">{{ level.approver }}</p>
+        }
+        @if (level.comment) {
+          <p class="bg-muted mt-1 rounded-md p-2 text-sm">{{ level.comment }}</p>
+        }
+      </div>
+    </li>
+  }
+</ol>

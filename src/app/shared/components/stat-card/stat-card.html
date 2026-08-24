@@ -1,0 +1,21 @@
+<div hlmCard class="p-4">
+  <p class="text-muted-foreground text-xs font-medium tracking-wide uppercase">{{ label() }}</p>
+  <p class="mt-1 text-2xl font-semibold tracking-tight">{{ value() }}</p>
+  @if (hint() || trendLabel()) {
+    <p class="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
+      @if (trendLabel()) {
+        <span
+          class="inline-flex items-center gap-0.5"
+          [class.text-emerald-600]="trend() === 'up'"
+          [class.text-destructive]="trend() === 'down'"
+        >
+          <ng-icon [name]="trend() === 'up' ? 'tablerTrendingUp' : trend() === 'down' ? 'tablerTrendingDown' : 'tablerArrowRight'" />
+          {{ trendLabel() }}
+        </span>
+      }
+      @if (hint()) {
+        <span>{{ hint() }}</span>
+      }
+    </p>
+  }
+</div>

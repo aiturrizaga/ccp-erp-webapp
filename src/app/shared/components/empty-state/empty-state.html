@@ -1,0 +1,7 @@
+<div class="flex flex-col items-center justify-center gap-2 rounded-lg border border-dashed py-16 text-center">
+  <ng-icon [name]="icon()" class="text-muted-foreground text-3xl" />
+  <p class="font-medium">{{ title() }}</p>
+  @if (description(); as desc) {
+    <p class="text-muted-foreground max-w-sm text-sm">{{ desc }}</p>
+  }
+</div>

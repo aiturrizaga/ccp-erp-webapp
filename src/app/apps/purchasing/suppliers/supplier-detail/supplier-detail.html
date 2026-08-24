@@ -1,0 +1,104 @@
+@if (supplier(); as s) {
+  <app-entity-header
+    [title]="s.legalName"
+    [subtitle]="'RUC ' + s.taxId"
+    [statusLabel]="statusLabel(s.status)"
+    [statusTone]="statusTone(s.status)"
+    [crumbs]="[{ label: 'Proveedores', link: '/apps/purchasing/suppliers' }, { label: s.legalName }]"
+  >
+    <div actions class="flex gap-2">
+      @if (s.status === 'pending_approval' || s.status === 'under_evaluation') {
+        <button hlmBtn size="sm" variant="outline">Rechazar</button>
+        <button hlmBtn size="sm">Aprobar</button>
+      } @else {
+        <button hlmBtn size="sm" variant="outline">Editar</button>
+      }
+    </div>
+  </app-entity-header>
+
+  <div hlmTabs tab="profile">
+    <div hlmTabsList class="mb-4">
+      <button hlmTabsTrigger="profile">Perfil</button>
+      <button hlmTabsTrigger="approval">Evaluación y aprobación</button>
+      <button hlmTabsTrigger="credit">Crédito</button>
+      <button hlmTabsTrigger="orders">Órdenes de compra</button>
+    </div>
+
+    <div hlmTabsContent="profile">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div hlmCard class="p-4">
+          <h3 class="mb-3 text-sm font-semibold">Datos generales</h3>
+          <dl class="grid grid-cols-2 gap-y-2 text-sm">
+            <dt class="text-muted-foreground">Clase</dt><dd>{{ s.class === 'PRODUCT' ? 'Producto' : 'Servicio' }}</dd>
+            <dt class="text-muted-foreground">Tipo</dt><dd>{{ s.tier }}</dd>
+            <dt class="text-muted-foreground">Rubro</dt><dd>{{ s.businessLine ?? '—' }}</dd>
+            <dt class="text-muted-foreground">Dirección</dt><dd>{{ s.address }}</dd>
+            <dt class="text-muted-foreground">Teléfono</dt><dd>{{ s.phone }}</dd>
+            <dt class="text-muted-foreground">Correo</dt><dd>{{ s.email }}</dd>
+          </dl>
+        </div>
+        <div hlmCard class="p-4">
+          <h3 class="mb-3 text-sm font-semibold">Condiciones comerciales</h3>
+          <dl class="grid grid-cols-2 gap-y-2 text-sm">
+            <dt class="text-muted-foreground">Moneda</dt><dd>{{ s.currency }}</dd>
+            <dt class="text-muted-foreground">Condición de pago</dt><dd>{{ s.paymentTerms }}</dd>
+            <dt class="text-muted-foreground">Cuenta bancaria</dt><dd>{{ s.bankAccount }}</dd>
+            <dt class="text-muted-foreground">Registrado por</dt><dd>{{ s.createdBy }}</dd>
+            <dt class="text-muted-foreground">Fecha de registro</dt><dd>{{ s.registeredAt }}</dd>
+          </dl>
+          <h3 class="mt-4 mb-2 text-sm font-semibold">Desempeño</h3>
+          <dl class="grid grid-cols-2 gap-y-2 text-sm">
+            <dt class="text-muted-foreground">Entregas a tiempo</dt><dd>{{ s.performance.onTimeDeliveryPct }}%</dd>
+            <dt class="text-muted-foreground">Órdenes completadas</dt><dd>{{ s.performance.completedOrdersPct }}%</dd>
+            <dt class="text-muted-foreground">Calidad</dt><dd>{{ s.performance.qualityRating }} / 5</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div hlmTabsContent="approval">
+      @if (approval(); as a) {
+        <div hlmCard class="max-w-lg p-4">
+          <app-approval-timeline [levels]="a.levels" />
+        </div>
+      } @else if (s.status === 'rejected' && s.rejectionReason) {
+        <div hlmCard class="max-w-lg p-4 text-sm">
+          <p class="font-medium">Rechazado</p>
+          <p class="text-muted-foreground mt-1">{{ s.rejectionReason }}</p>
+        </div>
+      } @else {
+        <app-empty-state icon="tablerClockHour4" title="Sin proceso de aprobación" description="Este proveedor fue aprobado antes de que el flujo de aprobación configurable quedara vigente." />
+      }
+    </div>
+
+    <div hlmTabsContent="credit">
+      <div hlmCard class="max-w-md p-4">
+        <div class="mb-2 flex items-center justify-between text-sm">
+          <span class="text-muted-foreground">Crédito utilizado</span>
+          <span class="font-medium">{{ s.currency }} {{ s.creditUsed | number: '1.0-0' }} / {{ s.creditLimit | number: '1.0-0' }}</span>
+        </div>
+        <hlm-progress [value]="creditPct()">
+          <div hlmProgressIndicator></div>
+        </hlm-progress>
+        <p class="text-muted-foreground mt-2 text-xs">{{ creditPct() }}% del límite de crédito acordado con este proveedor.</p>
+      </div>
+    </div>
+
+    <div hlmTabsContent="orders">
+      @if (purchaseOrders().length) {
+        <ul class="divide-y rounded-lg border text-sm">
+          @for (po of purchaseOrders(); track po.id) {
+            <li class="flex items-center justify-between px-4 py-2.5">
+              <a [routerLink]="['/apps/purchasing/purchase-orders', po.id]" class="text-primary hover:underline">{{ po.number }}</a>
+              <span class="text-muted-foreground">{{ po.currency }} {{ po.lines.length }} línea(s) · {{ po.issuedAt }}</span>
+            </li>
+          }
+        </ul>
+      } @else {
+        <app-empty-state icon="tablerPackage" title="Sin órdenes de compra" />
+      }
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerBuilding" title="Proveedor no encontrado" />
+}

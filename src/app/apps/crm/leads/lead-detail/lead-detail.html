@@ -1,0 +1,41 @@
+@if (lead(); as l) {
+  <app-entity-header
+    [title]="l.contactName"
+    [subtitle]="l.company"
+    [statusLabel]="statusLabel(l.status)"
+    [statusTone]="statusTone(l.status)"
+    [crumbs]="[{ label: 'Leads', link: '/apps/crm/leads' }, { label: l.contactName }]"
+  >
+    <div actions class="flex gap-2">
+      @if (l.status === 'new' || l.status === 'contacted') {
+        <button hlmBtn size="sm" variant="outline" (click)="qualify()">Calificar</button>
+      }
+      @if (l.status === 'qualified' && !l.convertedOpportunityId) {
+        <button hlmBtn size="sm" (click)="convertToOpportunity()">Convertir en oportunidad</button>
+      }
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Datos de contacto</h3>
+      <dl class="grid grid-cols-2 gap-y-2 text-sm">
+        <dt class="text-muted-foreground">Empresa</dt><dd>{{ l.company }}</dd>
+        <dt class="text-muted-foreground">Contacto</dt><dd>{{ l.contactName }}</dd>
+        <dt class="text-muted-foreground">Correo</dt><dd>{{ l.email }}</dd>
+        <dt class="text-muted-foreground">Teléfono</dt><dd>{{ l.phone }}</dd>
+        <dt class="text-muted-foreground">Origen</dt><dd>{{ sourceLabel(l.source) }}</dd>
+        <dt class="text-muted-foreground">Creado</dt><dd>{{ l.createdAt }}</dd>
+      </dl>
+    </div>
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Notas</h3>
+      <p class="text-sm">{{ l.notes ?? 'Sin notas registradas.' }}</p>
+      @if (l.convertedOpportunityId) {
+        <p class="text-muted-foreground mt-3 text-xs">Convertido en la oportunidad {{ l.convertedOpportunityId }}.</p>
+      }
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerUserPlus" title="Lead no encontrado" />
+}

@@ -10,8 +10,9 @@
   color-scheme: light;
 
   --font-sans:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans',
-    sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    'Noto Sans', sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol',
+    'Noto Color Emoji';
 
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -79,5 +80,69 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+
+  /* Every native clickable control shows a pointer cursor by default, so users always
+     recognize an interactive element. Explicit `cursor-default`/`cursor-not-allowed` utilities
+     (e.g. spartan/ui menu items, disabled controls) still win — this rule has the lowest
+     specificity of any cursor utility. */
+  button:not(:disabled),
+  a[href],
+  [role='button'],
+  select,
+  summary {
+    cursor: pointer;
+  }
+
+  /* Angular component host elements are unrecognized tags, so browsers default them to
+     `display: inline` (there's no UA stylesheet rule for them, unlike <div>/<section>/etc).
+     An inline host wrapping a block-level template root causes real layout bugs — collapsed
+     heights, phantom gaps from anonymous line boxes, flex items not sizing correctly. Every
+     `app-*` component gets `block` by default here; the three pure chrome wrappers (root/layout/
+     sidebar) override to `contents` on their own host so they don't add an extra box at all.
+     New `app-*` components should be added to this list. */
+  app-activity-timeline,
+  app-app-launcher,
+  app-approval-timeline,
+  app-approvals-inbox,
+  app-bom-detail,
+  app-bom-list,
+  app-coming-soon,
+  app-dashboard,
+  app-data-filters,
+  app-data-table,
+  app-document-attachments,
+  app-empty-state,
+  app-entity-header,
+  app-goods-receipt-detail,
+  app-goods-receipt-list,
+  app-item-detail,
+  app-item-list,
+  app-output-bundle-detail,
+  app-output-bundle-list,
+  app-product-detail,
+  app-product-list,
+  app-production-order-detail,
+  app-production-order-list,
+  app-purchase-order-detail,
+  app-purchase-order-list,
+  app-quotation-detail,
+  app-quotation-list,
+  app-requisition-detail,
+  app-requisition-list,
+  app-select-filter,
+  app-stat-card,
+  app-status-badge,
+  app-stock-ledger-list,
+  app-stock-list,
+  app-supplier-detail,
+  app-supplier-list,
+  app-topbar,
+  app-warehouse-detail,
+  app-warehouse-list,
+  app-work-sheet-detail,
+  app-work-sheet-list {
+    display: block;
   }
 }

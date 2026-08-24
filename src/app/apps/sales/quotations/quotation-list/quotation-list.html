@@ -1,0 +1,121 @@
+<app-list-toolbar
+  [(search)]="search"
+  searchPlaceholder="Buscar por número o cliente..."
+  [views]="views"
+  [(view)]="view"
+  [groupByOptions]="view() === 'kanban' ? [] : groupByOptions"
+  [(groupBy)]="groupBy"
+  [hasFilters]="true"
+  [filterCount]="filterCount()"
+  [hasSecondaryActions]="true"
+  actionLabel="Nueva cotización"
+>
+  <div filters class="flex flex-col gap-3">
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Estado</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of statusOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="statusFilter().has(opt.value)" (checkedChange)="toggleStatusFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Moneda</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of currencyOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="currencyFilter().has(opt.value)" (checkedChange)="toggleCurrencyFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    @if (filterCount() > 0) {
+      <button hlmBtn variant="ghost" size="sm" class="justify-start gap-1.5" (click)="clearFilters()">
+        <ng-icon name="tablerFilter" />
+        Limpiar filtros
+      </button>
+    }
+  </div>
+
+  <div secondaryActions class="flex flex-col gap-0.5">
+    <button hlmBtn variant="ghost" size="sm" class="justify-start gap-2">
+      <ng-icon name="tablerDownload" />
+      Exportar a Excel
+    </button>
+  </div>
+</app-list-toolbar>
+
+@if (view() === 'kanban') {
+  <app-data-kanban
+    [columns]="statusColumns"
+    [rows]="filteredRows()"
+    [groupKey]="statusKey"
+    [cardTemplate]="cardTpl"
+    [rowClickable]="true"
+    (rowClick)="openDetail($event)"
+  />
+} @else if (groupedSections(); as sections) {
+  <div class="flex flex-col gap-5">
+    @for (section of sections; track section.label) {
+      <div>
+        <h3 class="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{{ section.label }} · {{ section.rows.length }}</h3>
+        @if (view() === 'list') {
+          <app-data-table [columns]="columns" [rows]="section.rows" [rowClickable]="true" (rowClick)="openDetail($event)" [cellTemplate]="cellTpl" />
+        } @else {
+          <app-data-grid [rows]="section.rows" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" />
+        }
+      </div>
+    }
+  </div>
+} @else {
+  @if (view() === 'list') {
+    <app-data-table
+      [columns]="columns"
+      [rows]="paginatedRows()"
+      [rowClickable]="true"
+      (rowClick)="openDetail($event)"
+      emptyMessage="No se encontraron cotizaciones."
+      [cellTemplate]="cellTpl"
+    />
+  } @else {
+    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron cotizaciones." />
+  }
+  <app-list-pagination [total]="filteredRows().length" [(page)]="page" [(pageSize)]="pageSize" />
+}
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('expiresAt') {
+      <span [class.text-destructive]="isExpiringSoon(row)" [class.font-medium]="isExpiringSoon(row)">
+        {{ row.expiresAt }}
+        @if (isExpiringSoon(row)) { · por vencer }
+      </span>
+    }
+    @case ('total') {
+      {{ row.total | number: '1.2-2' }}
+    }
+    @case ('status') {
+      <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
+    }
+    @default {
+      {{ row[key] }}
+    }
+  }
+</ng-template>
+
+<ng-template #cardTpl let-row>
+  <div class="flex items-start justify-between gap-2">
+    <p class="text-sm font-medium">{{ row.number }}</p>
+    <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
+  </div>
+  <p class="text-muted-foreground mt-1 text-xs">{{ row.customerName }}</p>
+  <p class="mt-2 text-xs" [class.text-destructive]="isExpiringSoon(row)" [class.font-medium]="isExpiringSoon(row)">
+    Vigente hasta {{ row.expiresAt }}
+    @if (isExpiringSoon(row)) { · por vencer }
+  </p>
+  <p class="text-muted-foreground mt-2 text-xs">{{ row.currency }} {{ row.total | number: '1.2-2' }}</p>
+</ng-template>

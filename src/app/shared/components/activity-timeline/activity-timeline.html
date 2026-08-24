@@ -1,0 +1,18 @@
+@if (events().length) {
+  <ol class="flex flex-col gap-3">
+    @for (event of events(); track $index) {
+      <li class="flex gap-3 text-sm">
+        <span class="bg-muted-foreground mt-1.5 size-1.5 shrink-0 rounded-full"></span>
+        <div>
+          <p><span class="font-medium">{{ event.user }}</span> — {{ event.action }}</p>
+          @if (event.detail) {
+            <p class="text-muted-foreground">{{ event.detail }}</p>
+          }
+          <p class="text-muted-foreground text-xs">{{ event.date }}</p>
+        </div>
+      </li>
+    }
+  </ol>
+} @else {
+  <p class="text-muted-foreground text-sm">Sin historial registrado.</p>
+}

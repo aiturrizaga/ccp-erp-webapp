@@ -1,0 +1,72 @@
+<div class="flex flex-col gap-4">
+  <div>
+    <h1 class="text-xl font-semibold tracking-tight">Bandeja de aprobaciones</h1>
+    <p class="text-muted-foreground text-sm">Aprobaciones transversales de Compras, PLM y demás Apps — un único lugar para Gerencia y jefaturas.</p>
+  </div>
+
+  <app-data-filters [(search)]="search" searchPlaceholder="Buscar por documento, descripción o solicitante...">
+    <app-select-filter [options]="statusOptions" [(value)]="statusFilter" placeholder="Pendientes" />
+  </app-data-filters>
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.4fr_1fr]">
+    <app-data-table
+      [columns]="columns"
+      [rows]="filteredApprovals()"
+      [rowClickable]="true"
+      emptyMessage="No hay aprobaciones para este filtro."
+      (rowClick)="select($event)"
+      [cellTemplate]="cellTpl"
+    />
+
+    <div class="rounded-lg border p-4">
+      @if (selected(); as approval) {
+        <div class="flex flex-col gap-4">
+          <div>
+            <p class="text-muted-foreground text-xs">{{ processLabel(approval.process) }}</p>
+            <h2 class="font-semibold">{{ approval.documentNumber }}</h2>
+            <p class="text-muted-foreground text-sm">{{ approval.description }}</p>
+          </div>
+          <div class="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <span>Solicitante: {{ approval.requestedBy }}</span>
+            <span>Planta: {{ approval.plant }}</span>
+            <span>Creado: {{ approval.createdAt }}</span>
+            @if (approval.amount) {
+              <span>Monto: {{ approval.currency }} {{ approval.amount | number: '1.2-2' }}</span>
+            }
+          </div>
+          <app-approval-timeline [levels]="approval.levels" />
+          @if (approval.status === 'pending') {
+            <div class="flex gap-2 border-t pt-3">
+              <button hlmBtn size="sm">Aprobar</button>
+              <button hlmBtn size="sm" variant="outline">Observar</button>
+              <button hlmBtn size="sm" variant="destructive">Rechazar</button>
+            </div>
+          }
+        </div>
+      } @else {
+        <app-empty-state icon="tablerCircleCheck" title="Selecciona una aprobación" description="Elige un documento de la lista para ver su línea de tiempo de aprobación." />
+      }
+    </div>
+  </div>
+</div>
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('process') {
+      {{ processLabel(row.process) }}
+    }
+    @case ('amount') {
+      @if (row.amount) {
+        {{ row.currency }} {{ row.amount | number: '1.2-2' }}
+      } @else {
+        —
+      }
+    }
+    @case ('status') {
+      <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
+    }
+    @default {
+      {{ row[key] }}
+    }
+  }
+</ng-template>

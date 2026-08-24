@@ -1,0 +1,51 @@
+<header class="relative flex h-14 shrink-0 items-center gap-2 border-b px-3">
+  <button hlmSidebarTrigger class="cursor-pointer"></button>
+
+  <button hlmBtn variant="ghost" size="icon" aria-label="Abrir selector de Apps" class="cursor-pointer" (click)="appLauncher.toggle()">
+    <ng-icon name="tablerLayoutGrid" class="text-lg" />
+  </button>
+
+  <hlm-separator orientation="vertical" class="me-2 self-stretch !bg-foreground/20" />
+
+  <nav hlmBreadcrumb>
+    <ol hlmBreadcrumbList>
+      <li hlmBreadcrumbItem class="hidden sm:block">
+        <a hlmBreadcrumbLink link="/" class="cursor-pointer">{{ appName() }}</a>
+      </li>
+      <li hlmBreadcrumbSeparator class="hidden sm:block"></li>
+      <li hlmBreadcrumbItem>
+        <a hlmBreadcrumbPage>{{ pageLabel() }}</a>
+      </li>
+    </ol>
+  </nav>
+
+  <div class="absolute start-1/2 hidden w-full max-w-md -translate-x-1/2 lg:block">
+    <ng-icon name="tablerSearch" class="text-muted-foreground pointer-events-none absolute top-1/2 start-2.5 -translate-y-1/2 text-sm" />
+    <input
+      type="search"
+      placeholder="Buscar artículos, órdenes, proveedores..."
+      class="border-input bg-background placeholder:text-muted-foreground focus-visible:ring-ring/50 h-8 w-full rounded-lg border ps-8 pe-3 text-sm outline-none focus-visible:ring-3"
+    />
+  </div>
+
+  <div class="ms-auto flex items-center gap-1">
+    <a routerLink="/approvals" class="relative cursor-pointer">
+      <button hlmBtn variant="ghost" size="icon" aria-label="Aprobaciones pendientes" class="cursor-pointer">
+        <ng-icon name="tablerClipboardCheck" class="text-lg" />
+      </button>
+      @if (pendingApprovals() > 0) {
+        <span hlmBadge variant="destructive" class="absolute -end-1 -top-1 h-4 min-w-4 justify-center px-1 text-[10px]">
+          {{ pendingApprovals() }}
+        </span>
+      }
+    </a>
+
+    <button hlmBtn variant="ghost" size="icon" aria-label="Notificaciones" class="cursor-pointer">
+      <ng-icon name="tablerBell" class="text-lg" />
+    </button>
+  </div>
+
+  @if (appLauncher.open()) {
+    <app-app-launcher (close)="appLauncher.hide()" />
+  }
+</header>

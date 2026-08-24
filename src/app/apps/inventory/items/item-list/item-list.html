@@ -1,0 +1,124 @@
+<app-list-toolbar
+  [(search)]="search"
+  searchPlaceholder="Buscar por código o descripción..."
+  [views]="views"
+  [(view)]="view"
+  [groupByOptions]="groupByOptions"
+  [(groupBy)]="groupBy"
+  [hasFilters]="true"
+  [filterCount]="filterCount()"
+  [hasSecondaryActions]="true"
+  actionLabel="Nuevo artículo"
+>
+  <div filters class="flex flex-col gap-3">
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Categoría</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of categoryOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="categoryFilter().has(opt.value)" (checkedChange)="toggleCategoryFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Estrategia de salida</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of strategyOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="strategyFilter().has(opt.value)" (checkedChange)="toggleStrategyFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Estado</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of activeOptions; track opt.label) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="activeFilter().has(opt.value)" (checkedChange)="toggleActiveFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    @if (filterCount() > 0) {
+      <button hlmBtn variant="ghost" size="sm" class="justify-start gap-1.5" (click)="clearFilters()">
+        <ng-icon name="tablerFilter" />
+        Limpiar filtros
+      </button>
+    }
+  </div>
+
+  <div secondaryActions class="flex flex-col gap-0.5">
+    <button hlmBtn variant="ghost" size="sm" class="justify-start gap-2">
+      <ng-icon name="tablerDownload" />
+      Exportar a Excel
+    </button>
+    <button hlmBtn variant="ghost" size="sm" class="justify-start gap-2">
+      <ng-icon name="tablerUpload" />
+      Importar artículos
+    </button>
+  </div>
+</app-list-toolbar>
+
+@if (groupedSections(); as sections) {
+  <div class="flex flex-col gap-5">
+    @for (section of sections; track section.label) {
+      <div>
+        <h3 class="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{{ section.label }} · {{ section.rows.length }}</h3>
+        @if (view() === 'list') {
+          <app-data-table [columns]="columns" [rows]="section.rows" [rowClickable]="true" (rowClick)="openDetail($event)" [cellTemplate]="cellTpl" />
+        } @else {
+          <app-data-grid [rows]="section.rows" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" />
+        }
+      </div>
+    }
+  </div>
+} @else {
+  @if (view() === 'list') {
+    <app-data-table
+      [columns]="columns"
+      [rows]="paginatedRows()"
+      [rowClickable]="true"
+      (rowClick)="openDetail($event)"
+      emptyMessage="No se encontraron artículos."
+      [cellTemplate]="cellTpl"
+    />
+  } @else {
+    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron artículos." />
+  }
+  <app-list-pagination [total]="filteredRows().length" [(page)]="page" [(pageSize)]="pageSize" />
+}
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('category') {
+      <app-status-badge [label]="categoryLabel(row.category)" [tone]="categoryTone(row.category)" />
+    }
+    @case ('averageCost') {
+      {{ row.currency }} {{ row.averageCost }}
+    }
+    @case ('active') {
+      <app-status-badge [label]="activeLabel(row.active)" [tone]="activeTone(row.active)" />
+    }
+    @default {
+      {{ row[key] }}
+    }
+  }
+</ng-template>
+
+<ng-template #cardTpl let-row>
+  <div class="flex items-start justify-between gap-2">
+    <p class="text-sm font-medium">{{ row.code }}</p>
+    <app-status-badge [label]="activeLabel(row.active)" [tone]="activeTone(row.active)" />
+  </div>
+  <p class="text-muted-foreground mt-1 text-xs">{{ row.description }}</p>
+  <div class="mt-2 flex items-center gap-2">
+    <app-status-badge [label]="categoryLabel(row.category)" [tone]="categoryTone(row.category)" />
+    <span class="text-muted-foreground text-xs">{{ row.unitOfMeasure }}</span>
+  </div>
+  <p class="text-muted-foreground mt-2 text-xs">{{ row.currency }} {{ row.averageCost }}</p>
+</ng-template>

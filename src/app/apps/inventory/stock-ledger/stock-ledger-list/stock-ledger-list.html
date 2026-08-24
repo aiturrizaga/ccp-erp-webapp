@@ -1,0 +1,62 @@
+<app-list-toolbar
+  [(search)]="search"
+  searchPlaceholder="Buscar por documento o artículo..."
+  [views]="views"
+  [(view)]="view"
+  [hasFilters]="true"
+  [filterCount]="filterCount()"
+  [hasSecondaryActions]="true"
+>
+  <div filters class="flex flex-col gap-3">
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Tipo de movimiento</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of typeOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="typeFilter().has(opt.value)" (checkedChange)="toggleTypeFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    @if (filterCount() > 0) {
+      <button hlmBtn variant="ghost" size="sm" class="justify-start gap-1.5" (click)="clearFilters()">
+        <ng-icon name="tablerFilter" />
+        Limpiar filtros
+      </button>
+    }
+  </div>
+
+  <div secondaryActions class="flex flex-col gap-0.5">
+    <button hlmBtn variant="ghost" size="sm" class="justify-start gap-2">
+      <ng-icon name="tablerDownload" />
+      Exportar a Excel
+    </button>
+  </div>
+</app-list-toolbar>
+
+<app-data-table [columns]="columns" [rows]="paginatedRows()" emptyMessage="No se encontraron movimientos." [cellTemplate]="cellTpl" />
+<app-list-pagination [total]="filteredRows().length" [(page)]="page" [(pageSize)]="pageSize" />
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('itemId') {
+      {{ itemLabel(row.itemId) }}
+    }
+    @case ('locationId') {
+      {{ locationName(row.locationId) }}
+    }
+    @case ('type') {
+      <app-status-badge [label]="typeLabel(row.type)" [tone]="typeTone(row.type)" />
+    }
+    @case ('inboundQuantity') {
+      {{ row.inboundQuantity || '—' }}
+    }
+    @case ('outboundQuantity') {
+      {{ row.outboundQuantity || '—' }}
+    }
+    @default {
+      {{ row[key] }}
+    }
+  }
+</ng-template>

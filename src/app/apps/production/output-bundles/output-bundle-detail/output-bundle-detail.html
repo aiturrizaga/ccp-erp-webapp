@@ -1,0 +1,108 @@
+@if (bundle(); as b) {
+  <app-entity-header
+    [title]="b.number"
+    [subtitle]="b.plant + ' · ' + b.date"
+    [statusLabel]="statusLabel(b.status)"
+    [statusTone]="statusTone(b.status)"
+    [crumbs]="[{ label: 'Bolsa de salidas', link: '/apps/production/output-bundles' }, { label: b.number }]"
+  />
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.6fr_1fr]">
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Hojas de trabajo incluidas</h3>
+        <ul class="divide-y text-sm">
+          @for (ws of workSheets(); track ws.id) {
+            <li class="flex items-center justify-between py-2">
+              <a [routerLink]="['/apps/production/work-sheets', ws.id]" class="text-primary hover:underline">{{ ws.number }}</a>
+              <span class="text-muted-foreground text-xs">{{ ws.plant }}</span>
+            </li>
+          }
+        </ul>
+      </div>
+
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Lotes seleccionados</h3>
+        <table class="w-full text-sm">
+          <thead class="text-muted-foreground border-b text-xs">
+            <tr>
+              <th class="py-1.5 text-start font-medium">Artículo</th>
+              <th class="py-1.5 text-start font-medium">Lote</th>
+              <th class="py-1.5 text-end font-medium">Cantidad</th>
+              <th class="py-1.5 text-start font-medium">Recomendado</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            @for (lot of b.selectedLots; track lot.lotId) {
+              <tr>
+                <td class="py-2">{{ itemLabel(lot.itemId) }}</td>
+                <td class="py-2">{{ lotCode(lot.lotId) }}</td>
+                <td class="py-2 text-end">{{ lot.quantity }}</td>
+                <td class="py-2">{{ lot.recommended ? 'Sí, según estrategia PEPS/FEFO' : 'Selección manual' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Excepciones — suministros no contemplados</h3>
+        @if (b.exceptions.length) {
+          <ul class="flex flex-col gap-2 text-sm">
+            @for (exception of b.exceptions; track exception.itemId) {
+              <li class="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
+                <div class="flex items-center justify-between">
+                  <span class="font-medium">{{ itemLabel(exception.itemId) }}</span>
+                  <app-status-badge
+                    [label]="exception.status === 'authorized' ? 'Autorizado' : exception.status === 'rejected' ? 'Rechazado' : 'Pendiente'"
+                    [tone]="exception.status === 'authorized' ? 'success' : exception.status === 'rejected' ? 'danger' : 'warning'"
+                  />
+                </div>
+                <p class="text-muted-foreground mt-1 text-xs">{{ exception.reason }}</p>
+                @if (exception.authorizedBy) {
+                  <p class="mt-1 text-xs">Autorizado por {{ exception.authorizedBy }}</p>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <app-empty-state icon="tablerCircleCheck" title="Sin excepciones" description="Todos los suministros usados estaban contemplados en las Hojas de Trabajo." />
+        }
+      </div>
+    </div>
+
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Firmas digitales</h3>
+      <dl class="flex flex-col gap-3 text-sm">
+        <div class="flex items-center justify-between">
+          <span class="text-muted-foreground">Operador</span>
+          @if (b.operatorSignature) {
+            <span class="inline-flex items-center gap-1 font-medium"><ng-icon name="tablerSignature" /> {{ b.operatorSignature }}</span>
+          } @else {
+            <span class="text-muted-foreground">Pendiente</span>
+          }
+        </div>
+        <div class="flex items-center justify-between">
+          <span class="text-muted-foreground">Supervisor de producción</span>
+          @if (b.supervisorSignature) {
+            <span class="inline-flex items-center gap-1 font-medium"><ng-icon name="tablerSignature" /> {{ b.supervisorSignature }}</span>
+          } @else {
+            <span class="text-muted-foreground">Pendiente</span>
+          }
+        </div>
+      </dl>
+
+      @if (b.status !== 'dispatched') {
+        <button hlmBtn class="mt-4 w-full">
+          @switch (b.status) {
+            @case ('preparing') { Seleccionar lotes }
+            @case ('lot_selected') { Firmar y confirmar }
+            @case ('signed') { Despachar }
+          }
+        </button>
+      }
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerBackpack" title="Bolsa de salida no encontrada" />
+}

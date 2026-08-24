@@ -1,0 +1,29 @@
+<div class="flex flex-wrap items-center justify-between gap-3 border-t py-3 text-sm">
+  <div class="text-muted-foreground">
+    @if (total() > 0) {
+      Mostrando {{ rangeStart() }}–{{ rangeEnd() }} de {{ total() }}
+    } @else {
+      Sin registros
+    }
+  </div>
+
+  <div class="flex items-center gap-3">
+    <app-select-filter [options]="pageSizeSelectOptions()" [value]="pageSizeValue()" (valueChange)="setPageSize($event)" />
+
+    <div class="flex items-center gap-1">
+      <button hlmBtn variant="outline" size="icon-sm" [disabled]="page() === 1" (click)="goTo(1)" aria-label="Primera página">
+        <ng-icon name="tablerChevronsLeft" />
+      </button>
+      <button hlmBtn variant="outline" size="icon-sm" [disabled]="page() === 1" (click)="goTo(page() - 1)" aria-label="Página anterior">
+        <ng-icon name="tablerChevronLeft" />
+      </button>
+      <span class="text-muted-foreground px-2 text-xs whitespace-nowrap">Página {{ page() }} de {{ pageCount() }}</span>
+      <button hlmBtn variant="outline" size="icon-sm" [disabled]="page() === pageCount()" (click)="goTo(page() + 1)" aria-label="Página siguiente">
+        <ng-icon name="tablerChevronRight" />
+      </button>
+      <button hlmBtn variant="outline" size="icon-sm" [disabled]="page() === pageCount()" (click)="goTo(pageCount())" aria-label="Última página">
+        <ng-icon name="tablerChevronsRight" />
+      </button>
+    </div>
+  </div>
+</div>

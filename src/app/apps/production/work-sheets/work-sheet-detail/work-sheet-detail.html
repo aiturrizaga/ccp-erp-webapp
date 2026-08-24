@@ -1,0 +1,60 @@
+@if (workSheet(); as ws) {
+  <app-entity-header
+    [title]="ws.number"
+    [subtitle]="(product()?.name ?? ws.productId) + ' · ' + ws.plant"
+    [statusLabel]="statusLabel(ws.status)"
+    [statusTone]="statusTone(ws.status)"
+    [crumbs]="[{ label: 'Hojas de trabajo', link: '/apps/production/work-sheets' }, { label: ws.number }]"
+  >
+    <div actions>
+      <a [routerLink]="['/apps/plm/bill-of-materials', ws.bomId]" class="text-primary text-sm hover:underline">Ver BOM {{ ws.bomVersion }}</a>
+    </div>
+  </app-entity-header>
+
+  @if (ws.atRisk) {
+    <div class="mb-4 flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+      <ng-icon name="tablerAlertTriangle" class="mt-0.5 shrink-0" />
+      <span>Producción en riesgo: {{ ws.riskReason }}</span>
+    </div>
+  }
+
+  <div hlmCard class="p-4">
+    <h3 class="mb-3 text-sm font-semibold">Materiales y suministros</h3>
+    <table class="w-full text-sm">
+      <thead class="text-muted-foreground border-b text-xs">
+        <tr>
+          <th class="py-1.5 text-start font-medium">Artículo</th>
+          <th class="py-1.5 text-start font-medium">Tipo</th>
+          <th class="py-1.5 text-end font-medium">Requerido</th>
+          <th class="py-1.5 text-end font-medium">Disponible</th>
+          <th class="py-1.5 text-end font-medium">Reservado</th>
+          <th class="py-1.5 text-end font-medium">Consumido</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        @for (material of ws.materials; track material.itemId) {
+          <tr>
+            <td class="py-2">{{ itemLabel(material.itemId) }}</td>
+            <td class="py-2">{{ material.isSupply ? 'Suministro' : 'Materia prima' }}</td>
+            <td class="py-2 text-end">{{ material.required }} {{ material.unitOfMeasure }}</td>
+            <td class="py-2 text-end" [class.text-destructive]="shortfall(material.required, material.available)" [class.font-medium]="shortfall(material.required, material.available)">
+              {{ material.available }}
+            </td>
+            <td class="py-2 text-end">{{ material.reserved }}</td>
+            <td class="py-2 text-end">{{ material.consumed }}</td>
+          </tr>
+          @if (material.exception) {
+            <tr><td colspan="6" class="text-muted-foreground pb-2 text-xs italic"><ng-icon name="tablerAlertTriangle" class="align-middle" /> {{ material.exception }}</td></tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="mt-4 flex gap-2">
+    <button hlmBtn variant="outline">Reservar materiales</button>
+    <button hlmBtn>Agregar a bolsa de salida</button>
+  </div>
+} @else {
+  <app-empty-state icon="tablerClipboardText" title="Hoja de trabajo no encontrada" />
+}

@@ -1,0 +1,72 @@
+@if (quotation(); as q) {
+  <app-entity-header
+    [title]="q.number"
+    [subtitle]="q.customerName"
+    [statusLabel]="statusLabel(q.status)"
+    [statusTone]="statusTone(q.status)"
+    [crumbs]="[{ label: 'Cotizaciones', link: '/apps/sales/quotations' }, { label: q.number }]"
+  >
+    <div actions class="flex gap-2">
+      @if (canConfirmSale()) {
+        <button hlmBtn size="sm" (click)="confirmSale()">Confirmar venta</button>
+      }
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.6fr_1fr]">
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Líneas</h3>
+        <table class="w-full text-sm">
+          <thead class="text-muted-foreground border-b text-xs">
+            <tr>
+              <th class="py-1.5 text-start font-medium">Producto</th>
+              <th class="py-1.5 text-end font-medium">Cantidad</th>
+              <th class="py-1.5 text-end font-medium">Precio unit.</th>
+              <th class="py-1.5 text-end font-medium">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            @for (line of q.lines; track line.productCode) {
+              <tr>
+                <td class="py-2">{{ line.productCode }} — {{ line.description }}</td>
+                <td class="py-2 text-end">{{ line.quantity }} {{ line.unitOfMeasure }}</td>
+                <td class="py-2 text-end">{{ q.currency }} {{ line.unitPrice }}</td>
+                <td class="py-2 text-end font-medium">{{ q.currency }} {{ (line.quantity * line.unitPrice) | number: '1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot>
+            <tr class="border-t">
+              <td colspan="3" class="py-2 text-end text-sm font-semibold">Total</td>
+              <td class="py-2 text-end text-sm font-semibold">{{ q.currency }} {{ q.total | number: '1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      @if (q.notes) {
+        <div hlmCard class="p-4">
+          <h3 class="mb-3 text-sm font-semibold">Observaciones</h3>
+          <p class="text-sm">{{ q.notes }}</p>
+        </div>
+      }
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4 text-sm">
+        <dl class="grid grid-cols-2 gap-y-2">
+          <dt class="text-muted-foreground">Cliente</dt><dd>{{ q.customerName }}</dd>
+          <dt class="text-muted-foreground">Moneda</dt><dd>{{ q.currency }}</dd>
+          <dt class="text-muted-foreground">Emitida</dt><dd>{{ q.issuedAt }}</dd>
+          <dt class="text-muted-foreground">Vigente hasta</dt><dd>{{ q.expiresAt }}</dd>
+          @if (q.opportunityId) {
+            <dt class="text-muted-foreground">Oportunidad CRM</dt><dd>{{ q.opportunityId }}</dd>
+          }
+        </dl>
+      </div>
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerFileText" title="Cotización no encontrada" />
+}

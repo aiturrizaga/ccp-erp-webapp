@@ -1,0 +1,90 @@
+<app-list-toolbar
+  [(search)]="search"
+  searchPlaceholder="Buscar por artículo o lote..."
+  [views]="views"
+  [(view)]="view"
+  [groupByOptions]="groupByOptions"
+  [(groupBy)]="groupBy"
+  [hasFilters]="true"
+  [filterCount]="filterCount()"
+  [hasSecondaryActions]="true"
+>
+  <div filters class="flex flex-col gap-3">
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Estado</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of statusOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="statusFilter().has(opt.value)" (checkedChange)="toggleStatusFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    @if (filterCount() > 0) {
+      <button hlmBtn variant="ghost" size="sm" class="justify-start gap-1.5" (click)="clearFilters()">
+        <ng-icon name="tablerFilter" />
+        Limpiar filtros
+      </button>
+    }
+  </div>
+
+  <div secondaryActions class="flex flex-col gap-0.5">
+    <button hlmBtn variant="ghost" size="sm" class="justify-start gap-2">
+      <ng-icon name="tablerDownload" />
+      Exportar a Excel
+    </button>
+  </div>
+</app-list-toolbar>
+
+@if (groupedSections(); as sections) {
+  <div class="flex flex-col gap-5">
+    @for (section of sections; track section.label) {
+      <div>
+        <h3 class="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{{ section.label }} · {{ section.rows.length }}</h3>
+        @if (view() === 'list') {
+          <app-data-table [columns]="columns" [rows]="section.rows" [cellTemplate]="cellTpl" />
+        } @else {
+          <app-data-grid [rows]="section.rows" [cardTemplate]="cardTpl" />
+        }
+      </div>
+    }
+  </div>
+} @else {
+  @if (view() === 'list') {
+    <app-data-table [columns]="columns" [rows]="paginatedRows()" emptyMessage="No se encontraron lotes." [cellTemplate]="cellTpl" />
+  } @else {
+    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" emptyMessage="No se encontraron lotes." />
+  }
+  <app-list-pagination [total]="filteredRows().length" [(page)]="page" [(pageSize)]="pageSize" />
+}
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('rank') {
+      @if (row.rank === 1) {
+        <span class="font-medium text-emerald-600">1º — siguiente en salir</span>
+      } @else {
+        {{ row.rank }}º
+      }
+    }
+    @case ('status') {
+      <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
+    }
+    @default {
+      {{ row[key] }}
+    }
+  }
+</ng-template>
+
+<ng-template #cardTpl let-row>
+  <div class="flex items-start justify-between gap-2">
+    <p class="text-sm font-medium">{{ row.itemLabel }}</p>
+    <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
+  </div>
+  <p class="text-muted-foreground mt-1 text-xs">Lote {{ row.lot }} · {{ row.locationName }}</p>
+  @if (row.rank === 1) {
+    <p class="mt-2 text-xs font-medium text-emerald-600">1º — siguiente en salir</p>
+  }
+  <p class="text-muted-foreground mt-2 text-xs">{{ row.quantity }} · ingreso {{ row.receivedAt }}</p>
+</ng-template>

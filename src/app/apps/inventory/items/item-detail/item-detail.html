@@ -1,0 +1,140 @@
+@if (item(); as it) {
+  <app-entity-header
+    [title]="it.code + ' — ' + it.description"
+    [subtitle]="it.group"
+    [statusLabel]="categoryLabel(it.category)"
+    [statusTone]="categoryTone(it.category)"
+    [crumbs]="[{ label: 'Artículos', link: '/apps/inventory/items' }, { label: it.code }]"
+  >
+    <div actions>
+      <button hlmBtn size="sm" variant="outline">Editar</button>
+    </div>
+  </app-entity-header>
+
+  <div hlmTabs tab="general">
+    <div hlmTabsList class="mb-4">
+      <button hlmTabsTrigger="general">General</button>
+      <button hlmTabsTrigger="suppliers">Proveedores</button>
+      <button hlmTabsTrigger="lots">Stock por lote</button>
+      <button hlmTabsTrigger="ledger">Kardex</button>
+    </div>
+
+    <div hlmTabsContent="general">
+      <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div hlmCard class="p-4">
+          <h3 class="mb-3 text-sm font-semibold">Datos generales</h3>
+          <dl class="grid grid-cols-2 gap-y-2 text-sm">
+            <dt class="text-muted-foreground">Unidad de medida</dt><dd>{{ it.unitOfMeasure }}</dd>
+            <dt class="text-muted-foreground">Controla lote</dt><dd>{{ it.tracksLot ? 'Sí' : 'No' }}</dd>
+            <dt class="text-muted-foreground">Controla vencimiento</dt><dd>{{ it.tracksExpiration ? 'Sí' : 'No' }}</dd>
+            <dt class="text-muted-foreground">Estrategia de salida</dt><dd>{{ it.outboundStrategy === 'NONE' ? '—' : it.outboundStrategy }}</dd>
+            <dt class="text-muted-foreground">Estado</dt><dd>{{ it.active ? 'Activo' : 'Inactivo' }}</dd>
+          </dl>
+        </div>
+        <div hlmCard class="p-4">
+          <h3 class="mb-3 text-sm font-semibold">Costos e inventario</h3>
+          <dl class="grid grid-cols-2 gap-y-2 text-sm">
+            <dt class="text-muted-foreground">Costo estándar</dt><dd>{{ it.currency }} {{ it.standardCost }}</dd>
+            <dt class="text-muted-foreground">Último costo</dt><dd>{{ it.currency }} {{ it.lastCost }}</dd>
+            <dt class="text-muted-foreground">Costo promedio</dt><dd>{{ it.currency }} {{ it.averageCost }}</dd>
+            <dt class="text-muted-foreground">Stock mínimo</dt><dd>{{ it.minStock }}</dd>
+            <dt class="text-muted-foreground">Punto de reposición</dt><dd>{{ it.reorderPoint }}</dd>
+            <dt class="text-muted-foreground">Stock máximo</dt><dd>{{ it.maxStock }}</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+
+    <div hlmTabsContent="suppliers">
+      @if (it.suppliers.length) {
+        <table class="w-full text-sm">
+          <thead class="text-muted-foreground border-b text-xs">
+            <tr>
+              <th class="py-1.5 text-start font-medium">Proveedor</th>
+              <th class="py-1.5 text-end font-medium">Precio</th>
+              <th class="py-1.5 text-end font-medium">Lead time</th>
+              <th class="py-1.5 text-start font-medium">Principal</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            @for (link of it.suppliers; track link.supplierId) {
+              <tr>
+                <td class="py-2">{{ supplierName(link.supplierId) }}</td>
+                <td class="py-2 text-end">{{ link.currency }} {{ link.price }}</td>
+                <td class="py-2 text-end">{{ link.leadTimeDays }} días</td>
+                <td class="py-2">{{ link.isPrimary ? 'Sí' : '' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <app-empty-state icon="tablerBuilding" title="Sin proveedores asociados" description="Este artículo es un producto terminado, no se compra a proveedores." />
+      }
+    </div>
+
+    <div hlmTabsContent="lots">
+      @if (lots().length) {
+        <table class="w-full text-sm">
+          <thead class="text-muted-foreground border-b text-xs">
+            <tr>
+              <th class="py-1.5 text-start font-medium">Lote</th>
+              <th class="py-1.5 text-start font-medium">Ubicación</th>
+              <th class="py-1.5 text-start font-medium">Ingreso</th>
+              <th class="py-1.5 text-end font-medium">Cantidad</th>
+              <th class="py-1.5 text-start font-medium">Estado</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            @for (lot of lots(); track lot.id) {
+              <tr>
+                <td class="py-2">{{ lot.lot }}</td>
+                <td class="py-2">{{ locationName(lot.locationId) }}</td>
+                <td class="py-2">{{ lot.receivedAt }}</td>
+                <td class="py-2 text-end">{{ lot.quantity }}</td>
+                <td class="py-2"><app-status-badge [label]="stockStatusLabel(lot.status)" [tone]="stockStatusTone(lot.status)" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+        <p class="text-muted-foreground mt-2 text-xs">
+          Ordenado por antigüedad de ingreso — {{ it.outboundStrategy === 'FEFO' ? 'estrategia FEFO (primero en vencer, primero en salir)' : it.outboundStrategy === 'FIFO' ? 'estrategia FIFO (primero en entrar, primero en salir)' : 'sin estrategia de salida configurada' }}.
+        </p>
+      } @else {
+        <app-empty-state icon="tablerPackage" title="Sin lotes en stock" />
+      }
+    </div>
+
+    <div hlmTabsContent="ledger">
+      @if (ledger().length) {
+        <table class="w-full text-sm">
+          <thead class="text-muted-foreground border-b text-xs">
+            <tr>
+              <th class="py-1.5 text-start font-medium">Fecha</th>
+              <th class="py-1.5 text-start font-medium">Documento</th>
+              <th class="py-1.5 text-end font-medium">Entrada</th>
+              <th class="py-1.5 text-end font-medium">Salida</th>
+              <th class="py-1.5 text-end font-medium">Saldo</th>
+              <th class="py-1.5 text-start font-medium">Usuario</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            @for (mv of ledger(); track mv.id) {
+              <tr>
+                <td class="py-2">{{ mv.date }}</td>
+                <td class="py-2">{{ mv.documentNumber }}</td>
+                <td class="py-2 text-end">{{ mv.inboundQuantity || '—' }}</td>
+                <td class="py-2 text-end">{{ mv.outboundQuantity || '—' }}</td>
+                <td class="py-2 text-end font-medium">{{ mv.balance }}</td>
+                <td class="py-2">{{ mv.user }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      } @else {
+        <app-empty-state icon="tablerBook" title="Sin movimientos de kardex" />
+      }
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerBox" title="Artículo no encontrado" />
+}

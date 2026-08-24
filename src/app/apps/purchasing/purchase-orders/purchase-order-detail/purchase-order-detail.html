@@ -1,0 +1,105 @@
+@if (po(); as p) {
+  <app-entity-header
+    [title]="p.number"
+    [subtitle]="supplierName(p.supplierId)"
+    [statusLabel]="statusLabel(p.status)"
+    [statusTone]="statusTone(p.status)"
+    [crumbs]="[{ label: 'Órdenes de compra', link: '/apps/purchasing/purchase-orders' }, { label: p.number }]"
+  >
+    <div actions class="flex gap-2">
+      @if (p.status === 'pending_approval') {
+        <button hlmBtn size="sm" variant="outline">Rechazar</button>
+        <button hlmBtn size="sm">Aprobar</button>
+      }
+      @if (canRegisterInvoice(p)) {
+        <button hlmBtn size="sm" (click)="registerInvoice(p)">Registrar factura</button>
+      }
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.6fr_1fr]">
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Líneas</h3>
+        <table class="w-full text-sm">
+          <thead class="text-muted-foreground border-b text-xs">
+            <tr>
+              <th class="py-1.5 text-start font-medium">Artículo</th>
+              <th class="py-1.5 text-end font-medium">Cantidad</th>
+              <th class="py-1.5 text-end font-medium">Recibido</th>
+              <th class="py-1.5 text-end font-medium">Precio unit.</th>
+              <th class="py-1.5 text-end font-medium">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            @for (line of p.lines; track line.itemId) {
+              <tr>
+                <td class="py-2">{{ itemLabel(line.itemId) }}</td>
+                <td class="py-2 text-end">{{ line.quantity }} {{ line.unitOfMeasure }}</td>
+                <td class="py-2 text-end">{{ line.receivedQuantity }}</td>
+                <td class="py-2 text-end">{{ p.currency }} {{ line.unitPrice }}</td>
+                <td class="py-2 text-end font-medium">{{ p.currency }} {{ (line.quantity * line.unitPrice) | number: '1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Términos y condiciones</h3>
+        <dl class="grid grid-cols-1 gap-3 text-sm">
+          <div><dt class="text-muted-foreground text-xs">Condiciones de entrega</dt><dd>{{ p.termsAndConditions || '—' }}</dd></div>
+          <div><dt class="text-muted-foreground text-xs">Penalidades</dt><dd>{{ p.penalties || '—' }}</dd></div>
+          <div><dt class="text-muted-foreground text-xs">Garantías</dt><dd>{{ p.warranty || '—' }}</dd></div>
+          @if (p.notes) {
+            <div><dt class="text-muted-foreground text-xs">Observaciones</dt><dd>{{ p.notes }}</dd></div>
+          }
+        </dl>
+      </div>
+
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Recepciones</h3>
+        @if (receipts().length) {
+          <ul class="divide-y text-sm">
+            @for (r of receipts(); track r.id) {
+              <li class="flex items-center justify-between py-2">
+                <a [routerLink]="['/apps/inventory/goods-receipt', r.id]" class="text-primary hover:underline">{{ r.number }}</a>
+                <span class="text-muted-foreground text-xs">{{ r.actualDate ?? r.expectedDate }} · {{ r.status }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="text-muted-foreground text-sm">Sin recepciones registradas.</p>
+        }
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4 text-sm">
+        <dl class="grid grid-cols-2 gap-y-2">
+          <dt class="text-muted-foreground">Moneda</dt><dd>{{ p.currency }} @if (p.currency === 'USD') { (TC {{ p.exchangeRate }}) }</dd>
+          <dt class="text-muted-foreground">Condición de pago</dt><dd>{{ p.paymentTerms }}</dd>
+          <dt class="text-muted-foreground">Emitida</dt><dd>{{ p.issuedAt }}</dd>
+          <dt class="text-muted-foreground">Entrega comprometida</dt><dd>{{ p.committedDeliveryDate }} {{ p.committedDeliveryTime }}</dd>
+          <dt class="text-muted-foreground">Planta</dt><dd>{{ p.plant }}</dd>
+        </dl>
+      </div>
+
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Aprobación</h3>
+        @if (approval(); as a) {
+          <app-approval-timeline [levels]="a.levels" />
+        } @else {
+          <app-empty-state icon="tablerClockHour4" title="Sin flujo de aprobación" />
+        }
+      </div>
+
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Evidencias</h3>
+        <app-document-attachments [attachments]="attachments()" />
+      </div>
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerPackage" title="Orden de compra no encontrada" />
+}
