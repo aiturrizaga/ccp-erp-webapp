@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { loadPersistedState, persistState } from '@core/supabase/state-persistence';
 import { ITEMS } from '@core/mock-data';
 import { Item, ItemSupplierLink, StockTypeCode } from '@core/models';
 
@@ -16,6 +17,13 @@ export type NewItemInput = Omit<Item, 'id' | 'code'>;
 @Injectable({ providedIn: 'root' })
 export class InventoryState {
   readonly items = signal<Item[]>([...ITEMS]);
+
+  constructor() {
+    loadPersistedState<Item[]>('inventory-items').then((items) => {
+      if (items) this.items.set(items);
+    });
+    persistState<Item[]>('inventory-items', () => this.items());
+  }
 
   addItem(input: NewItemInput): Item {
     const code = this.nextCode(STOCK_TYPE_PREFIX[input.stockType]);

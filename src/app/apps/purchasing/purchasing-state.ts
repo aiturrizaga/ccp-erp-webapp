@@ -1,4 +1,5 @@
 import { Injectable, signal } from '@angular/core';
+import { loadPersistedState, persistState } from '@core/supabase/state-persistence';
 import { PURCHASE_ORDERS, PURCHASE_REQUISITIONS, QUOTATIONS, SUPPLIERS } from '@core/mock-data';
 import {
   Currency,
@@ -17,6 +18,13 @@ import {
 
 const TODAY = '2026-08-23';
 
+interface PurchasingSnapshot {
+  requisitions: PurchaseRequisition[];
+  quotations: Quotation[];
+  purchaseOrders: PurchaseOrder[];
+  suppliers: Supplier[];
+}
+
 /**
  * Mutable in-memory copy of the purchasing fixtures so contextual actions (generate quotation from
  * a requisition, award a quotation into a purchase order, Almacén editing an auto-generated
@@ -33,6 +41,25 @@ export class PurchasingState {
   private nextQuotationSeq = QUOTATIONS.length + 1;
   private nextPurchaseOrderSeq = PURCHASE_ORDERS.length + 1;
   private nextSupplierSeq = SUPPLIERS.length + 1;
+
+  constructor() {
+    loadPersistedState<PurchasingSnapshot>('purchasing').then((snapshot) => {
+      if (!snapshot) return;
+      this.requisitions.set(snapshot.requisitions);
+      this.quotations.set(snapshot.quotations);
+      this.purchaseOrders.set(snapshot.purchaseOrders);
+      this.suppliers.set(snapshot.suppliers);
+      this.nextQuotationSeq = snapshot.quotations.length + 1;
+      this.nextPurchaseOrderSeq = snapshot.purchaseOrders.length + 1;
+      this.nextSupplierSeq = snapshot.suppliers.length + 1;
+    });
+    persistState<PurchasingSnapshot>('purchasing', () => ({
+      requisitions: this.requisitions(),
+      quotations: this.quotations(),
+      purchaseOrders: this.purchaseOrders(),
+      suppliers: this.suppliers(),
+    }));
+  }
 
   /** Quick "datos básicos" registration from within a quotation flow — the rest of the supplier profile (tier, credit, performance) is filled in later by Compras from the real Proveedores screen. */
   addSupplier(input: { legalName: string; taxId: string; phone: string; email: string; class: SupplierClass; currency: Currency; createdBy: string }): Supplier {

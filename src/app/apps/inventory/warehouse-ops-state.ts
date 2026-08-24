@@ -1,7 +1,14 @@
 import { Injectable, inject, signal } from '@angular/core';
+import { loadPersistedState, persistState } from '@core/supabase/state-persistence';
 import { GOODS_RECEIPTS, ITEMS, STOCK_ISSUES, STOCK_LEDGER, STOCK_LOTS, WAREHOUSES, WORK_SHEETS } from '@core/mock-data';
 import { GoodsReceipt, GoodsReceiptLine, GoodsReceiptStatus, PurchaseOrder, StockIssue, StockIssueStatus, StockLedgerEntry, StockLedgerSourceDocument } from '@core/models';
 import { PurchasingState } from '../purchasing/purchasing-state';
+
+interface WarehouseOpsSnapshot {
+  goodsReceipts: GoodsReceipt[];
+  stockIssues: StockIssue[];
+  stockLedger: StockLedgerEntry[];
+}
 
 /**
  * Mutable in-memory store for goods receipts. A receipt is scheduled the moment a Purchase Order is
@@ -22,6 +29,23 @@ export class WarehouseOpsState {
   private nextReceiptSeq = GOODS_RECEIPTS.length + 1;
   private nextIssueSeq = STOCK_ISSUES.length + 1;
   private nextLedgerSeq = STOCK_LEDGER.length + 1;
+
+  constructor() {
+    loadPersistedState<WarehouseOpsSnapshot>('warehouse-ops').then((snapshot) => {
+      if (!snapshot) return;
+      this.goodsReceipts.set(snapshot.goodsReceipts);
+      this.stockIssues.set(snapshot.stockIssues);
+      this.stockLedger.set(snapshot.stockLedger);
+      this.nextReceiptSeq = snapshot.goodsReceipts.length + 1;
+      this.nextIssueSeq = snapshot.stockIssues.length + 1;
+      this.nextLedgerSeq = snapshot.stockLedger.length + 1;
+    });
+    persistState<WarehouseOpsSnapshot>('warehouse-ops', () => ({
+      goodsReceipts: this.goodsReceipts(),
+      stockIssues: this.stockIssues(),
+      stockLedger: this.stockLedger(),
+    }));
+  }
 
   private defaultLocationId(): string {
     return WAREHOUSES[0]?.locations[0]?.id ?? '';
