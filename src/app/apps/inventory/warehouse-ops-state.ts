@@ -1,26 +1,26 @@
-import { Injectable, inject, signal } from '@angular/core';
-import { loadPersistedState, persistState } from '@core/supabase/state-persistence';
+import { Injectable, WritableSignal, inject, signal } from '@angular/core';
+import { TableStore } from '@core/supabase/table-store';
 import { GOODS_RECEIPTS, ITEMS, STOCK_ISSUES, STOCK_LEDGER, STOCK_LOTS, WAREHOUSES, WORK_SHEETS } from '@core/mock-data';
 import { GoodsReceipt, GoodsReceiptLine, GoodsReceiptStatus, PurchaseOrder, StockIssue, StockIssueStatus, StockLedgerEntry, StockLedgerSourceDocument } from '@core/models';
 import { PurchasingState } from '../purchasing/purchasing-state';
 
-interface WarehouseOpsSnapshot {
-  goodsReceipts: GoodsReceipt[];
-  stockIssues: StockIssue[];
-  stockLedger: StockLedgerEntry[];
-}
-
 /**
- * Mutable in-memory store for goods receipts. A receipt is scheduled the moment a Purchase Order is
- * awarded (before the supplier even confirms) so Almacén sees it on their agenda; Almacén then edits
- * the expected date/time, counts what actually arrived, and confirms — which rolls the accepted
- * quantities into the PO's cumulative received quantity. A delivery that falls short of the PO line
- * leaves a pending balance that Almacén can schedule a follow-up receipt for. No persistence — resets
- * on reload.
+ * Mutable store for goods receipts, stock issues and the Kardex, backed by Supabase tables
+ * (`goods_receipts`, `stock_issues`, `stock_ledger_entries`) — one row per document. A receipt is
+ * scheduled the moment a Purchase Order is awarded (before the supplier even confirms) so Almacén
+ * sees it on their agenda; Almacén then edits the expected date/time, counts what actually
+ * arrived, and confirms — which rolls the accepted quantities into the PO's cumulative received
+ * quantity. A delivery that falls short of the PO line leaves a pending balance that Almacén can
+ * schedule a follow-up receipt for. Falls back to the bundled fixtures when Supabase isn't
+ * configured or reachable.
  */
 @Injectable({ providedIn: 'root' })
 export class WarehouseOpsState {
   private readonly purchasingState = inject(PurchasingState);
+
+  private readonly goodsReceiptsStore = new TableStore<GoodsReceipt>('goods_receipts');
+  private readonly stockIssuesStore = new TableStore<StockIssue>('stock_issues');
+  private readonly stockLedgerStore = new TableStore<StockLedgerEntry>('stock_ledger_entries');
 
   readonly goodsReceipts = signal<GoodsReceipt[]>([...GOODS_RECEIPTS]);
   readonly stockIssues = signal<StockIssue[]>([...STOCK_ISSUES]);
@@ -31,20 +31,30 @@ export class WarehouseOpsState {
   private nextLedgerSeq = STOCK_LEDGER.length + 1;
 
   constructor() {
-    loadPersistedState<WarehouseOpsSnapshot>('warehouse-ops').then((snapshot) => {
-      if (!snapshot) return;
-      this.goodsReceipts.set(snapshot.goodsReceipts);
-      this.stockIssues.set(snapshot.stockIssues);
-      this.stockLedger.set(snapshot.stockLedger);
-      this.nextReceiptSeq = snapshot.goodsReceipts.length + 1;
-      this.nextIssueSeq = snapshot.stockIssues.length + 1;
-      this.nextLedgerSeq = snapshot.stockLedger.length + 1;
+    this.goodsReceiptsStore.fetchAll().then((rows) => {
+      if (!rows?.length) return;
+      this.goodsReceipts.set(rows);
+      this.nextReceiptSeq = rows.length + 1;
     });
-    persistState<WarehouseOpsSnapshot>('warehouse-ops', () => ({
-      goodsReceipts: this.goodsReceipts(),
-      stockIssues: this.stockIssues(),
-      stockLedger: this.stockLedger(),
-    }));
+    this.stockIssuesStore.fetchAll().then((rows) => {
+      if (!rows?.length) return;
+      this.stockIssues.set(rows);
+      this.nextIssueSeq = rows.length + 1;
+    });
+    this.stockLedgerStore.fetchAll().then((rows) => {
+      if (!rows?.length) return;
+      this.stockLedger.set(rows);
+      this.nextLedgerSeq = rows.length + 1;
+    });
+
+    this.goodsReceiptsStore.subscribe((r) => this.mergeRow(this.goodsReceipts, r));
+    this.stockIssuesStore.subscribe((i) => this.mergeRow(this.stockIssues, i));
+    this.stockLedgerStore.subscribe((e) => this.mergeRow(this.stockLedger, e));
+  }
+
+  /** Merges a row pushed by Realtime (another tab/user) into a local signal — update in place, or append if it's new to us. */
+  private mergeRow<T extends { id: string }>(sig: WritableSignal<T[]>, entity: T): void {
+    sig.update((rows) => (rows.some((r) => r.id === entity.id) ? rows.map((r) => (r.id === entity.id ? entity : r)) : [...rows, entity]));
   }
 
   private defaultLocationId(): string {
@@ -65,6 +75,18 @@ export class WarehouseOpsState {
       }));
   }
 
+  private updateGoodsReceipt(id: string, patch: (r: GoodsReceipt) => GoodsReceipt): void {
+    let patched: GoodsReceipt | undefined;
+    this.goodsReceipts.update((rows) =>
+      rows.map((r) => {
+        if (r.id !== id) return r;
+        patched = patch(r);
+        return patched;
+      }),
+    );
+    if (patched) this.goodsReceiptsStore.upsert(patched, (r) => ({ status: r.status, purchase_order_id: r.purchaseOrderId }));
+  }
+
   /** Called right when a PO is awarded, so Almacén sees the delivery coming before the supplier even confirms it. */
   scheduleReceiptForPurchaseOrder(po: PurchaseOrder): GoodsReceipt {
     const seq = this.nextReceiptSeq++;
@@ -81,6 +103,7 @@ export class WarehouseOpsState {
       photos: [],
     };
     this.goodsReceipts.update((rs) => [...rs, receipt]);
+    this.goodsReceiptsStore.upsert(receipt, (r) => ({ status: r.status, purchase_order_id: r.purchaseOrderId }));
     return receipt;
   }
 
@@ -103,21 +126,20 @@ export class WarehouseOpsState {
       photos: [],
     };
     this.goodsReceipts.update((rs) => [...rs, receipt]);
+    this.goodsReceiptsStore.upsert(receipt, (r) => ({ status: r.status, purchase_order_id: r.purchaseOrderId }));
     return receipt;
   }
 
   updateExpectedDate(receiptId: string, expectedDate: string): void {
-    this.goodsReceipts.update((rs) => rs.map((r) => (r.id === receiptId ? { ...r, expectedDate } : r)));
+    this.updateGoodsReceipt(receiptId, (r) => ({ ...r, expectedDate }));
   }
 
   updateExpectedTime(receiptId: string, expectedTime: string): void {
-    this.goodsReceipts.update((rs) => rs.map((r) => (r.id === receiptId ? { ...r, expectedTime } : r)));
+    this.updateGoodsReceipt(receiptId, (r) => ({ ...r, expectedTime }));
   }
 
   updateLine(receiptId: string, itemId: string, patch: Partial<GoodsReceiptLine>): void {
-    this.goodsReceipts.update((rs) =>
-      rs.map((r) => (r.id !== receiptId ? r : { ...r, lines: r.lines.map((l) => (l.itemId === itemId ? { ...l, ...patch } : l)) })),
-    );
+    this.updateGoodsReceipt(receiptId, (r) => ({ ...r, lines: r.lines.map((l) => (l.itemId === itemId ? { ...l, ...patch } : l)) }));
   }
 
   private statusFromLines(lines: GoodsReceiptLine[]): GoodsReceiptStatus {
@@ -134,7 +156,7 @@ export class WarehouseOpsState {
     if (!receipt) return;
 
     const status = this.statusFromLines(receipt.lines);
-    this.goodsReceipts.update((rs) => rs.map((r) => (r.id === receiptId ? { ...r, status, actualDate, actualTime, receivedBy } : r)));
+    this.updateGoodsReceipt(receiptId, (r) => ({ ...r, status, actualDate, actualTime, receivedBy }));
 
     const deltas: Record<string, number> = {};
     for (const line of receipt.lines) deltas[line.itemId] = (deltas[line.itemId] ?? 0) + line.acceptedQuantity;
@@ -173,6 +195,7 @@ export class WarehouseOpsState {
       user,
     };
     this.stockLedger.update((rows) => [...rows, entry]);
+    this.stockLedgerStore.upsert(entry, (e) => ({ item_id: e.itemId }));
   }
 
   /** Almacén attends a pending outbound order — can be partial, repeated as more stock becomes available. */
@@ -189,6 +212,7 @@ export class WarehouseOpsState {
     const date = now.toISOString().slice(0, 10);
     const time = now.toTimeString().slice(0, 5);
 
+    let patched: StockIssue | undefined;
     this.stockIssues.update((issues) =>
       issues.map((i) => {
         if (i.id !== issueId) return i;
@@ -196,14 +220,16 @@ export class WarehouseOpsState {
           const dispatched = quantities[line.itemId];
           return dispatched > 0 ? { ...line, dispatchedQuantity: line.dispatchedQuantity + dispatched } : line;
         });
-        return {
+        patched = {
           ...i,
           lines: updatedLines,
           status: this.issueStatusFromLines(updatedLines),
           dispatches: [...i.dispatches, { date, time, dispatchedBy, receivedBy, lines }],
         };
+        return patched;
       }),
     );
+    if (patched) this.stockIssuesStore.upsert(patched, (i) => ({ status: i.status, work_sheet_id: i.workSheetId ?? null }));
 
     for (const { itemId, quantity } of lines) {
       this.appendLedgerEntry(itemId, quantity, issue.workSheetId ? this.workSheetNumber(issue.workSheetId) : issue.number, 'WorkSheet', issue.plant, dispatchedBy);
@@ -240,6 +266,7 @@ export class WarehouseOpsState {
     };
 
     this.stockIssues.update((issues) => [...issues, issue]);
+    this.stockIssuesStore.upsert(issue, (i) => ({ status: i.status, work_sheet_id: i.workSheetId ?? null }));
 
     for (const line of input.lines) {
       this.appendLedgerEntry(line.itemId, line.quantity, issue.number, 'Adjustment', issue.plant, input.dispatchedBy);

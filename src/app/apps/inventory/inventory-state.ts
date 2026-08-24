@@ -1,5 +1,5 @@
 import { Injectable, signal } from '@angular/core';
-import { loadPersistedState, persistState } from '@core/supabase/state-persistence';
+import { TableStore } from '@core/supabase/table-store';
 import { ITEMS } from '@core/mock-data';
 import { Item, ItemSupplierLink, StockTypeCode } from '@core/models';
 
@@ -13,34 +13,42 @@ const STOCK_TYPE_PREFIX: Record<StockTypeCode, string> = {
 
 export type NewItemInput = Omit<Item, 'id' | 'code'>;
 
-/** In-memory mutable store for the item catalog, scoped to Inventario. Lets "Nuevo artículo" append a real Item without touching the read-only fixture array. No persistence — resets on reload. */
+/** Mutable store for the item catalog, backed by the Supabase `items` table — one row per article. Falls back to the bundled fixture when Supabase isn't configured or reachable. */
 @Injectable({ providedIn: 'root' })
 export class InventoryState {
+  private readonly itemsStore = new TableStore<Item>('items');
+
   readonly items = signal<Item[]>([...ITEMS]);
 
   constructor() {
-    loadPersistedState<Item[]>('inventory-items').then((items) => {
-      if (items) this.items.set(items);
+    this.itemsStore.fetchAll().then((rows) => {
+      if (rows?.length) this.items.set(rows);
     });
-    persistState<Item[]>('inventory-items', () => this.items());
+    this.itemsStore.subscribe((item) => {
+      this.items.update((items) => (items.some((i) => i.id === item.id) ? items.map((i) => (i.id === item.id ? item : i)) : [...items, item]));
+    });
   }
 
   addItem(input: NewItemInput): Item {
     const code = this.nextCode(STOCK_TYPE_PREFIX[input.stockType]);
     const item: Item = { ...input, id: code, code };
     this.items.update((items) => [...items, item]);
+    this.itemsStore.upsert(item, (i) => ({ code: i.code, active: i.active }));
     return item;
   }
 
   /** A new primary link demotes any other primary link already on the item — only one supplier can be primary at a time. */
   addSupplierLink(itemId: string, link: ItemSupplierLink): void {
+    let patched: Item | undefined;
     this.items.update((items) =>
       items.map((item) => {
         if (item.id !== itemId) return item;
         const suppliers = link.isPrimary ? item.suppliers.map((s) => ({ ...s, isPrimary: false })) : item.suppliers;
-        return { ...item, suppliers: [...suppliers, link] };
+        patched = { ...item, suppliers: [...suppliers, link] };
+        return patched;
       }),
     );
+    if (patched) this.itemsStore.upsert(patched, (i) => ({ code: i.code, active: i.active }));
   }
 
   private nextCode(prefix: string): string {

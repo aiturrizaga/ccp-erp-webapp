@@ -1,5 +1,5 @@
-import { Injectable, signal } from '@angular/core';
-import { loadPersistedState, persistState } from '@core/supabase/state-persistence';
+import { Injectable, WritableSignal, signal } from '@angular/core';
+import { TableStore } from '@core/supabase/table-store';
 import { PURCHASE_ORDERS, PURCHASE_REQUISITIONS, QUOTATIONS, SUPPLIERS } from '@core/mock-data';
 import {
   Currency,
@@ -18,21 +18,19 @@ import {
 
 const TODAY = '2026-08-23';
 
-interface PurchasingSnapshot {
-  requisitions: PurchaseRequisition[];
-  quotations: Quotation[];
-  purchaseOrders: PurchaseOrder[];
-  suppliers: Supplier[];
-}
-
 /**
- * Mutable in-memory copy of the purchasing fixtures so contextual actions (generate quotation from
- * a requisition, award a quotation into a purchase order, Almacén editing an auto-generated
- * requisition) can append/mutate documents without touching the shared fixture arrays. No
- * persistence — resets on reload.
+ * Mutable store for Compras' documents, backed by Supabase tables (`purchase_requisitions`,
+ * `quotations`, `purchase_orders`, `suppliers`) — one row per document, so two people editing
+ * different documents at once never clobber each other. Falls back to the bundled fixtures when
+ * Supabase isn't configured or reachable, so the prototype still works standalone.
  */
 @Injectable({ providedIn: 'root' })
 export class PurchasingState {
+  private readonly requisitionsStore = new TableStore<PurchaseRequisition>('purchase_requisitions');
+  private readonly quotationsStore = new TableStore<Quotation>('quotations');
+  private readonly purchaseOrdersStore = new TableStore<PurchaseOrder>('purchase_orders');
+  private readonly suppliersStore = new TableStore<Supplier>('suppliers');
+
   readonly requisitions = signal<PurchaseRequisition[]>([...PURCHASE_REQUISITIONS]);
   readonly quotations = signal<Quotation[]>([...QUOTATIONS]);
   readonly purchaseOrders = signal<PurchaseOrder[]>([...PURCHASE_ORDERS]);
@@ -43,22 +41,35 @@ export class PurchasingState {
   private nextSupplierSeq = SUPPLIERS.length + 1;
 
   constructor() {
-    loadPersistedState<PurchasingSnapshot>('purchasing').then((snapshot) => {
-      if (!snapshot) return;
-      this.requisitions.set(snapshot.requisitions);
-      this.quotations.set(snapshot.quotations);
-      this.purchaseOrders.set(snapshot.purchaseOrders);
-      this.suppliers.set(snapshot.suppliers);
-      this.nextQuotationSeq = snapshot.quotations.length + 1;
-      this.nextPurchaseOrderSeq = snapshot.purchaseOrders.length + 1;
-      this.nextSupplierSeq = snapshot.suppliers.length + 1;
+    this.requisitionsStore.fetchAll().then((rows) => {
+      if (!rows?.length) return;
+      this.requisitions.set(rows);
     });
-    persistState<PurchasingSnapshot>('purchasing', () => ({
-      requisitions: this.requisitions(),
-      quotations: this.quotations(),
-      purchaseOrders: this.purchaseOrders(),
-      suppliers: this.suppliers(),
-    }));
+    this.quotationsStore.fetchAll().then((rows) => {
+      if (!rows?.length) return;
+      this.quotations.set(rows);
+      this.nextQuotationSeq = rows.length + 1;
+    });
+    this.purchaseOrdersStore.fetchAll().then((rows) => {
+      if (!rows?.length) return;
+      this.purchaseOrders.set(rows);
+      this.nextPurchaseOrderSeq = rows.length + 1;
+    });
+    this.suppliersStore.fetchAll().then((rows) => {
+      if (!rows?.length) return;
+      this.suppliers.set(rows);
+      this.nextSupplierSeq = rows.length + 1;
+    });
+
+    this.requisitionsStore.subscribe((r) => this.mergeRow(this.requisitions, r));
+    this.quotationsStore.subscribe((q) => this.mergeRow(this.quotations, q));
+    this.purchaseOrdersStore.subscribe((po) => this.mergeRow(this.purchaseOrders, po));
+    this.suppliersStore.subscribe((s) => this.mergeRow(this.suppliers, s));
+  }
+
+  /** Merges a row pushed by Realtime (another tab/user) into a local signal — update in place, or append if it's new to us. */
+  private mergeRow<T extends { id: string }>(sig: WritableSignal<T[]>, entity: T): void {
+    sig.update((rows) => (rows.some((r) => r.id === entity.id) ? rows.map((r) => (r.id === entity.id ? entity : r)) : [...rows, entity]));
   }
 
   /** Quick "datos básicos" registration from within a quotation flow — the rest of the supplier profile (tier, credit, performance) is filled in later by Compras from the real Proveedores screen. */
@@ -84,11 +95,20 @@ export class PurchasingState {
       performance: { onTimeDeliveryPct: 0, completedOrdersPct: 0, qualityRating: 0 },
     };
     this.suppliers.update((rows) => [...rows, supplier]);
+    this.suppliersStore.upsert(supplier, (s) => ({ status: s.status }));
     return supplier;
   }
 
   private updateRequisition(id: string, patch: (r: PurchaseRequisition) => PurchaseRequisition): void {
-    this.requisitions.update((rows) => rows.map((r) => (r.id === id ? patch(r) : r)));
+    let patched: PurchaseRequisition | undefined;
+    this.requisitions.update((rows) =>
+      rows.map((r) => {
+        if (r.id !== id) return r;
+        patched = patch(r);
+        return patched;
+      }),
+    );
+    if (patched) this.requisitionsStore.upsert(patched, (r) => ({ status: r.status, area: r.area }));
   }
 
   private nextRequisitionNumber(): string {
@@ -127,6 +147,7 @@ export class PurchasingState {
       lines: input.lines,
     };
     this.requisitions.update((rows) => [...rows, requisition]);
+    this.requisitionsStore.upsert(requisition, (r) => ({ status: r.status, area: r.area }));
     return requisition;
   }
 
@@ -170,6 +191,18 @@ export class PurchasingState {
     this.updateRequisition(requisitionId, (r) => ({ ...r, status: 'draft' as const }));
   }
 
+  private updateQuotation(id: string, patch: (q: Quotation) => Quotation): void {
+    let patched: Quotation | undefined;
+    this.quotations.update((rows) =>
+      rows.map((q) => {
+        if (q.id !== id) return q;
+        patched = patch(q);
+        return patched;
+      }),
+    );
+    if (patched) this.quotationsStore.upsert(patched, (q) => ({ status: q.status, requisition_id: q.requisitionId }));
+  }
+
   createQuotationFromRequisition(requisition: PurchaseRequisition): Quotation {
     const seq = this.nextQuotationSeq++;
     const quotation: Quotation = {
@@ -189,27 +222,22 @@ export class PurchasingState {
         })),
     };
     this.quotations.update((quotations) => [...quotations, quotation]);
+    this.quotationsStore.upsert(quotation, (q) => ({ status: q.status, requisition_id: q.requisitionId }));
     return quotation;
   }
 
   /** Conie marks an RFQ as sent once she's requested quotes from suppliers, before any offers come back. */
   markQuotationSent(quotationId: string): void {
-    this.quotations.update((quotations) => quotations.map((q) => (q.id === quotationId ? { ...q, status: 'sent' as const } : q)));
+    this.updateQuotation(quotationId, (q) => ({ ...q, status: 'sent' as const }));
   }
 
   /** Conie registers a supplier's quotation received by phone/email as a manual offer, attaching the PDF she received as evidence. */
   addOfferToLine(quotationId: string, itemId: string, offer: QuotationOffer): void {
-    this.quotations.update((quotations) =>
-      quotations.map((q) =>
-        q.id !== quotationId
-          ? q
-          : {
-              ...q,
-              status: q.status === 'draft' || q.status === 'sent' ? ('received' as const) : q.status,
-              lines: q.lines.map((line) => (line.itemId === itemId ? { ...line, offers: [...line.offers, offer] } : line)),
-            },
-      ),
-    );
+    this.updateQuotation(quotationId, (q) => ({
+      ...q,
+      status: q.status === 'draft' || q.status === 'sent' ? ('received' as const) : q.status,
+      lines: q.lines.map((line) => (line.itemId === itemId ? { ...line, offers: [...line.offers, offer] } : line)),
+    }));
   }
 
   /**
@@ -255,29 +283,25 @@ export class PurchasingState {
     }
 
     this.purchaseOrders.update((orders_) => [...orders_, ...orders]);
+    this.purchaseOrdersStore.upsert(orders, (po) => ({ status: po.status, supplier_id: po.supplierId }));
 
     const distinctSuppliers = [...linesBySupplier.keys()];
-    this.quotations.update((quotations) =>
-      quotations.map((q) =>
-        q.id !== quotation.id
-          ? q
-          : {
-              ...q,
-              status: 'awarded' as const,
-              awardedSupplierId: distinctSuppliers.length === 1 ? distinctSuppliers[0] : undefined,
-              lines: q.lines.map((line) => ({
-                ...line,
-                offers: line.offers.map((o) => ({ ...o, selected: winners[line.itemId] === o.supplierId })),
-              })),
-            },
-      ),
-    );
+    this.updateQuotation(quotation.id, (q) => ({
+      ...q,
+      status: 'awarded' as const,
+      awardedSupplierId: distinctSuppliers.length === 1 ? distinctSuppliers[0] : undefined,
+      lines: q.lines.map((line) => ({
+        ...line,
+        offers: line.offers.map((o) => ({ ...o, selected: winners[line.itemId] === o.supplierId })),
+      })),
+    }));
 
     return orders;
   }
 
   /** Almacén confirmed a goods receipt — rolls the accepted quantities into the PO's cumulative received quantity and updates its status. */
   applyReceivedQuantities(purchaseOrderId: string, acceptedByItem: Record<string, number>): void {
+    let patched: PurchaseOrder | undefined;
     this.purchaseOrders.update((orders) =>
       orders.map((po) => {
         if (po.id !== purchaseOrderId) return po;
@@ -285,8 +309,10 @@ export class PurchasingState {
         const allReceived = lines.every((line) => line.receivedQuantity >= line.quantity);
         const anyReceived = lines.some((line) => line.receivedQuantity > 0);
         const status: PurchaseOrderStatus = allReceived ? 'received' : anyReceived ? 'partially_received' : po.status;
-        return { ...po, lines, status };
+        patched = { ...po, lines, status };
+        return patched;
       }),
     );
+    if (patched) this.purchaseOrdersStore.upsert(patched, (po) => ({ status: po.status, supplier_id: po.supplierId }));
   }
 }
