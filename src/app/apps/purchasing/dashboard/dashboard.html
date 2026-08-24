@@ -1,0 +1,76 @@
+<div class="flex flex-col gap-6">
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <app-stat-card
+      label="Solicitudes por aprobar"
+      [value]="pendingRequisitions().length + ''"
+      hint="pendientes de aprobación"
+      [trend]="pendingRequisitions().length ? 'down' : 'flat'"
+    />
+    <app-stat-card label="Cotizaciones en evaluación" [value]="quotationsUnderEvaluation() + ''" hint="enviadas o en evaluación" />
+    <app-stat-card
+      label="Órdenes por aprobar"
+      [value]="pendingPurchaseOrders().length + ''"
+      hint="pendientes de aprobación"
+      [trend]="pendingPurchaseOrders().length ? 'down' : 'flat'"
+    />
+    <app-stat-card label="Proveedores aprobados" [value]="approvedSuppliers() + ''" hint="en el catálogo" />
+  </div>
+
+  <div hlmCard class="p-4">
+    <h3 class="mb-3 text-sm font-semibold">Gasto mensual en órdenes de compra</h3>
+    <app-chart-canvas [config]="monthlySpendChart()" />
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Top proveedores por monto adjudicado</h3>
+      <app-chart-canvas [config]="topSuppliersChart()" [heightPx]="220" />
+    </div>
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Solicitudes por estado</h3>
+      <app-chart-canvas [config]="requisitionsByStatusChart()" [heightPx]="220" />
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+    <div class="rounded-lg border">
+      <div class="flex items-center justify-between border-b px-4 py-3">
+        <h2 class="text-sm font-semibold">Solicitudes pendientes de aprobación</h2>
+        <a routerLink="/apps/purchasing/requisitions" class="text-primary text-xs hover:underline">Ver solicitudes</a>
+      </div>
+      <ul class="divide-y">
+        @for (r of pendingRequisitions(); track r.id) {
+          <li class="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToRequisition(r.id)">
+            <div class="min-w-0">
+              <p class="font-medium">{{ r.number }}</p>
+              <p class="text-muted-foreground text-xs">{{ r.area }}</p>
+            </div>
+            <span class="text-muted-foreground text-xs whitespace-nowrap">{{ priorityLabel(r.priority) }}</span>
+          </li>
+        } @empty {
+          <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin solicitudes pendientes de aprobación.</li>
+        }
+      </ul>
+    </div>
+
+    <div class="rounded-lg border">
+      <div class="flex items-center justify-between border-b px-4 py-3">
+        <h2 class="text-sm font-semibold">Órdenes de compra por aprobar</h2>
+        <a routerLink="/apps/purchasing/purchase-orders" class="text-primary text-xs hover:underline">Ver órdenes</a>
+      </div>
+      <ul class="divide-y">
+        @for (po of pendingPurchaseOrders(); track po.id) {
+          <li class="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToPurchaseOrder(po.id)">
+            <div class="min-w-0">
+              <p class="font-medium">{{ po.number }}</p>
+              <p class="text-muted-foreground truncate text-xs">{{ supplierName(po.supplierId) }}</p>
+            </div>
+            <span class="text-muted-foreground text-xs whitespace-nowrap">Entrega {{ po.committedDeliveryDate }}</span>
+          </li>
+        } @empty {
+          <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin órdenes pendientes de aprobación.</li>
+        }
+      </ul>
+    </div>
+  </div>
+</div>

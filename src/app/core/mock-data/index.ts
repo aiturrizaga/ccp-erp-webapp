@@ -3,6 +3,7 @@ export * from './warehouses.fixture';
 export * from './suppliers.fixture';
 export * from './purchasing.fixture';
 export * from './warehouse-ops.fixture';
+export * from './inventory-analytics.fixture';
 export * from './plm.fixture';
 export * from './production.fixture';
 export * from './approvals.fixture';

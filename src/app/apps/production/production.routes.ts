@@ -3,7 +3,8 @@ import { Routes } from '@angular/router';
 const comingSoon = () => import('@shared/components/coming-soon/coming-soon').then((m) => m.ComingSoon);
 
 export const PRODUCTION_ROUTES: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'production-orders' },
+  { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+  { path: 'dashboard', loadComponent: () => import('./dashboard/dashboard').then((m) => m.ProductionDashboard) },
   { path: 'production-orders', loadComponent: () => import('./production-orders/production-order-list/production-order-list').then((m) => m.ProductionOrderList) },
   { path: 'production-orders/:id', loadComponent: () => import('./production-orders/production-order-detail/production-order-detail').then((m) => m.ProductionOrderDetail) },
   { path: 'work-sheets', loadComponent: () => import('./work-sheets/work-sheet-list/work-sheet-list').then((m) => m.WorkSheetList) },

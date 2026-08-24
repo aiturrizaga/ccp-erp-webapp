@@ -2,7 +2,8 @@ import { Routes } from '@angular/router';
 import { roleGuard } from '@shell/role-guard';
 
 export const PURCHASING_ROUTES: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'requisitions' },
+  { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+  { path: 'dashboard', loadComponent: () => import('./dashboard/dashboard').then((m) => m.PurchasingDashboard) },
   { path: 'requisitions', loadComponent: () => import('./requisitions/requisition-list/requisition-list').then((m) => m.RequisitionList) },
   { path: 'requisitions/new', loadComponent: () => import('./requisitions/requisition-create/requisition-create').then((m) => m.RequisitionCreate) },
   { path: 'requisitions/:id', loadComponent: () => import('./requisitions/requisition-detail/requisition-detail').then((m) => m.RequisitionDetail) },

@@ -1,6 +1,7 @@
 import { Injectable, signal } from '@angular/core';
-import { PURCHASE_ORDERS, PURCHASE_REQUISITIONS, QUOTATIONS } from '@core/mock-data';
+import { PURCHASE_ORDERS, PURCHASE_REQUISITIONS, QUOTATIONS, SUPPLIERS } from '@core/mock-data';
 import {
+  Currency,
   PurchaseOrder,
   PurchaseOrderLine,
   PurchaseOrderStatus,
@@ -10,6 +11,8 @@ import {
   QuotationLine,
   QuotationOffer,
   RequisitionPriority,
+  Supplier,
+  SupplierClass,
 } from '@core/models';
 
 const TODAY = '2026-08-23';
@@ -25,9 +28,37 @@ export class PurchasingState {
   readonly requisitions = signal<PurchaseRequisition[]>([...PURCHASE_REQUISITIONS]);
   readonly quotations = signal<Quotation[]>([...QUOTATIONS]);
   readonly purchaseOrders = signal<PurchaseOrder[]>([...PURCHASE_ORDERS]);
+  readonly suppliers = signal<Supplier[]>([...SUPPLIERS]);
 
   private nextQuotationSeq = QUOTATIONS.length + 1;
   private nextPurchaseOrderSeq = PURCHASE_ORDERS.length + 1;
+  private nextSupplierSeq = SUPPLIERS.length + 1;
+
+  /** Quick "datos básicos" registration from within a quotation flow — the rest of the supplier profile (tier, credit, performance) is filled in later by Compras from the real Proveedores screen. */
+  addSupplier(input: { legalName: string; taxId: string; phone: string; email: string; class: SupplierClass; currency: Currency; createdBy: string }): Supplier {
+    const supplier: Supplier = {
+      id: `SUP-${String(this.nextSupplierSeq++).padStart(3, '0')}`,
+      taxId: input.taxId,
+      legalName: input.legalName,
+      class: input.class,
+      tier: 'C',
+      businessLine: null,
+      address: '',
+      phone: input.phone,
+      email: input.email,
+      currency: input.currency,
+      paymentTerms: '',
+      bankAccount: '',
+      status: 'draft',
+      createdBy: input.createdBy,
+      registeredAt: TODAY,
+      creditLimit: 0,
+      creditUsed: 0,
+      performance: { onTimeDeliveryPct: 0, completedOrdersPct: 0, qualityRating: 0 },
+    };
+    this.suppliers.update((rows) => [...rows, supplier]);
+    return supplier;
+  }
 
   private updateRequisition(id: string, patch: (r: PurchaseRequisition) => PurchaseRequisition): void {
     this.requisitions.update((rows) => rows.map((r) => (r.id === id ? patch(r) : r)));

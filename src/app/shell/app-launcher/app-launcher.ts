@@ -9,7 +9,7 @@ import { APP_CATALOG } from '../app-catalog';
   templateUrl: './app-launcher.html',
 })
 export class AppLauncher {
-  protected readonly apps = APP_CATALOG;
+  protected readonly apps = APP_CATALOG.filter((app) => !app.hidden);
 
   readonly close = output<void>();
 }

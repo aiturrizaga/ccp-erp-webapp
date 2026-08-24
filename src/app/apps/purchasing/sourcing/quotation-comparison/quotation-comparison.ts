@@ -7,7 +7,7 @@ import { HlmAlertDialogImports } from '@ui/alert-dialog';
 import { toast } from '@shared/toast';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
-import { PURCHASE_REQUISITIONS, ITEMS, SUPPLIERS } from '@core/mock-data';
+import { PURCHASE_REQUISITIONS, ITEMS } from '@core/mock-data';
 import { Quotation } from '@core/models';
 import { PurchasingState } from '../../purchasing-state';
 import { WarehouseOpsState } from '../../../inventory/warehouse-ops-state';
@@ -96,7 +96,7 @@ export class QuotationComparison {
   }
 
   protected supplierName(supplierId: string): string {
-    return SUPPLIERS.find((s) => s.id === supplierId)?.legalName ?? supplierId;
+    return this.purchasingState.suppliers().find((s) => s.id === supplierId)?.legalName ?? supplierId;
   }
 
   private winnerKey(quotationId: string, itemId: string): string {

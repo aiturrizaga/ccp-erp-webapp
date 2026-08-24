@@ -1,6 +1,7 @@
 import { NavItem } from '@shell/nav-item.model';
 
 export const INVENTORY_NAV: NavItem[] = [
+  { label: 'Dashboard', route: '/apps/inventory/dashboard', icon: 'tablerLayoutDashboard' },
   { label: 'Artículos', route: '/apps/inventory/items', icon: 'tablerBox' },
   { label: 'Almacenes', route: '/apps/inventory/warehouses', icon: 'tablerBuildingWarehouse' },
   { label: 'Recepciones', route: '/apps/inventory/goods-receipt', icon: 'tablerTruckDelivery' },

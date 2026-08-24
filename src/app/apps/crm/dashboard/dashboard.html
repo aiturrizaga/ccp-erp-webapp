@@ -1,0 +1,36 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h1 class="text-xl font-semibold tracking-tight">Dashboard</h1>
+    <p class="text-muted-foreground text-sm">Vista general de CRM — leads, oportunidades y pipeline.</p>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <app-stat-card label="Leads sin calificar" [value]="unqualifiedLeads() + ''" hint="por calificar" />
+    <app-stat-card label="Oportunidades abiertas" [value]="openOpportunities().length + ''" hint="en curso" />
+    <app-stat-card label="Oportunidades ganadas" [value]="wonOpportunities() + ''" hint="cerradas ganadas" trend="up" />
+    <app-stat-card label="Pipeline abierto" [value]="'S/ ' + (openPipelineValue() | number: '1.2-2')" hint="valor esperado" />
+  </div>
+
+  <div class="rounded-lg border">
+    <div class="flex items-center justify-between border-b px-4 py-3">
+      <h2 class="text-sm font-semibold">Oportunidades abiertas</h2>
+      <a routerLink="/apps/crm/opportunities" class="text-primary text-xs hover:underline">Ver oportunidades</a>
+    </div>
+    <ul class="divide-y">
+      @for (o of openOpportunities(); track o.id) {
+        <li class="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToOpportunity(o.id)">
+          <div class="min-w-0">
+            <p class="font-medium">{{ o.title }}</p>
+            <p class="text-muted-foreground truncate text-xs">{{ customerName(o.customerId) }}</p>
+          </div>
+          <div class="text-right whitespace-nowrap">
+            <p class="font-medium">S/ {{ o.expectedAmount | number: '1.2-2' }}</p>
+            <p class="text-muted-foreground text-xs">{{ stageLabel(o.stage) }}</p>
+          </div>
+        </li>
+      } @empty {
+        <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin oportunidades abiertas.</li>
+      }
+    </ul>
+  </div>
+</div>

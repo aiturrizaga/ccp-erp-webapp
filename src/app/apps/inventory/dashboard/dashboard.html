@@ -1,0 +1,171 @@
+<div class="flex flex-col gap-6">
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-5">
+    <app-stat-card label="Artículos activos" [value]="totalItems() + ''" hint="en el catálogo" />
+    <app-stat-card label="Valor de inventario" [value]="'S/ ' + (inventoryValue() | number: '1.2-2')" hint="disponible + reservado" />
+    <app-stat-card label="Stock crítico" [value]="criticalStockItems().length + ''" hint="por debajo del punto de reposición" [trend]="criticalStockItems().length ? 'down' : 'flat'" />
+    <app-stat-card label="Recepciones pendientes" [value]="pendingReceipts().length + ''" hint="agendadas o en curso" />
+    <app-stat-card label="Salidas pendientes" [value]="pendingIssues().length + ''" hint="por despachar" />
+  </div>
+
+  <div hlmCard class="flex flex-col gap-4 p-4">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h3 class="text-sm font-semibold">Costos de Almacén 2026</h3>
+        <p class="text-muted-foreground text-xs">Valores en soles, sin I.G.V. (18%).</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <hlm-select class="w-56" [value]="supplierFilter()" (valueChange)="supplierFilter.set($event ?? 'all')" [itemToString]="supplierOptionToString">
+          <hlm-select-trigger size="sm" class="w-56">
+            <hlm-select-value placeholder="Proveedor" />
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (option of supplierOptions(); track option.value) {
+              <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
+        <hlm-select class="w-64" [value]="materialFilter()" (valueChange)="materialFilter.set($event ?? 'all')" [itemToString]="materialOptionToString">
+          <hlm-select-trigger size="sm" class="w-64">
+            <hlm-select-value placeholder="Material" />
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (option of materialOptions(); track option.value) {
+              <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full min-w-[760px] border-collapse text-sm">
+        <thead>
+          <tr>
+            <th class="border bg-muted/50 px-2 py-1.5 text-start"></th>
+            @for (month of tableColumns(); track $index) {
+              <th class="border bg-muted/50 px-2 py-1.5 text-end font-medium">{{ ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'][$index] }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="border px-2 py-1.5 font-semibold text-blue-600">COMPRAS</td>
+            @for (col of tableColumns(); track $index) {
+              <td class="border px-2 py-1.5 text-end text-blue-600">{{ col ? (col.purchases | number: '1.2-2') : '' }}</td>
+            }
+          </tr>
+          <tr>
+            <td class="border px-2 py-1.5 font-semibold text-red-600">CONSUMO</td>
+            @for (col of tableColumns(); track $index) {
+              <td class="border px-2 py-1.5 text-end text-red-600">{{ col ? (col.consumption | number: '1.2-2') : '' }}</td>
+            }
+          </tr>
+          <tr>
+            <td class="border px-2 py-1.5 font-semibold">INVENTARIO</td>
+            @for (col of tableColumns(); track $index) {
+              <td class="border px-2 py-1.5 text-end">{{ col ? (col.inventory | number: '1.2-2') : '' }}</td>
+            }
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <app-chart-canvas [config]="costsChart()" />
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+    <div class="rounded-lg border">
+      <div class="border-b px-4 py-3">
+        <h2 class="text-sm font-semibold">Existencias por estado</h2>
+      </div>
+      <ul class="divide-y">
+        @for (row of stockByStatus(); track row.status) {
+          <li class="px-4 py-2.5 text-sm">
+            <div class="mb-1 flex items-center justify-between">
+              <span class="inline-flex items-center gap-1.5"><span class="inline-block size-2.5 rounded-full" [style.background-color]="row.color"></span>{{ row.label }}</span>
+              <span class="font-medium">S/ {{ row.value | number: '1.2-2' }}</span>
+            </div>
+            <div class="bg-muted h-1.5 overflow-hidden rounded-full">
+              <div class="h-full rounded-full" [style.width.%]="row.pct" [style.background-color]="row.color"></div>
+            </div>
+          </li>
+        }
+      </ul>
+    </div>
+
+    <div class="rounded-lg border">
+      <div class="border-b px-4 py-3">
+        <h2 class="text-sm font-semibold">Top 5 artículos por valor</h2>
+      </div>
+      <ul class="divide-y">
+        @for (row of topValueItems(); track row.itemId) {
+          <li class="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToItem(row.itemId)">
+            <span class="min-w-0 flex-1 truncate">{{ row.label }}</span>
+            <span class="font-medium">S/ {{ row.value | number: '1.2-2' }}</span>
+          </li>
+        } @empty {
+          <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin existencias valorizadas.</li>
+        }
+      </ul>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+    <div class="rounded-lg border">
+      <div class="flex items-center justify-between border-b px-4 py-3">
+        <h2 class="text-sm font-semibold">Artículos en stock crítico</h2>
+        <a routerLink="/apps/inventory/items" class="text-primary text-xs hover:underline">Ver artículos</a>
+      </div>
+      <ul class="divide-y">
+        @for (item of criticalStockItems(); track item.id) {
+          <li class="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToItem(item.id)">
+            <span class="min-w-0 flex-1 truncate">{{ item.code }} — {{ item.description }}</span>
+            <span class="text-amber-600 whitespace-nowrap">{{ availableStock(item.id) }} / {{ item.reorderPoint }} {{ item.unitOfMeasure }}</span>
+          </li>
+        } @empty {
+          <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin alertas de stock crítico.</li>
+        }
+      </ul>
+    </div>
+
+    <div class="rounded-lg border">
+      <div class="flex items-center justify-between border-b px-4 py-3">
+        <h2 class="text-sm font-semibold">Recepciones pendientes</h2>
+        <a routerLink="/apps/inventory/goods-receipt" class="text-primary text-xs hover:underline">Ver recepciones</a>
+      </div>
+      <ul class="divide-y">
+        @for (r of pendingReceipts(); track r.id) {
+          <li class="px-4 py-2.5 text-sm">
+            <div class="flex items-center justify-between">
+              <span class="font-medium">{{ r.number }}</span>
+              <span class="text-muted-foreground text-xs">{{ receiptStatusLabel(r.status) }}</span>
+            </div>
+            <p class="text-muted-foreground text-xs">Esperada {{ r.expectedDate }} {{ r.expectedTime }}</p>
+          </li>
+        } @empty {
+          <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin recepciones pendientes.</li>
+        }
+      </ul>
+    </div>
+  </div>
+
+  <div class="rounded-lg border">
+    <div class="flex items-center justify-between border-b px-4 py-3">
+      <h2 class="text-sm font-semibold">Salidas pendientes</h2>
+      <a routerLink="/apps/inventory/stock-issues" class="text-primary text-xs hover:underline">Ver salidas</a>
+    </div>
+    <ul class="divide-y">
+      @for (i of pendingIssues(); track i.id) {
+        <li class="flex items-center justify-between px-4 py-2.5 text-sm">
+          <div class="min-w-0">
+            <p class="font-medium">{{ i.number }}</p>
+            <p class="text-muted-foreground text-xs">{{ i.plant }}</p>
+          </div>
+          <span class="text-muted-foreground text-xs">{{ issueStatusLabel(i.status) }}</span>
+        </li>
+      } @empty {
+        <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin salidas pendientes.</li>
+      }
+    </ul>
+  </div>
+</div>

@@ -1,7 +1,8 @@
 import { Routes } from '@angular/router';
 
 export const INVENTORY_ROUTES: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'items' },
+  { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+  { path: 'dashboard', loadComponent: () => import('./dashboard/dashboard').then((m) => m.InventoryDashboard) },
   { path: 'items', loadComponent: () => import('./items/item-list/item-list').then((m) => m.ItemList) },
   { path: 'items/new', loadComponent: () => import('./items/item-create/item-create').then((m) => m.ItemCreate) },
   { path: 'items/:id', loadComponent: () => import('./items/item-detail/item-detail').then((m) => m.ItemDetail) },

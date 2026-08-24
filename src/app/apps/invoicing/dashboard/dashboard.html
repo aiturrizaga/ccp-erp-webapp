@@ -1,0 +1,33 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h1 class="text-xl font-semibold tracking-tight">Dashboard</h1>
+    <p class="text-muted-foreground text-sm">Vista general de Facturación — cuentas por cobrar, por pagar y vencidas.</p>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <app-stat-card label="Por cobrar pendientes" [value]="pendingReceivable() + ''" hint="facturas de venta" />
+    <app-stat-card label="Por pagar pendientes" [value]="pendingPayable() + ''" hint="facturas de compra" />
+    <app-stat-card label="Facturas vencidas" [value]="overdueInvoices().length + ''" hint="requieren cobro/pago" [trend]="overdueInvoices().length ? 'down' : 'flat'" />
+    <app-stat-card label="Total facturado" [value]="'S/ ' + (totalInvoiced() | number: '1.2-2')" hint="ventas + compras" />
+  </div>
+
+  <div class="rounded-lg border">
+    <div class="flex items-center justify-between border-b px-4 py-3">
+      <h2 class="text-sm font-semibold">Facturas vencidas</h2>
+      <a routerLink="/apps/invoicing/invoices" class="text-primary text-xs hover:underline">Ver facturas</a>
+    </div>
+    <ul class="divide-y">
+      @for (i of overdueInvoices(); track i.id) {
+        <li class="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToInvoice(i.id)">
+          <div class="min-w-0">
+            <p class="font-medium">{{ i.number }}</p>
+            <p class="text-muted-foreground truncate text-xs">{{ partyName(i) }}</p>
+          </div>
+          <span class="font-medium whitespace-nowrap">S/ {{ i.outstandingBalance | number: '1.2-2' }}</span>
+        </li>
+      } @empty {
+        <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin facturas vencidas.</li>
+      }
+    </ul>
+  </div>
+</div>

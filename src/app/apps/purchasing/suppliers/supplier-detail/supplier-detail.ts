@@ -1,4 +1,4 @@
-import { Component, computed, input } from '@angular/core';
+import { Component, computed, inject, input } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HlmTabsImports } from '@ui/tabs';
@@ -8,8 +8,9 @@ import { HlmProgressImports } from '@ui/progress';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { ApprovalTimeline } from '@shared/components/approval-timeline/approval-timeline';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
-import { SUPPLIERS, APPROVALS, PURCHASE_ORDERS } from '@core/mock-data';
+import { APPROVALS, PURCHASE_ORDERS } from '@core/mock-data';
 import { SupplierStatus, SUPPLIER_STATUS_LABEL, Tone } from '@core/models';
+import { PurchasingState } from '../../purchasing-state';
 
 const STATUS_TONE: Record<SupplierStatus, Tone> = {
   draft: 'neutral',
@@ -26,9 +27,11 @@ const STATUS_TONE: Record<SupplierStatus, Tone> = {
   templateUrl: './supplier-detail.html',
 })
 export class SupplierDetail {
+  private readonly purchasingState = inject(PurchasingState);
+
   readonly id = input.required<string>();
 
-  protected readonly supplier = computed(() => SUPPLIERS.find((s) => s.id === this.id()));
+  protected readonly supplier = computed(() => this.purchasingState.suppliers().find((s) => s.id === this.id()));
   protected readonly approval = computed(() => APPROVALS.find((a) => a.process === 'supplier' && a.documentId === this.id()));
   protected readonly purchaseOrders = computed(() => PURCHASE_ORDERS.filter((po) => po.supplierId === this.id()));
 

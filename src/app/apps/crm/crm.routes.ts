@@ -1,7 +1,8 @@
 import { Routes } from '@angular/router';
 
 export const CRM_ROUTES: Routes = [
-  { path: '', pathMatch: 'full', redirectTo: 'leads' },
+  { path: '', pathMatch: 'full', redirectTo: 'dashboard' },
+  { path: 'dashboard', loadComponent: () => import('./dashboard/dashboard').then((m) => m.CrmDashboard) },
   { path: 'leads', loadComponent: () => import('./leads/lead-list/lead-list').then((m) => m.LeadList) },
   { path: 'leads/:id', loadComponent: () => import('./leads/lead-detail/lead-detail').then((m) => m.LeadDetail) },
   { path: 'opportunities', loadComponent: () => import('./opportunities/opportunity-list/opportunity-list').then((m) => m.OpportunityList) },

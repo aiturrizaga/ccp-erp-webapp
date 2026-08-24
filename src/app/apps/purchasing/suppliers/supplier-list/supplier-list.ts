@@ -11,8 +11,8 @@ import { ListPagination } from '@shared/components/list-pagination/list-paginati
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { SelectFilterOption } from '@shared/components/select-filter/select-filter';
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
-import { SUPPLIERS } from '@core/mock-data';
 import { Supplier, SupplierClass, SupplierStatus, SupplierTier, SUPPLIER_STATUS_LABEL, Tone } from '@core/models';
+import { PurchasingState } from '../../purchasing-state';
 
 const STATUS_TONE: Record<SupplierStatus, Tone> = {
   draft: 'neutral',
@@ -57,6 +57,7 @@ const GROUP_BY_OPTIONS: SelectFilterOption[] = [
 })
 export class SupplierList {
   private readonly router = inject(Router);
+  private readonly purchasingState = inject(PurchasingState);
 
   protected readonly search = signal('');
   protected readonly view = signal<'list' | 'grid' | 'kanban'>('list');
@@ -91,7 +92,7 @@ export class SupplierList {
     const statuses = this.statusFilter();
     const tiers = this.tierFilter();
     const classes = this.classFilter();
-    return SUPPLIERS.filter((s) => {
+    return this.purchasingState.suppliers().filter((s) => {
       const matchesSearch = !term || s.legalName.toLowerCase().includes(term) || s.taxId.includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(s.status);
       const matchesTier = tiers.size === 0 || tiers.has(s.tier);

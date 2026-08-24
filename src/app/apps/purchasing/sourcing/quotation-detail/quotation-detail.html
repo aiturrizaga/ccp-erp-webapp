@@ -34,8 +34,12 @@
           <div class="flex flex-col gap-3">
             <div class="flex flex-col gap-1.5">
               <label hlmLabel>Proveedor</label>
-              <hlm-combobox [(value)]="bulkSupplierId" [itemToString]="bulkSupplierPickerToString">
-                <hlm-combobox-input placeholder="Buscar proveedor..." />
+              <hlm-combobox
+                [value]="bulkSupplierId()"
+                (valueChange)="onBulkSupplierValueChange($event)"
+                [itemToString]="bulkSupplierPickerToString"
+              >
+                <hlm-combobox-input placeholder="Buscar proveedor..." (input)="bulkSupplierSearch.set($any($event.target).value)" />
                 <hlm-combobox-content *hlmComboboxPortal>
                   <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
                   <div hlmComboboxList>
@@ -132,8 +136,12 @@
               <div class="flex flex-col gap-3">
                 <div class="flex flex-col gap-1.5">
                   <label hlmLabel>Proveedor</label>
-                  <hlm-combobox [(value)]="newSupplierId" [itemToString]="supplierPickerToString">
-                    <hlm-combobox-input placeholder="Buscar proveedor..." />
+                  <hlm-combobox
+                    [value]="newSupplierId()"
+                    (valueChange)="onSupplierValueChange($event)"
+                    [itemToString]="supplierPickerToString"
+                  >
+                    <hlm-combobox-input placeholder="Buscar proveedor..." (input)="newSupplierSearch.set($any($event.target).value)" />
                     <hlm-combobox-content *hlmComboboxPortal>
                       <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
                       <div hlmComboboxList>
@@ -237,6 +245,68 @@
       </div>
     }
   </div>
+
+  <hlm-dialog [state]="newSupplierDialogState()" (stateChanged)="newSupplierDialogState.set($event)">
+    <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-md">
+      <hlm-dialog-header>
+        <h3 hlmDialogTitle>Agregar nuevo proveedor</h3>
+        <p hlmDialogDescription>Registra los datos básicos para poder cotizarle. Compras completa el resto de la ficha luego en Proveedores.</p>
+      </hlm-dialog-header>
+      <div class="flex flex-col gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="new-supplier-name">Razón social</label>
+          <input hlmInput id="new-supplier-name" [ngModel]="newSupplierLegalName()" (ngModelChange)="newSupplierLegalName.set($event)" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1.5">
+            <label hlmLabel for="new-supplier-tax-id">RUC</label>
+            <input hlmInput id="new-supplier-tax-id" [ngModel]="newSupplierTaxId()" (ngModelChange)="newSupplierTaxId.set($event)" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label hlmLabel>Clase</label>
+            <hlm-select class="block w-full" [value]="newSupplierClass()" (valueChange)="newSupplierClass.set($event ?? 'PRODUCT')" [itemToString]="supplierClassToString">
+              <hlm-select-trigger size="sm" class="w-full">
+                <hlm-select-value placeholder="Selecciona" />
+              </hlm-select-trigger>
+              <hlm-select-content *hlmSelectPortal>
+                @for (option of supplierClassOptions; track option.value) {
+                  <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+                }
+              </hlm-select-content>
+            </hlm-select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1.5">
+            <label hlmLabel for="new-supplier-phone">Teléfono</label>
+            <input hlmInput id="new-supplier-phone" [ngModel]="newSupplierPhone()" (ngModelChange)="newSupplierPhone.set($event)" />
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label hlmLabel for="new-supplier-email">Correo</label>
+            <input hlmInput id="new-supplier-email" type="email" [ngModel]="newSupplierEmail()" (ngModelChange)="newSupplierEmail.set($event)" />
+          </div>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel>Moneda</label>
+          <hlm-combobox [value]="newSupplierCurrency()" (valueChange)="newSupplierCurrency.set($event ?? 'PEN')" [itemToString]="currencyToString">
+            <hlm-combobox-input placeholder="Moneda..." />
+            <hlm-combobox-content *hlmComboboxPortal>
+              <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+              <div hlmComboboxList>
+                @for (option of currencyOptions; track option.value) {
+                  <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
+                }
+              </div>
+            </hlm-combobox-content>
+          </hlm-combobox>
+        </div>
+      </div>
+      <hlm-dialog-footer>
+        <button hlmBtn variant="outline" (click)="newSupplierDialogState.set('closed')">Cancelar</button>
+        <button hlmBtn [disabled]="!canCreateSupplier()" (click)="confirmCreateSupplier()">Agregar proveedor</button>
+      </hlm-dialog-footer>
+    </hlm-dialog-content>
+  </hlm-dialog>
 } @else {
   <app-empty-state icon="tablerFileSearch" title="Cotización no encontrada" />
 }

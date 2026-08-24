@@ -1,0 +1,54 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h1 class="text-xl font-semibold tracking-tight">Dashboard</h1>
+    <p class="text-muted-foreground text-sm">Vista general de Producción — órdenes, hojas de trabajo y bolsas de salida.</p>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <app-stat-card label="Órdenes en producción" [value]="ordersInProgress() + ''" hint="en curso" />
+    <app-stat-card label="Hojas de trabajo en riesgo" [value]="worksheetsAtRisk().length + ''" hint="requieren atención" [trend]="worksheetsAtRisk().length ? 'down' : 'flat'" />
+    <app-stat-card label="Órdenes completadas" [value]="ordersCompleted() + ''" hint="finalizadas" trend="up" />
+    <app-stat-card label="Bolsas por firmar" [value]="bundlesPendingSignature() + ''" hint="pendientes de firma" />
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+    <div class="rounded-lg border">
+      <div class="flex items-center justify-between border-b px-4 py-3">
+        <h2 class="text-sm font-semibold">Hojas de trabajo en riesgo</h2>
+        <a routerLink="/apps/production/work-sheets" class="text-primary text-xs hover:underline">Ver hojas de trabajo</a>
+      </div>
+      <ul class="divide-y">
+        @for (ws of worksheetsAtRisk(); track ws.id) {
+          <li class="cursor-pointer px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToWorkSheet(ws.id)">
+            <div class="flex items-center justify-between">
+              <span class="font-medium">{{ ws.number }}</span>
+            </div>
+            <p class="text-muted-foreground text-xs">{{ ws.riskReason }}</p>
+          </li>
+        } @empty {
+          <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin hojas de trabajo en riesgo.</li>
+        }
+      </ul>
+    </div>
+
+    <div class="rounded-lg border">
+      <div class="flex items-center justify-between border-b px-4 py-3">
+        <h2 class="text-sm font-semibold">Órdenes de fabricación en curso</h2>
+        <a routerLink="/apps/production/production-orders" class="text-primary text-xs hover:underline">Ver órdenes</a>
+      </div>
+      <ul class="divide-y">
+        @for (o of ordersInCourse(); track o.id) {
+          <li class="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToProductionOrder(o.id)">
+            <div class="min-w-0">
+              <p class="font-medium">{{ o.number }}</p>
+              <p class="text-muted-foreground truncate text-xs">{{ productName(o.productId) }} — {{ o.plannedQuantity }}</p>
+            </div>
+            <span class="text-muted-foreground text-xs whitespace-nowrap">{{ statusLabel(o.status) }}</span>
+          </li>
+        } @empty {
+          <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin órdenes en curso.</li>
+        }
+      </ul>
+    </div>
+  </div>
+</div>
