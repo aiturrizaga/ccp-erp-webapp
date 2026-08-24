@@ -97,7 +97,7 @@ export class SupplierList {
       const matchesTier = tiers.size === 0 || tiers.has(s.tier);
       const matchesClass = classes.size === 0 || classes.has(s.class);
       return matchesSearch && matchesStatus && matchesTier && matchesClass;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.tierFilter().size + this.classFilter().size);

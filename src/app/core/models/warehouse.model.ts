@@ -23,7 +23,10 @@ export const LOCATION_TYPE_LABEL: Record<LocationType, string> = {
 
 export interface Location {
   id: string;
+  /** Auto-incrementing sequential code assigned when the location is created (e.g. '001'). */
   code: string;
+  /** Short abbreviation used day-to-day on the floor (e.g. 'P1'). */
+  shortName: string;
   name: string;
   type: LocationType;
   warehouseId: string;
@@ -32,7 +35,9 @@ export interface Location {
 export interface Warehouse {
   id: string;
   code: string;
+  /** Short abbreviation used day-to-day (e.g. 'AL01'). */
+  shortName: string;
   name: string;
-  plant: string;
+  address: string;
   locations: Location[];
 }

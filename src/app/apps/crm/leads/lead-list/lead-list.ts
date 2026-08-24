@@ -75,7 +75,7 @@ export class LeadList {
       const matchesStatus = statuses.size === 0 || statuses.has(l.status);
       const matchesSource = sources.size === 0 || sources.has(l.source);
       return matchesSearch && matchesStatus && matchesSource;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.sourceFilter().size);

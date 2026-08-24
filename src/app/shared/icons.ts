@@ -1,5 +1,6 @@
 import {
   tablerAdjustments,
+  tablerAlertOctagon,
   tablerAlertTriangle,
   tablerArrowRight,
   tablerArrowsExchange,
@@ -38,6 +39,7 @@ import {
   tablerFlask,
   tablerHeartHandshake,
   tablerInbox,
+  tablerInfoCircle,
   tablerLayoutGrid,
   tablerLayoutKanban,
   tablerLayoutList,
@@ -64,11 +66,13 @@ import {
   tablerUser,
   tablerUserPlus,
   tablerUsers,
+  tablerX,
 } from '@ng-icons/tabler-icons';
 
 /** Curated set of Tabler icons registered once at the app root — every component can then use <ng-icon name="..."> without its own providers. Emoji are reserved for the App Launcher's app icons only. */
 export const APP_ICONS = {
   tablerAdjustments,
+  tablerAlertOctagon,
   tablerAlertTriangle,
   tablerArrowRight,
   tablerArrowsExchange,
@@ -107,6 +111,7 @@ export const APP_ICONS = {
   tablerFlask,
   tablerHeartHandshake,
   tablerInbox,
+  tablerInfoCircle,
   tablerLayoutGrid,
   tablerLayoutKanban,
   tablerLayoutList,
@@ -133,4 +138,5 @@ export const APP_ICONS = {
   tablerUser,
   tablerUserPlus,
   tablerUsers,
+  tablerX,
 };

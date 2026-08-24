@@ -24,6 +24,9 @@
         <div hlmCard class="p-4">
           <h3 class="mb-3 text-sm font-semibold">Datos generales</h3>
           <dl class="grid grid-cols-2 gap-y-2 text-sm">
+            <dt class="text-muted-foreground">Tipo de existencia</dt><dd>{{ stockTypeLabel(it.stockType) }}</dd>
+            <dt class="text-muted-foreground">Grupo</dt><dd>{{ itemGroupLabel(it.itemGroup) }}</dd>
+            <dt class="text-muted-foreground">Centro de costo</dt><dd>{{ costCenterLabel(it.costCenter) }}</dd>
             <dt class="text-muted-foreground">Unidad de medida</dt><dd>{{ it.unitOfMeasure }}</dd>
             <dt class="text-muted-foreground">Controla lote</dt><dd>{{ it.tracksLot ? 'Sí' : 'No' }}</dd>
             <dt class="text-muted-foreground">Controla vencimiento</dt><dd>{{ it.tracksExpiration ? 'Sí' : 'No' }}</dd>
@@ -46,29 +49,85 @@
     </div>
 
     <div hlmTabsContent="suppliers">
+      <div class="mb-3 flex justify-end">
+        <hlm-dialog>
+          <button hlmDialogTrigger hlmBtn size="sm" (click)="openAddSupplierDraft()">Agregar proveedor</button>
+          <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-sm">
+            <hlm-dialog-header>
+              <h3 hlmDialogTitle>Agregar proveedor</h3>
+              <p hlmDialogDescription>Vincula un proveedor a {{ it.code }} con sus condiciones comerciales.</p>
+            </hlm-dialog-header>
+            <div class="flex flex-col gap-3">
+              <div class="flex flex-col gap-1.5">
+                <label hlmLabel>Proveedor</label>
+                <hlm-combobox [(value)]="newSupplierId" [itemToString]="supplierPickerToString">
+                  <hlm-combobox-input placeholder="Buscar proveedor..." />
+                  <hlm-combobox-content *hlmComboboxPortal>
+                    <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+                    <div hlmComboboxList>
+                      @for (option of availableSupplierOptions(); track option.value) {
+                        <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
+                      }
+                    </div>
+                  </hlm-combobox-content>
+                </hlm-combobox>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label hlmLabel for="supplier-price">Precio</label>
+                <input hlmInput id="supplier-price" type="number" min="0" step="0.01" [ngModel]="newPrice()" (ngModelChange)="newPrice.set($event)" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label hlmLabel>Moneda</label>
+                <hlm-select class="block w-full" [value]="newCurrency()" (valueChange)="newCurrency.set($event ?? '')" [itemToString]="currencyToString">
+                  <hlm-select-trigger size="sm" class="w-full">
+                    <hlm-select-value placeholder="Selecciona" />
+                  </hlm-select-trigger>
+                  <hlm-select-content *hlmSelectPortal>
+                    @for (option of currencyOptions; track option.value) {
+                      <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+                    }
+                  </hlm-select-content>
+                </hlm-select>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label hlmLabel for="supplier-lead-time">Plazo de entrega (días)</label>
+                <input hlmInput id="supplier-lead-time" type="number" min="0" [ngModel]="newLeadTimeDays()" (ngModelChange)="newLeadTimeDays.set($event)" />
+              </div>
+              <label class="flex cursor-pointer items-center gap-2 text-sm">
+                <hlm-checkbox [checked]="newIsPrimary()" (checkedChange)="newIsPrimary.set($event)" />
+                Proveedor principal
+              </label>
+            </div>
+            <hlm-dialog-footer>
+              <button hlmBtn variant="outline" hlmDialogClose>Cancelar</button>
+              <button hlmBtn [disabled]="!canAddSupplier()" hlmDialogClose (click)="confirmAddSupplier()">Agregar</button>
+            </hlm-dialog-footer>
+          </hlm-dialog-content>
+        </hlm-dialog>
+      </div>
       @if (it.suppliers.length) {
         <table class="w-full text-sm">
           <thead class="text-muted-foreground border-b text-xs">
             <tr>
-              <th class="py-1.5 text-start font-medium">Proveedor</th>
-              <th class="py-1.5 text-end font-medium">Precio</th>
-              <th class="py-1.5 text-end font-medium">Lead time</th>
-              <th class="py-1.5 text-start font-medium">Principal</th>
+              <th class="py-1.5 px-3 first:ps-0 text-start font-medium">Proveedor</th>
+              <th class="py-1.5 px-3 last:pe-0 text-end font-medium">Precio</th>
+              <th class="py-1.5 px-3 last:pe-0 text-end font-medium">Plazo de entrega</th>
+              <th class="py-1.5 px-3 first:ps-0 text-start font-medium">Principal</th>
             </tr>
           </thead>
           <tbody class="divide-y">
             @for (link of it.suppliers; track link.supplierId) {
               <tr>
-                <td class="py-2">{{ supplierName(link.supplierId) }}</td>
-                <td class="py-2 text-end">{{ link.currency }} {{ link.price }}</td>
-                <td class="py-2 text-end">{{ link.leadTimeDays }} días</td>
-                <td class="py-2">{{ link.isPrimary ? 'Sí' : '' }}</td>
+                <td class="py-2 px-3 first:ps-0">{{ supplierName(link.supplierId) }}</td>
+                <td class="py-2 px-3 last:pe-0 text-end">{{ link.currency }} {{ link.price }}</td>
+                <td class="py-2 px-3 last:pe-0 text-end">{{ link.leadTimeDays }} días</td>
+                <td class="py-2 px-3 first:ps-0">{{ link.isPrimary ? 'Sí' : '' }}</td>
               </tr>
             }
           </tbody>
         </table>
       } @else {
-        <app-empty-state icon="tablerBuilding" title="Sin proveedores asociados" description="Este artículo es un producto terminado, no se compra a proveedores." />
+        <app-empty-state icon="tablerBuilding" title="Sin proveedores asociados" />
       }
     </div>
 
@@ -77,21 +136,21 @@
         <table class="w-full text-sm">
           <thead class="text-muted-foreground border-b text-xs">
             <tr>
-              <th class="py-1.5 text-start font-medium">Lote</th>
-              <th class="py-1.5 text-start font-medium">Ubicación</th>
-              <th class="py-1.5 text-start font-medium">Ingreso</th>
-              <th class="py-1.5 text-end font-medium">Cantidad</th>
-              <th class="py-1.5 text-start font-medium">Estado</th>
+              <th class="py-1.5 px-3 first:ps-0 text-start font-medium">Lote</th>
+              <th class="py-1.5 px-3 first:ps-0 text-start font-medium">Ubicación</th>
+              <th class="py-1.5 px-3 first:ps-0 text-start font-medium">Ingreso</th>
+              <th class="py-1.5 px-3 last:pe-0 text-end font-medium">Cantidad</th>
+              <th class="py-1.5 px-3 first:ps-0 text-start font-medium">Estado</th>
             </tr>
           </thead>
           <tbody class="divide-y">
             @for (lot of lots(); track lot.id) {
               <tr>
-                <td class="py-2">{{ lot.lot }}</td>
-                <td class="py-2">{{ locationName(lot.locationId) }}</td>
-                <td class="py-2">{{ lot.receivedAt }}</td>
-                <td class="py-2 text-end">{{ lot.quantity }}</td>
-                <td class="py-2"><app-status-badge [label]="stockStatusLabel(lot.status)" [tone]="stockStatusTone(lot.status)" /></td>
+                <td class="py-2 px-3 first:ps-0">{{ lot.lot }}</td>
+                <td class="py-2 px-3 first:ps-0">{{ locationName(lot.locationId) }}</td>
+                <td class="py-2 px-3 first:ps-0">{{ lot.receivedAt }}</td>
+                <td class="py-2 px-3 last:pe-0 text-end">{{ lot.quantity }}</td>
+                <td class="py-2 px-3 first:ps-0"><app-status-badge [label]="stockStatusLabel(lot.status)" [tone]="stockStatusTone(lot.status)" /></td>
               </tr>
             }
           </tbody>
@@ -109,23 +168,23 @@
         <table class="w-full text-sm">
           <thead class="text-muted-foreground border-b text-xs">
             <tr>
-              <th class="py-1.5 text-start font-medium">Fecha</th>
-              <th class="py-1.5 text-start font-medium">Documento</th>
-              <th class="py-1.5 text-end font-medium">Entrada</th>
-              <th class="py-1.5 text-end font-medium">Salida</th>
-              <th class="py-1.5 text-end font-medium">Saldo</th>
-              <th class="py-1.5 text-start font-medium">Usuario</th>
+              <th class="py-1.5 px-3 first:ps-0 text-start font-medium">Fecha</th>
+              <th class="py-1.5 px-3 first:ps-0 text-start font-medium">Documento</th>
+              <th class="py-1.5 px-3 last:pe-0 text-end font-medium">Entrada</th>
+              <th class="py-1.5 px-3 last:pe-0 text-end font-medium">Salida</th>
+              <th class="py-1.5 px-3 last:pe-0 text-end font-medium">Saldo</th>
+              <th class="py-1.5 px-3 first:ps-0 text-start font-medium">Usuario</th>
             </tr>
           </thead>
           <tbody class="divide-y">
             @for (mv of ledger(); track mv.id) {
               <tr>
-                <td class="py-2">{{ mv.date }}</td>
-                <td class="py-2">{{ mv.documentNumber }}</td>
-                <td class="py-2 text-end">{{ mv.inboundQuantity || '—' }}</td>
-                <td class="py-2 text-end">{{ mv.outboundQuantity || '—' }}</td>
-                <td class="py-2 text-end font-medium">{{ mv.balance }}</td>
-                <td class="py-2">{{ mv.user }}</td>
+                <td class="py-2 px-3 first:ps-0">{{ mv.date }}</td>
+                <td class="py-2 px-3 first:ps-0">{{ mv.documentNumber }}</td>
+                <td class="py-2 px-3 last:pe-0 text-end">{{ mv.inboundQuantity || '—' }}</td>
+                <td class="py-2 px-3 last:pe-0 text-end">{{ mv.outboundQuantity || '—' }}</td>
+                <td class="py-2 px-3 last:pe-0 text-end font-medium">{{ mv.balance }}</td>
+                <td class="py-2 px-3 first:ps-0">{{ mv.user }}</td>
               </tr>
             }
           </tbody>

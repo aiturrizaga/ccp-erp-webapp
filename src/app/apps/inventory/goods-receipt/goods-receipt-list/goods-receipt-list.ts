@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { NgIcon } from '@ng-icons/core';
 import { HlmButtonImports } from '@ui/button';
 import { HlmCheckboxImports } from '@ui/checkbox';
@@ -11,8 +11,12 @@ import { ListPagination } from '@shared/components/list-pagination/list-paginati
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { SelectFilterOption } from '@shared/components/select-filter/select-filter';
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
-import { GOODS_RECEIPTS, SUPPLIERS } from '@core/mock-data';
+import { SUPPLIERS, WORK_SHEETS } from '@core/mock-data';
 import { GoodsReceipt, GoodsReceiptStatus, GOODS_RECEIPT_STATUS_LABEL, Tone } from '@core/models';
+import { WarehouseOpsState } from '../../warehouse-ops-state';
+import { PurchasingState } from '../../../purchasing/purchasing-state';
+
+const TODAY = new Date(2026, 7, 24);
 
 const STATUS_TONE: Record<GoodsReceiptStatus, Tone> = {
   scheduled: 'neutral',
@@ -28,11 +32,6 @@ const STATUS_OPTIONS: { value: GoodsReceiptStatus; label: string }[] = (
   Object.entries(GOODS_RECEIPT_STATUS_LABEL) as [GoodsReceiptStatus, string][]
 ).map(([value, label]) => ({ value, label }));
 
-const SUPPLIER_OPTIONS: { value: string; label: string }[] = Array.from(new Set(GOODS_RECEIPTS.map((r) => r.supplierId))).map((supplierId) => ({
-  value: supplierId,
-  label: SUPPLIERS.find((s) => s.id === supplierId)?.legalName ?? supplierId,
-}));
-
 const GROUP_BY_OPTIONS: SelectFilterOption[] = [
   { value: 'none', label: 'Sin agrupar' },
   { value: 'status', label: 'Estado' },
@@ -41,11 +40,13 @@ const GROUP_BY_OPTIONS: SelectFilterOption[] = [
 
 @Component({
   selector: 'app-goods-receipt-list',
-  imports: [NgIcon, ...HlmButtonImports, ...HlmCheckboxImports, DataTable, DataGrid, DataKanban, ListToolbar, ListPagination, StatusBadge],
+  imports: [RouterLink, NgIcon, ...HlmButtonImports, ...HlmCheckboxImports, DataTable, DataGrid, DataKanban, ListToolbar, ListPagination, StatusBadge],
   templateUrl: './goods-receipt-list.html',
 })
 export class GoodsReceiptList {
   private readonly router = inject(Router);
+  private readonly warehouseOpsState = inject(WarehouseOpsState);
+  private readonly purchasingState = inject(PurchasingState);
 
   protected readonly search = signal('');
   protected readonly view = signal<'list' | 'grid' | 'kanban'>('list');
@@ -59,7 +60,13 @@ export class GoodsReceiptList {
   protected readonly views: ListViewOption[] = [LIST_VIEW_OPTIONS.list, LIST_VIEW_OPTIONS.grid, LIST_VIEW_OPTIONS.kanban];
   protected readonly groupByOptions = GROUP_BY_OPTIONS;
   protected readonly statusOptions = STATUS_OPTIONS;
-  protected readonly supplierOptions = SUPPLIER_OPTIONS;
+
+  protected readonly supplierOptions = computed<SelectFilterOption[]>(() =>
+    Array.from(new Set(this.warehouseOpsState.goodsReceipts().map((r) => r.supplierId))).map((supplierId) => ({
+      value: supplierId,
+      label: SUPPLIERS.find((s) => s.id === supplierId)?.legalName ?? supplierId,
+    })),
+  );
 
   protected readonly statusColumns: KanbanColumn[] = STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label, tone: STATUS_TONE[o.value] }));
   protected readonly statusKey = (row: GoodsReceipt): string => row.status;
@@ -67,7 +74,8 @@ export class GoodsReceiptList {
   protected readonly columns: DataTableColumn[] = [
     { key: 'number', header: 'Recepción', width: '150px' },
     { key: 'supplierId', header: 'Proveedor' },
-    { key: 'expectedDate', header: 'Fecha esperada', width: '150px' },
+    { key: 'workSheetRef', header: 'H. Trabajo', width: '130px' },
+    { key: 'expectedDate', header: 'Fecha esperada', width: '190px' },
     { key: 'receivedBy', header: 'Recibido por', width: '160px' },
     { key: 'status', header: 'Estado', width: '150px' },
   ];
@@ -76,12 +84,15 @@ export class GoodsReceiptList {
     const term = this.search().trim().toLowerCase();
     const statuses = this.statusFilter();
     const suppliers = this.supplierFilter();
-    return GOODS_RECEIPTS.filter((r) => {
-      const matchesSearch = !term || r.number.toLowerCase().includes(term);
-      const matchesStatus = statuses.size === 0 || statuses.has(r.status);
-      const matchesSupplier = suppliers.size === 0 || suppliers.has(r.supplierId);
-      return matchesSearch && matchesStatus && matchesSupplier;
-    });
+    return this.warehouseOpsState
+      .goodsReceipts()
+      .filter((r) => {
+        const matchesSearch = !term || r.number.toLowerCase().includes(term);
+        const matchesStatus = statuses.size === 0 || statuses.has(r.status);
+        const matchesSupplier = suppliers.size === 0 || suppliers.has(r.supplierId);
+        return matchesSearch && matchesStatus && matchesSupplier;
+      })
+      .sort((a, b) => `${a.expectedDate}T${a.expectedTime}`.localeCompare(`${b.expectedDate}T${b.expectedTime}`));
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.supplierFilter().size);
@@ -135,6 +146,39 @@ export class GoodsReceiptList {
 
   protected statusTone(status: GoodsReceiptStatus): Tone {
     return STATUS_TONE[status];
+  }
+
+  /** Resolves the Hoja de Trabajo behind a receipt by walking PO → Cotización → Solicitud → HT. */
+  protected workSheetRefFor(purchaseOrderId: string): string | undefined {
+    const po = this.purchasingState.purchaseOrders().find((p) => p.id === purchaseOrderId);
+    const quotation = this.purchasingState.quotations().find((q) => q.id === po?.quotationId);
+    const requisition = this.purchasingState.requisitions().find((r) => r.id === quotation?.requisitionId);
+    return requisition?.workSheetRef;
+  }
+
+  protected workSheetId(workSheetRef: string | undefined): string | undefined {
+    return WORK_SHEETS.find((ws) => ws.number === workSheetRef)?.id;
+  }
+
+  /** Days between today and the given date — negative means overdue, used for the agenda hint on the list. */
+  private daysDiff(dateStr: string): number {
+    const d = new Date(`${dateStr}T00:00:00`);
+    return Math.round((d.getTime() - TODAY.getTime()) / 86400000);
+  }
+
+  protected whenLabel(dateStr: string): string {
+    const diff = this.daysDiff(dateStr);
+    if (diff < 0) return `Atrasada · ${Math.abs(diff)}d`;
+    if (diff === 0) return 'Hoy';
+    if (diff === 1) return 'Mañana';
+    return `En ${diff} días`;
+  }
+
+  protected whenTone(dateStr: string): Tone {
+    const diff = this.daysDiff(dateStr);
+    if (diff < 0) return 'danger';
+    if (diff <= 1) return 'warning';
+    return 'neutral';
   }
 
   protected openDetail(receipt: GoodsReceipt): void {

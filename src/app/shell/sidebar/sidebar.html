@@ -45,11 +45,11 @@
       <li hlmSidebarMenuItem>
         <button hlmSidebarMenuButton size="lg" [hlmDropdownMenuTrigger]="profileMenu" side="top" align="start">
           <hlm-avatar class="rounded-lg" size="sm">
-            <span hlmAvatarFallback class="rounded-lg bg-[#FD005B] text-white">RI</span>
+            <span hlmAvatarFallback class="rounded-lg bg-[#FD005B] text-white">{{ auth.currentUser()?.name?.charAt(0) ?? '?' }}</span>
           </hlm-avatar>
           <div class="grid flex-1 text-left text-sm leading-tight">
-            <span class="truncate font-medium">Rosa Injante</span>
-            <span class="truncate text-xs">hello&#64;ccp.pe</span>
+            <span class="truncate font-medium">{{ auth.currentUser()?.name ?? 'Invitado' }}</span>
+            <span class="truncate text-xs">{{ auth.currentUser()?.email }}</span>
           </div>
           <ng-icon name="tablerChevronDown" class="ms-auto" />
         </button>
@@ -84,8 +84,8 @@
 <ng-template #profileMenu>
   <hlm-dropdown-menu class="w-56">
     <hlm-dropdown-menu-label>
-      <p class="font-medium">Rosa Injante</p>
-      <p class="text-muted-foreground text-xs font-normal">Compras / Almacén — Planta Lima</p>
+      <p class="font-medium">{{ auth.currentUser()?.name ?? 'Invitado' }}</p>
+      <p class="text-muted-foreground text-xs font-normal">{{ auth.currentUser()?.area }}</p>
     </hlm-dropdown-menu-label>
     <hlm-dropdown-menu-separator />
     <button hlmDropdownMenuItem>
@@ -97,7 +97,7 @@
       Configuración
     </button>
     <hlm-dropdown-menu-separator />
-    <button hlmDropdownMenuItem variant="destructive">
+    <button hlmDropdownMenuItem variant="destructive" (click)="logout()">
       <ng-icon name="tablerLogout" />
       Cerrar sesión
     </button>

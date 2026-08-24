@@ -25,7 +25,7 @@
     <div>
       <p class="text-muted-foreground mb-1.5 text-xs font-medium">Proveedor</p>
       <div class="flex flex-col gap-1.5">
-        @for (opt of supplierOptions; track opt.value) {
+        @for (opt of supplierOptions(); track opt.value) {
           <label class="flex cursor-pointer items-center gap-2 text-sm">
             <hlm-checkbox [checked]="supplierFilter().has(opt.value)" (checkedChange)="toggleSupplierFilter(opt.value)" />
             {{ opt.label }}
@@ -92,8 +92,24 @@
     @case ('supplierId') {
       {{ supplierName(row.supplierId) }}
     }
+    @case ('workSheetRef') {
+      @if (workSheetRefFor(row.purchaseOrderId); as ref) {
+        @if (workSheetId(ref); as wsId) {
+          <a [routerLink]="['/apps/production/work-sheets', wsId]" class="text-primary hover:underline" (click)="$event.stopPropagation()">{{ ref }}</a>
+        } @else {
+          {{ ref }}
+        }
+      } @else {
+        <span class="text-muted-foreground">—</span>
+      }
+    }
     @case ('expectedDate') {
-      {{ row.expectedDate }} {{ row.expectedTime }}
+      <div class="flex items-center gap-2">
+        <span>{{ row.expectedDate }} {{ row.expectedTime }}</span>
+        @if (row.status === 'scheduled' || row.status === 'in_progress') {
+          <app-status-badge [label]="whenLabel(row.expectedDate)" [tone]="whenTone(row.expectedDate)" />
+        }
+      </div>
     }
     @case ('status') {
       <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
@@ -110,5 +126,10 @@
     <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
   </div>
   <p class="text-muted-foreground mt-1 text-xs">{{ supplierName(row.supplierId) }}</p>
-  <p class="text-muted-foreground mt-2 text-xs">{{ row.expectedDate }} {{ row.expectedTime }}</p>
+  <p class="text-muted-foreground mt-2 flex items-center gap-1.5 text-xs">
+    <span>{{ row.expectedDate }} {{ row.expectedTime }}</span>
+    @if (row.status === 'scheduled' || row.status === 'in_progress') {
+      <app-status-badge [label]="whenLabel(row.expectedDate)" [tone]="whenTone(row.expectedDate)" />
+    }
+  </p>
 </ng-template>

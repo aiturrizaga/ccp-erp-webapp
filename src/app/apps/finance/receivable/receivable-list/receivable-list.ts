@@ -17,6 +17,7 @@ import { SelectFilter, SelectFilterOption } from '@shared/components/select-filt
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
 import { SalesInvoice, Tone } from '@core/models';
 import { INVOICE_STATUS_LABEL, INVOICE_STATUS_TONE, InvoiceStatus, PAYMENT_METHOD_LABEL, PaymentMethod } from '@core/models/finance.model';
+import { toast } from '@shared/toast';
 import { InvoicingState } from '../../../invoicing/invoicing-state';
 
 const TODAY = '2026-08-23';
@@ -105,7 +106,7 @@ export class ReceivableList {
       const matchesSearch = !term || invoice.number.toLowerCase().includes(term) || invoice.customerName.toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(invoice.status);
       return matchesSearch && matchesStatus;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size);
@@ -167,5 +168,6 @@ export class ReceivableList {
     const amount = this.paymentAmount();
     if (amount <= 0) return;
     this.invoicingState.registerPayment(invoice.id, { amount, date: this.paymentDate(), method: this.paymentMethod() as PaymentMethod });
+    toast.success('Pago registrado', { description: `${invoice.customerName} · ${amount.toFixed(2)}` });
   }
 }

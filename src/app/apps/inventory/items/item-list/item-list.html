@@ -9,43 +9,76 @@
   [filterCount]="filterCount()"
   [hasSecondaryActions]="true"
   actionLabel="Nuevo artículo"
+  (action)="createItem()"
 >
-  <div filters class="flex flex-col gap-3">
-    <div>
-      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Categoría</p>
-      <div class="flex flex-col gap-1.5">
-        @for (opt of categoryOptions; track opt.value) {
-          <label class="flex cursor-pointer items-center gap-2 text-sm">
-            <hlm-checkbox [checked]="categoryFilter().has(opt.value)" (checkedChange)="toggleCategoryFilter(opt.value)" />
-            {{ opt.label }}
-          </label>
-        }
+  <div filters class="flex max-h-[70vh] flex-col overflow-y-auto">
+    <div hlmAccordion type="multiple" class="w-full">
+      <div hlmAccordionItem>
+        <hlm-accordion-trigger>
+          <span>Tipo de existencia @if (stockTypeFilter().size > 0) { <span class="text-primary">({{ stockTypeFilter().size }})</span> }</span>
+        </hlm-accordion-trigger>
+        <hlm-accordion-content>
+          <div class="flex flex-col gap-1.5">
+            @for (opt of stockTypeOptions; track opt.value) {
+              <label class="flex cursor-pointer items-center gap-2 text-sm">
+                <hlm-checkbox [checked]="stockTypeFilter().has(opt.value)" (checkedChange)="toggleStockTypeFilter(opt.value)" />
+                {{ opt.label }}
+              </label>
+            }
+          </div>
+        </hlm-accordion-content>
       </div>
-    </div>
-    <div>
-      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Estrategia de salida</p>
-      <div class="flex flex-col gap-1.5">
-        @for (opt of strategyOptions; track opt.value) {
-          <label class="flex cursor-pointer items-center gap-2 text-sm">
-            <hlm-checkbox [checked]="strategyFilter().has(opt.value)" (checkedChange)="toggleStrategyFilter(opt.value)" />
-            {{ opt.label }}
-          </label>
-        }
+
+      <div hlmAccordionItem>
+        <hlm-accordion-trigger>
+          <span>Grupo @if (itemGroupFilter().size > 0) { <span class="text-primary">({{ itemGroupFilter().size }})</span> }</span>
+        </hlm-accordion-trigger>
+        <hlm-accordion-content>
+          <div class="flex max-h-64 flex-col gap-1.5 overflow-y-auto">
+            @for (opt of itemGroupOptions; track opt.value) {
+              <label class="flex cursor-pointer items-center gap-2 text-sm">
+                <hlm-checkbox [checked]="itemGroupFilter().has(opt.value)" (checkedChange)="toggleItemGroupFilter(opt.value)" />
+                {{ opt.label }}
+              </label>
+            }
+          </div>
+        </hlm-accordion-content>
       </div>
-    </div>
-    <div>
-      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Estado</p>
-      <div class="flex flex-col gap-1.5">
-        @for (opt of activeOptions; track opt.label) {
-          <label class="flex cursor-pointer items-center gap-2 text-sm">
-            <hlm-checkbox [checked]="activeFilter().has(opt.value)" (checkedChange)="toggleActiveFilter(opt.value)" />
-            {{ opt.label }}
-          </label>
-        }
+
+      <div hlmAccordionItem>
+        <hlm-accordion-trigger>
+          <span>Centro de costo @if (costCenterFilter().size > 0) { <span class="text-primary">({{ costCenterFilter().size }})</span> }</span>
+        </hlm-accordion-trigger>
+        <hlm-accordion-content>
+          <div class="flex max-h-64 flex-col gap-1.5 overflow-y-auto">
+            @for (opt of costCenterOptions; track opt.value) {
+              <label class="flex cursor-pointer items-center gap-2 text-sm">
+                <hlm-checkbox [checked]="costCenterFilter().has(opt.value)" (checkedChange)="toggleCostCenterFilter(opt.value)" />
+                {{ opt.label }}
+              </label>
+            }
+          </div>
+        </hlm-accordion-content>
+      </div>
+
+      <div hlmAccordionItem>
+        <hlm-accordion-trigger>
+          <span>Estado @if (activeFilter().size > 0) { <span class="text-primary">({{ activeFilter().size }})</span> }</span>
+        </hlm-accordion-trigger>
+        <hlm-accordion-content>
+          <div class="flex flex-col gap-1.5">
+            @for (opt of activeOptions; track opt.label) {
+              <label class="flex cursor-pointer items-center gap-2 text-sm">
+                <hlm-checkbox [checked]="activeFilter().has(opt.value)" (checkedChange)="toggleActiveFilter(opt.value)" />
+                {{ opt.label }}
+              </label>
+            }
+          </div>
+        </hlm-accordion-content>
       </div>
     </div>
     @if (filterCount() > 0) {
-      <button hlmBtn variant="ghost" size="sm" class="justify-start gap-1.5" (click)="clearFilters()">
+      <button hlmBtn variant="ghost" size="sm" class="mt-2 justify-start gap-1.5" (click)="clearFilters()">
         <ng-icon name="tablerFilter" />
         Limpiar filtros
       </button>
@@ -70,7 +103,16 @@
       <div>
         <h3 class="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{{ section.label }} · {{ section.rows.length }}</h3>
         @if (view() === 'list') {
-          <app-data-table [columns]="columns" [rows]="section.rows" [rowClickable]="true" (rowClick)="openDetail($event)" [cellTemplate]="cellTpl" />
+          <app-data-table
+            [columns]="columns"
+            [rows]="section.rows"
+            [rowClickable]="true"
+            (rowClick)="openDetail($event)"
+            [cellTemplate]="cellTpl"
+            [naturalWidth]="true"
+            [frozenColumnCount]="2"
+            maxHeight="560px"
+          />
         } @else {
           <app-data-grid [rows]="section.rows" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" />
         }
@@ -86,6 +128,9 @@
       (rowClick)="openDetail($event)"
       emptyMessage="No se encontraron artículos."
       [cellTemplate]="cellTpl"
+      [naturalWidth]="true"
+      [frozenColumnCount]="2"
+      maxHeight="560px"
     />
   } @else {
     <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron artículos." />
@@ -95,8 +140,14 @@
 
 <ng-template #cellTpl let-row let-key="key">
   @switch (key) {
-    @case ('category') {
-      <app-status-badge [label]="categoryLabel(row.category)" [tone]="categoryTone(row.category)" />
+    @case ('stockType') {
+      <app-status-badge [label]="stockTypeLabel(row.stockType)" [tone]="stockTypeTone(row.stockType)" />
+    }
+    @case ('itemGroup') {
+      {{ itemGroupLabel(row.itemGroup) ?? '—' }}
+    }
+    @case ('unitOfMeasure') {
+      <span [hlmTooltip]="unitOfMeasureLabel(row.unitOfMeasure)">{{ row.unitOfMeasure }}</span>
     }
     @case ('averageCost') {
       {{ row.currency }} {{ row.averageCost }}
@@ -104,21 +155,41 @@
     @case ('active') {
       <app-status-badge [label]="activeLabel(row.active)" [tone]="activeTone(row.active)" />
     }
+    @case ('statsM0') {
+      <ng-container *ngTemplateOutlet="statsCellTpl; context: { $implicit: monthStats(row, key) }" />
+    }
+    @case ('statsM1') {
+      <ng-container *ngTemplateOutlet="statsCellTpl; context: { $implicit: monthStats(row, key) }" />
+    }
+    @case ('statsM2') {
+      <ng-container *ngTemplateOutlet="statsCellTpl; context: { $implicit: monthStats(row, key) }" />
+    }
     @default {
       {{ row[key] }}
     }
   }
 </ng-template>
 
+<ng-template #statsCellTpl let-stats>
+  <div class="flex flex-col gap-0.5 py-1 text-[11px] leading-tight">
+    <span class="text-emerald-600 dark:text-emerald-400">↑ Ingresos: {{ stats.inbound }}</span>
+    <span class="text-destructive">↓ Egresos: {{ stats.outbound }}</span>
+    <span class="text-foreground font-medium">Σ Stock: {{ stats.stock }}</span>
+  </div>
+</ng-template>
+
 <ng-template #cardTpl let-row>
   <div class="flex items-start justify-between gap-2">
-    <p class="text-sm font-medium">{{ row.code }}</p>
+    <p class="text-sm font-medium">{{ row.description }}</p>
     <app-status-badge [label]="activeLabel(row.active)" [tone]="activeTone(row.active)" />
   </div>
-  <p class="text-muted-foreground mt-1 text-xs">{{ row.description }}</p>
-  <div class="mt-2 flex items-center gap-2">
-    <app-status-badge [label]="categoryLabel(row.category)" [tone]="categoryTone(row.category)" />
-    <span class="text-muted-foreground text-xs">{{ row.unitOfMeasure }}</span>
+  <p class="text-muted-foreground mt-1 text-xs">{{ row.code }}</p>
+  <div class="mt-2 flex flex-wrap items-center gap-2">
+    <app-status-badge [label]="stockTypeLabel(row.stockType)" [tone]="stockTypeTone(row.stockType)" />
+    <span class="text-muted-foreground text-xs" [hlmTooltip]="unitOfMeasureLabel(row.unitOfMeasure)">{{ row.unitOfMeasure }}</span>
   </div>
+  @if (itemGroupLabel(row.itemGroup); as groupLabel) {
+    <p class="text-muted-foreground mt-2 text-xs">{{ groupLabel }}</p>
+  }
   <p class="text-muted-foreground mt-2 text-xs">{{ row.currency }} {{ row.averageCost }}</p>
 </ng-template>

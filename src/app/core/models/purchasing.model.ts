@@ -39,6 +39,12 @@ export interface PurchaseRequisitionLine {
   neededBy: string;
   availableStock: number;
   note?: string;
+  /** True when Almacén added this line by hand — it wasn't part of the Hoja de Trabajo's material list. */
+  addedManually?: boolean;
+  /** The system-calculated quantity (HT requirement minus available stock) before Almacén edits it, kept for reference. */
+  suggestedQuantity?: number;
+  /** True when the item was part of the HT's material list but the system determined stock already covers it — kept visible (crossed out) for audit, not requested. */
+  notNeeded?: boolean;
 }
 
 export interface PurchaseRequisition {
@@ -55,6 +61,8 @@ export interface PurchaseRequisition {
   lines: PurchaseRequisitionLine[];
   workSheetRef?: string;
   approvalId?: string;
+  /** Free-text remark Almacén can add while reviewing an auto-generated requisition. */
+  note?: string;
 }
 
 export type QuotationStatus = 'draft' | 'sent' | 'received' | 'under_evaluation' | 'awarded' | 'discarded';

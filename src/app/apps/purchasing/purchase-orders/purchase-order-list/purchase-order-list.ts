@@ -89,7 +89,7 @@ export class PurchaseOrderList {
       const matchesStatus = statuses.size === 0 || statuses.has(po.status);
       const matchesCurrency = currencies.size === 0 || currencies.has(po.currency);
       return matchesSearch && matchesStatus && matchesCurrency;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.currencyFilter().size);

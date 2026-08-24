@@ -98,7 +98,7 @@ export class WorkSheetList {
       const matchesPlant = plants.size === 0 || plants.has(w.plant);
       const matchesRisk = risks.size === 0 || risks.has(w.atRisk);
       return matchesSearch && matchesStatus && matchesPlant && matchesRisk;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.plantFilter().size + this.riskFilter().size);

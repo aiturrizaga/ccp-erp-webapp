@@ -74,7 +74,7 @@ export class OrderList {
       const matchesStatus = statuses.size === 0 || statuses.has(so.status);
       const matchesCurrency = currencies.size === 0 || currencies.has(so.currency);
       return matchesSearch && matchesStatus && matchesCurrency;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.currencyFilter().size);

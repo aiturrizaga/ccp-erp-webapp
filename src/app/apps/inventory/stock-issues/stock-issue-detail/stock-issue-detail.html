@@ -1,0 +1,134 @@
+@if (issue(); as i) {
+  <app-entity-header
+    [title]="i.number"
+    [subtitle]="originLabel(i.origin) + (i.reason ? ' · ' + i.reason : '')"
+    [statusLabel]="statusLabel(i.status)"
+    [statusTone]="statusTone(i.status)"
+    [crumbs]="[{ label: 'Salidas', link: '/apps/inventory/stock-issues' }, { label: i.number }]"
+  >
+    <div actions>
+      @if (workSheet(); as ws) {
+        <a [routerLink]="['/apps/production/work-sheets', ws.id]" class="text-primary text-sm hover:underline">Ver Hoja de Trabajo {{ ws.number }}</a>
+      }
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.6fr_1fr]">
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <div class="mb-3 flex items-center justify-between">
+          <h3 class="text-sm font-semibold">Artículos</h3>
+          @if (editable()) {
+            <hlm-alert-dialog>
+              <button hlmAlertDialogTrigger hlmBtn size="sm" (click)="openDispatchDraft()">Despachar</button>
+              <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx" class="data-[size=default]:sm:max-w-xl">
+                <hlm-alert-dialog-header>
+                  <h3 hlmAlertDialogTitle>Despachar {{ i.number }}</h3>
+                  <p hlmAlertDialogDescription>Registra cuánto entregas ahora de cada artículo. Puedes despachar parcialmente si no hay stock suficiente todavía.</p>
+                </hlm-alert-dialog-header>
+                <div class="flex flex-col gap-3">
+                  <div class="flex flex-col gap-1.5">
+                    <label hlmLabel for="issue-received-by">Entregado a</label>
+                    <input hlmInput id="issue-received-by" placeholder="Nombre de quien recibe" [ngModel]="receivedByDraft()" (ngModelChange)="receivedByDraft.set($event)" />
+                  </div>
+                  <div class="flex flex-col gap-2">
+                    @for (line of i.lines; track line.itemId) {
+                      @if (line.requiredQuantity - line.dispatchedQuantity > 0) {
+                        <div class="flex items-center gap-2 rounded-md border p-2">
+                          <div class="min-w-0 flex-1">
+                            <p class="truncate text-sm">{{ itemLabel(line.itemId) }}</p>
+                            <p class="text-muted-foreground text-xs">Pendiente: {{ pending(line.itemId) }} {{ line.unitOfMeasure }} · Stock: {{ availableStock(line.itemId) }}</p>
+                          </div>
+                          <div class="w-20 shrink-0">
+                            <input
+                              hlmInput
+                              type="number"
+                              min="0"
+                              [max]="pending(line.itemId)"
+                              class="w-full text-end"
+                              [ngModel]="dispatchQuantities()[line.itemId] ?? 0"
+                              (ngModelChange)="setDispatchQuantity(line.itemId, $event)"
+                            />
+                          </div>
+                        </div>
+                      }
+                    }
+                  </div>
+                </div>
+                <hlm-alert-dialog-footer>
+                  <button hlmAlertDialogCancel>Cancelar</button>
+                  <button hlmAlertDialogAction [disabled]="!canDispatch()" (click)="confirmDispatch()">Confirmar despacho</button>
+                </hlm-alert-dialog-footer>
+              </hlm-alert-dialog-content>
+            </hlm-alert-dialog>
+          }
+        </div>
+        <table class="w-full text-sm">
+          <thead class="text-muted-foreground border-b text-xs">
+            <tr>
+              <th class="px-3 py-1.5 text-start font-medium first:ps-0 last:pe-0">Artículo</th>
+              <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Requerido</th>
+              <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Despachado</th>
+              <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Pendiente</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            @for (line of i.lines; track line.itemId) {
+              <tr>
+                <td class="px-3 py-2 first:ps-0 last:pe-0">{{ itemLabel(line.itemId) }}</td>
+                <td class="px-3 py-2 text-end first:ps-0 last:pe-0">{{ line.requiredQuantity }} {{ line.unitOfMeasure }}</td>
+                <td class="px-3 py-2 text-end first:ps-0 last:pe-0">{{ line.dispatchedQuantity }}</td>
+                <td class="px-3 py-2 text-end first:ps-0 last:pe-0" [class.text-amber-600]="line.requiredQuantity - line.dispatchedQuantity > 0">
+                  {{ line.requiredQuantity - line.dispatchedQuantity > 0 ? line.requiredQuantity - line.dispatchedQuantity : '—' }}
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Historial de despachos</h3>
+        @if (i.dispatches.length) {
+          <div class="flex flex-col gap-3">
+            @for (dispatch of i.dispatches; track dispatch.date + dispatch.time) {
+              <div class="rounded-lg border p-3 text-sm">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <span class="font-medium">{{ dispatch.date }} · {{ dispatch.time }}</span>
+                  <span class="text-muted-foreground text-xs">Entregó {{ dispatch.dispatchedBy }} · Recibió {{ dispatch.receivedBy }}</span>
+                </div>
+                <ul class="text-muted-foreground mt-2 flex flex-col gap-0.5 text-xs">
+                  @for (line of dispatch.lines; track line.itemId) {
+                    <li>{{ itemLabel(line.itemId) }} — {{ line.quantity }}</li>
+                  }
+                </ul>
+              </div>
+            }
+          </div>
+        } @else {
+          <app-empty-state icon="tablerTruckDelivery" title="Sin despachos" description="Todavía no se ha entregado nada de esta salida." />
+        }
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4 text-sm">
+        <h3 class="mb-3 text-sm font-semibold">Trazabilidad</h3>
+        <dl class="grid grid-cols-2 gap-y-2">
+          <dt class="text-muted-foreground">Origen</dt><dd>{{ originLabel(i.origin) }}</dd>
+          @if (workSheet(); as ws) {
+            <dt class="text-muted-foreground">Hoja de trabajo</dt>
+            <dd><a [routerLink]="['/apps/production/work-sheets', ws.id]" class="text-primary hover:underline">{{ ws.number }}</a></dd>
+          }
+          @if (i.reason) {
+            <dt class="text-muted-foreground">Motivo</dt><dd>{{ i.reason }}</dd>
+          }
+          <dt class="text-muted-foreground">Planta</dt><dd>{{ i.plant }}</dd>
+          <dt class="text-muted-foreground">Creada</dt><dd>{{ i.createdAt }}</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerTruckDelivery" title="Salida no encontrada" />
+}

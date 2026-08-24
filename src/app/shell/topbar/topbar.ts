@@ -10,6 +10,7 @@ import { HlmBreadcrumbImports } from '@ui/breadcrumb';
 import { HlmSidebarImports } from '@ui/sidebar';
 import { APPROVALS } from '@core/mock-data';
 import { ActiveApp } from '../active-app';
+import { AuthState } from '../auth-state';
 import { AppLauncherState } from '../app-launcher-state';
 import { AppLauncher } from '../app-launcher/app-launcher';
 import { NavItem } from '../nav-item.model';
@@ -42,6 +43,7 @@ const NAV_BY_APP: Record<string, NavItem[]> = {
 export class Topbar {
   private readonly router = inject(Router);
   private readonly activeApp = inject(ActiveApp);
+  private readonly auth = inject(AuthState);
   protected readonly appLauncher = inject(AppLauncherState);
 
   private readonly url = toSignal(
@@ -56,7 +58,8 @@ export class Topbar {
   protected readonly appName = computed(() => this.activeApp.descriptor()?.name ?? 'CCP ERP');
 
   protected readonly pageLabel = computed(() => {
-    const items = NAV_BY_APP[this.activeApp.id() ?? ''] ?? [];
+    const role = this.auth.currentUser()?.role;
+    const items = (NAV_BY_APP[this.activeApp.id() ?? ''] ?? []).filter((item) => !item.roles || (role && item.roles.includes(role)));
     const current = this.url();
     const match = items.find((item) => current.startsWith(item.route));
     if (match) return match.label;

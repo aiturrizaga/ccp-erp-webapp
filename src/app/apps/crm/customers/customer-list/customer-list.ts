@@ -57,7 +57,7 @@ export class CustomerList {
       const matchesSearch = !term || c.legalName.toLowerCase().includes(term) || c.taxId.includes(term);
       const matchesCurrency = currencies.size === 0 || currencies.has(c.currency);
       return matchesSearch && matchesCurrency;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.currencyFilter().size);

@@ -35,7 +35,6 @@ export const PURCHASE_REQUISITIONS: PurchaseRequisition[] = [
       { itemId: 'MP00013', quantity: 1200, unitOfMeasure: 'UND', neededBy: '2026-08-20', availableStock: 240 },
       { itemId: 'MP00014', quantity: 300, unitOfMeasure: 'UND', neededBy: '2026-08-20', availableStock: 40 },
     ],
-    workSheetRef: 'HT-2026-0315',
   },
   {
     id: 'PR-005', number: 'SC-2026-0146', origin: 'inventory', requestedBy: 'Rosa Injante', area: 'Almacén', plant: 'Planta Lima',
@@ -64,6 +63,54 @@ export const PURCHASE_REQUISITIONS: PurchaseRequisition[] = [
     id: 'PR-008', number: 'SC-2026-0147', origin: 'production', requestedBy: 'Cristian Espinoza', area: 'Producción', plant: 'Planta Lima',
     priority: 'medium', status: 'awarded', createdAt: '2026-08-13', neededBy: '2026-08-28',
     lines: [{ itemId: 'MA00031', quantity: 200, unitOfMeasure: 'UND', neededBy: '2026-08-28', availableStock: 45 }],
+  },
+  {
+    id: 'PR-009', number: 'SC-2026-0148', origin: 'production', requestedBy: 'Sistema — Generación automática desde HT', area: 'Producción', plant: 'Planta Lima — P3',
+    priority: 'high', status: 'draft', createdAt: '2026-08-22', neededBy: '2026-08-29',
+    lines: [
+      { itemId: 'MP00008', quantity: 160, unitOfMeasure: 'BOL', neededBy: '2026-08-29', availableStock: 900, notNeeded: true },
+      { itemId: 'MP00003', quantity: 8.1, unitOfMeasure: 'M3', neededBy: '2026-08-29', availableStock: 18, notNeeded: true },
+      { itemId: 'MA00031', quantity: 135, suggestedQuantity: 135, unitOfMeasure: 'UND', neededBy: '2026-08-29', availableStock: 45 },
+    ],
+    workSheetRef: 'HT-2026-0330',
+  },
+  {
+    id: 'PR-010', number: 'SC-2026-0149', origin: 'production', requestedBy: 'Sistema — Generación automática desde HT', area: 'Producción', plant: 'Planta Accesorios',
+    priority: 'medium', status: 'draft', createdAt: '2026-08-22', neededBy: '2026-08-30',
+    lines: [
+      { itemId: 'MP00009', quantity: 38, suggestedQuantity: 38, unitOfMeasure: 'BOL', neededBy: '2026-08-30', availableStock: 60 },
+      { itemId: 'SU01122', quantity: 35, unitOfMeasure: 'UND', neededBy: '2026-08-30', availableStock: 72, notNeeded: true },
+      { itemId: 'SU00096', quantity: 6, unitOfMeasure: 'PAR', neededBy: '2026-08-30', availableStock: 3, addedManually: true },
+    ],
+    workSheetRef: 'HT-2026-0332',
+    note: 'Se agregaron guantes de seguridad para el equipo de moldeo — no venían incluidos en la Hoja de Trabajo.',
+  },
+  {
+    id: 'PR-011', number: 'SC-2026-0150', origin: 'production', requestedBy: 'Sistema — Generación automática desde HT', area: 'Producción', plant: 'Planta Accesorios',
+    priority: 'low', status: 'draft', createdAt: '2026-08-23', neededBy: '2026-08-31',
+    lines: [
+      { itemId: 'MP00009', quantity: 15, suggestedQuantity: 15, unitOfMeasure: 'BOL', neededBy: '2026-08-31', availableStock: 60 },
+      { itemId: 'MP00004', quantity: 2.7, unitOfMeasure: 'M3', neededBy: '2026-08-31', availableStock: 18, notNeeded: true },
+    ],
+    workSheetRef: 'HT-2026-0335',
+  },
+  {
+    id: 'PR-012', number: 'SC-2026-0151', origin: 'production', requestedBy: 'Sistema — Generación automática desde HT', area: 'Producción', plant: 'Planta Lima — P2',
+    priority: 'medium', status: 'draft', createdAt: '2026-08-23', neededBy: '2026-09-02',
+    lines: [
+      { itemId: 'MP00006', quantity: 50, suggestedQuantity: 50, unitOfMeasure: 'BOL', neededBy: '2026-09-02', availableStock: 150 },
+      { itemId: 'MP00013', quantity: 150, unitOfMeasure: 'UND', neededBy: '2026-09-02', availableStock: 1740, notNeeded: true },
+    ],
+    workSheetRef: 'HT-2026-0340',
+  },
+  {
+    id: 'PR-013', number: 'SC-2026-0152', origin: 'production', requestedBy: 'Sistema — Generación automática desde HT', area: 'Producción', plant: 'Planta Accesorios',
+    priority: 'high', status: 'draft', createdAt: '2026-08-24', neededBy: '2026-09-03',
+    lines: [
+      { itemId: 'MP00004', quantity: 2, suggestedQuantity: 2, unitOfMeasure: 'M3', neededBy: '2026-09-03', availableStock: 4 },
+      { itemId: 'SU01122', quantity: 20, unitOfMeasure: 'UND', neededBy: '2026-09-03', availableStock: 72, notNeeded: true },
+    ],
+    workSheetRef: 'HT-2026-0342',
   },
 ];
 

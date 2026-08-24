@@ -1,5 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import { NgIcon } from '@ng-icons/core';
 import { HlmButtonImports } from '@ui/button';
 import { HlmCheckboxImports } from '@ui/checkbox';
@@ -11,7 +11,8 @@ import { ListPagination } from '@shared/components/list-pagination/list-paginati
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { SelectFilterOption } from '@shared/components/select-filter/select-filter';
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
-import { PURCHASE_REQUISITIONS } from '@core/mock-data';
+import { WORK_SHEETS } from '@core/mock-data';
+import { PurchasingState } from '../../purchasing-state';
 import {
   PurchaseRequisition,
   PurchaseRequisitionStatus,
@@ -63,11 +64,12 @@ const GROUP_BY_OPTIONS: SelectFilterOption[] = [
 
 @Component({
   selector: 'app-requisition-list',
-  imports: [NgIcon, ...HlmButtonImports, ...HlmCheckboxImports, DataTable, DataGrid, DataKanban, ListToolbar, ListPagination, StatusBadge],
+  imports: [RouterLink, NgIcon, ...HlmButtonImports, ...HlmCheckboxImports, DataTable, DataGrid, DataKanban, ListToolbar, ListPagination, StatusBadge],
   templateUrl: './requisition-list.html',
 })
 export class RequisitionList {
   private readonly router = inject(Router);
+  private readonly purchasingState = inject(PurchasingState);
 
   protected readonly search = signal('');
   protected readonly view = signal<'list' | 'grid' | 'kanban'>('list');
@@ -92,7 +94,9 @@ export class RequisitionList {
     { key: 'number', header: 'Solicitud', width: '130px' },
     { key: 'requestedBy', header: 'Solicitante' },
     { key: 'area', header: 'Área', width: '150px' },
+    { key: 'workSheetRef', header: 'H. Trabajo', width: '130px' },
     { key: 'priority', header: 'Prioridad', width: '100px' },
+    { key: 'createdAt', header: 'Fecha de solicitud', width: '140px' },
     { key: 'neededBy', header: 'Fecha requerida', width: '130px' },
     { key: 'status', header: 'Estado', width: '160px' },
   ];
@@ -102,13 +106,13 @@ export class RequisitionList {
     const statuses = this.statusFilter();
     const priorities = this.priorityFilter();
     const origins = this.originFilter();
-    return PURCHASE_REQUISITIONS.filter((r) => {
+    return this.purchasingState.requisitions().filter((r) => {
       const matchesSearch = !term || r.number.toLowerCase().includes(term) || r.requestedBy.toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(r.status);
       const matchesPriority = priorities.size === 0 || priorities.has(r.priority);
       const matchesOrigin = origins.size === 0 || origins.has(r.origin);
       return matchesSearch && matchesStatus && matchesPriority && matchesOrigin;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.priorityFilter().size + this.originFilter().size);
@@ -172,5 +176,13 @@ export class RequisitionList {
 
   protected openDetail(requisition: PurchaseRequisition): void {
     this.router.navigate(['/apps/purchasing/requisitions', requisition.id]);
+  }
+
+  protected workSheetId(workSheetRef: string | undefined): string | undefined {
+    return WORK_SHEETS.find((ws) => ws.number === workSheetRef)?.id;
+  }
+
+  protected createRequisition(): void {
+    this.router.navigate(['/apps/purchasing/requisitions/new']);
   }
 }

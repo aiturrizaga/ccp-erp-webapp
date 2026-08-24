@@ -1,0 +1,124 @@
+<app-entity-header
+  title="Nueva solicitud"
+  [crumbs]="[{ label: 'Solicitudes de compra', link: '/apps/purchasing/requisitions' }, { label: 'Nueva solicitud' }]"
+/>
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 md:grid-cols-2">
+  <div hlmCard class="flex flex-col gap-4 p-4">
+    <h3 class="text-sm font-semibold">Datos generales</h3>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Origen</label>
+        <hlm-select class="block w-full" [value]="origin()" (valueChange)="origin.set($event ?? 'inventory')" [itemToString]="originToString">
+          <hlm-select-trigger size="sm" class="w-full">
+            <hlm-select-value placeholder="Selecciona" />
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (option of originOptions; track option.value) {
+              <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Prioridad</label>
+        <hlm-select class="block w-full" [value]="priority()" (valueChange)="priority.set($event ?? 'medium')" [itemToString]="priorityToString">
+          <hlm-select-trigger size="sm" class="w-full">
+            <hlm-select-value placeholder="Selecciona" />
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (option of priorityOptions; track option.value) {
+              <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label hlmLabel for="area">Área</label>
+      <input hlmInput id="area" [ngModel]="area()" (ngModelChange)="area.set($event)" />
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label hlmLabel>Planta</label>
+      <hlm-select class="block w-full" [value]="plant()" (valueChange)="plant.set($event ?? '')" [itemToString]="plantToString">
+        <hlm-select-trigger size="sm" class="w-full">
+          <hlm-select-value placeholder="Selecciona" />
+        </hlm-select-trigger>
+        <hlm-select-content *hlmSelectPortal>
+          @for (option of plantOptions; track option.value) {
+            <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+          }
+        </hlm-select-content>
+      </hlm-select>
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label hlmLabel for="needed-by">Fecha requerida</label>
+      <input hlmInput id="needed-by" type="date" [ngModel]="neededBy()" (ngModelChange)="neededBy.set($event)" />
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label hlmLabel for="note">Observación</label>
+      <textarea hlmTextarea id="note" class="w-full" placeholder="Opcional" [ngModel]="note()" (ngModelChange)="note.set($event)"></textarea>
+    </div>
+  </div>
+
+  <div hlmCard class="flex flex-col gap-4 p-4">
+    <h3 class="text-sm font-semibold">Artículos</h3>
+
+    <div class="flex items-end gap-2">
+      <div class="flex flex-1 flex-col gap-1.5">
+        <label hlmLabel>Artículo</label>
+        <hlm-combobox [(value)]="newItemId" [itemToString]="itemPickerToString">
+          <hlm-combobox-input placeholder="Buscar artículo..." />
+          <hlm-combobox-content *hlmComboboxPortal>
+            <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+            <div hlmComboboxList>
+              @for (option of availableItemOptions(); track option.value) {
+                <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
+              }
+            </div>
+          </hlm-combobox-content>
+        </hlm-combobox>
+      </div>
+      <div class="flex w-24 flex-col gap-1.5">
+        <label hlmLabel for="new-line-qty">Cantidad</label>
+        <input hlmInput id="new-line-qty" type="number" min="0" [ngModel]="newQuantity()" (ngModelChange)="newQuantity.set($event)" />
+      </div>
+      <button hlmBtn variant="outline" [disabled]="!canAddLine()" (click)="addLine()">Agregar</button>
+    </div>
+
+    @if (lines().length) {
+      <table class="w-full text-sm">
+        <thead class="text-muted-foreground border-b text-xs">
+          <tr>
+            <th class="px-3 py-1.5 text-start font-medium first:ps-0 last:pe-0">Artículo</th>
+            <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Cantidad</th>
+            <th class="px-3 py-1.5 first:ps-0 last:pe-0"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          @for (line of lines(); track line.itemId) {
+            <tr>
+              <td class="px-3 py-2 first:ps-0 last:pe-0">{{ itemLabel(line.itemId) }}</td>
+              <td class="px-3 py-2 text-end first:ps-0 last:pe-0">{{ line.quantity }} {{ line.unitOfMeasure }}</td>
+              <td class="px-3 py-2 text-end first:ps-0 last:pe-0">
+                <button hlmBtn variant="ghost" size="sm" (click)="removeLine(line.itemId)">Quitar</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else {
+      <p class="text-muted-foreground text-sm">Sin artículos agregados.</p>
+    }
+  </div>
+</div>
+
+<div class="mt-4 flex gap-2">
+  <button hlmBtn variant="outline" (click)="cancel()">Cancelar</button>
+  <button hlmBtn [disabled]="!canSubmit()" (click)="submit()">Crear solicitud</button>
+</div>

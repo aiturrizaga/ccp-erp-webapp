@@ -63,7 +63,7 @@ export class ApprovalsInbox {
         approval.description.toLowerCase().includes(term) ||
         approval.requestedBy.toLowerCase().includes(term);
       return matchesStatus && matchesSearch;
-    });
+    }).reverse();
   });
 
   protected readonly selected = computed<Approval | null>(() => APPROVALS.find((a) => a.id === this.selectedId()) ?? null);

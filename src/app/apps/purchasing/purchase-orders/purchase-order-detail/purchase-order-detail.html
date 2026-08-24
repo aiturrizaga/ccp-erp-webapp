@@ -11,8 +11,51 @@
         <button hlmBtn size="sm" variant="outline">Rechazar</button>
         <button hlmBtn size="sm">Aprobar</button>
       }
+      @if (p.status === 'partially_received' && auth.isWarehouse() && pendingLines().length) {
+        <hlm-dialog>
+          <button hlmDialogTrigger hlmBtn size="sm" variant="outline" (click)="openFollowUpDraft()">Programar recepción del saldo</button>
+          <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-sm">
+            <hlm-dialog-header>
+              <h3 hlmDialogTitle>Programar recepción del saldo</h3>
+              <p hlmDialogDescription>El proveedor quedó debiendo parte del pedido. Programa cuándo traerá lo que falta.</p>
+            </hlm-dialog-header>
+            <div class="flex flex-col gap-3">
+              <div class="flex flex-col gap-1.5">
+                <label hlmLabel for="followup-date">Fecha esperada</label>
+                <input hlmInput id="followup-date" type="date" [ngModel]="followUpDate()" (ngModelChange)="followUpDate.set($event)" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label hlmLabel for="followup-time">Hora esperada</label>
+                <input hlmInput id="followup-time" type="time" [ngModel]="followUpTime()" (ngModelChange)="followUpTime.set($event)" />
+              </div>
+              <div class="text-muted-foreground text-xs">
+                Pendiente: {{ pendingLines().length }} artículo(s) —
+                @for (line of pendingLines(); track line.itemId; let last = $last) {
+                  {{ itemLabel(line.itemId) }} ({{ line.quantity - line.receivedQuantity }} {{ line.unitOfMeasure }}){{ last ? '' : ', ' }}
+                }
+              </div>
+            </div>
+            <hlm-dialog-footer>
+              <button hlmBtn variant="outline" hlmDialogClose>Cancelar</button>
+              <button hlmBtn [disabled]="!canScheduleFollowUp()" hlmDialogClose (click)="confirmScheduleFollowUp()">Programar</button>
+            </hlm-dialog-footer>
+          </hlm-dialog-content>
+        </hlm-dialog>
+      }
       @if (canRegisterInvoice(p)) {
-        <button hlmBtn size="sm" (click)="registerInvoice(p)">Registrar factura</button>
+        <hlm-alert-dialog>
+          <button hlmAlertDialogTrigger hlmBtn size="sm">Registrar factura</button>
+          <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+            <hlm-alert-dialog-header>
+              <h3 hlmAlertDialogTitle>¿Registrar factura para {{ p.number }}?</h3>
+              <p hlmAlertDialogDescription>Se generará una factura de compra por el total de la orden y quedará pendiente de pago en Finanzas.</p>
+            </hlm-alert-dialog-header>
+            <hlm-alert-dialog-footer>
+              <button hlmAlertDialogCancel>Cancelar</button>
+              <button hlmAlertDialogAction (click)="registerInvoice(p)">Registrar</button>
+            </hlm-alert-dialog-footer>
+          </hlm-alert-dialog-content>
+        </hlm-alert-dialog>
       }
     </div>
   </app-entity-header>
@@ -24,21 +67,25 @@
         <table class="w-full text-sm">
           <thead class="text-muted-foreground border-b text-xs">
             <tr>
-              <th class="py-1.5 text-start font-medium">Artículo</th>
-              <th class="py-1.5 text-end font-medium">Cantidad</th>
-              <th class="py-1.5 text-end font-medium">Recibido</th>
-              <th class="py-1.5 text-end font-medium">Precio unit.</th>
-              <th class="py-1.5 text-end font-medium">Subtotal</th>
+              <th class="px-3 py-1.5 text-start font-medium first:ps-0 last:pe-0">Artículo</th>
+              <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Cantidad</th>
+              <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Recibido</th>
+              <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Pendiente</th>
+              <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Precio unit.</th>
+              <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Subtotal</th>
             </tr>
           </thead>
           <tbody class="divide-y">
             @for (line of p.lines; track line.itemId) {
               <tr>
-                <td class="py-2">{{ itemLabel(line.itemId) }}</td>
-                <td class="py-2 text-end">{{ line.quantity }} {{ line.unitOfMeasure }}</td>
-                <td class="py-2 text-end">{{ line.receivedQuantity }}</td>
-                <td class="py-2 text-end">{{ p.currency }} {{ line.unitPrice }}</td>
-                <td class="py-2 text-end font-medium">{{ p.currency }} {{ (line.quantity * line.unitPrice) | number: '1.2-2' }}</td>
+                <td class="px-3 py-2 first:ps-0 last:pe-0">{{ itemLabel(line.itemId) }}</td>
+                <td class="px-3 py-2 text-end first:ps-0 last:pe-0">{{ line.quantity }} {{ line.unitOfMeasure }}</td>
+                <td class="px-3 py-2 text-end first:ps-0 last:pe-0">{{ line.receivedQuantity }}</td>
+                <td class="px-3 py-2 text-end first:ps-0 last:pe-0" [class.text-amber-600]="line.quantity - line.receivedQuantity > 0">
+                  {{ line.quantity - line.receivedQuantity > 0 ? line.quantity - line.receivedQuantity : '—' }}
+                </td>
+                <td class="px-3 py-2 text-end first:ps-0 last:pe-0">{{ p.currency }} {{ line.unitPrice }}</td>
+                <td class="px-3 py-2 text-end font-medium first:ps-0 last:pe-0">{{ p.currency }} {{ (line.quantity * line.unitPrice) | number: '1.2-2' }}</td>
               </tr>
             }
           </tbody>
@@ -64,7 +111,10 @@
             @for (r of receipts(); track r.id) {
               <li class="flex items-center justify-between py-2">
                 <a [routerLink]="['/apps/inventory/goods-receipt', r.id]" class="text-primary hover:underline">{{ r.number }}</a>
-                <span class="text-muted-foreground text-xs">{{ r.actualDate ?? r.expectedDate }} · {{ r.status }}</span>
+                <span class="flex items-center gap-2">
+                  <span class="text-muted-foreground text-xs">{{ r.actualDate ?? r.expectedDate }} {{ r.actualTime ?? r.expectedTime }}</span>
+                  <app-status-badge [label]="receiptStatusLabel(r.status)" [tone]="receiptStatusTone(r.status)" />
+                </span>
               </li>
             }
           </ul>
@@ -82,6 +132,40 @@
           <dt class="text-muted-foreground">Emitida</dt><dd>{{ p.issuedAt }}</dd>
           <dt class="text-muted-foreground">Entrega comprometida</dt><dd>{{ p.committedDeliveryDate }} {{ p.committedDeliveryTime }}</dd>
           <dt class="text-muted-foreground">Planta</dt><dd>{{ p.plant }}</dd>
+        </dl>
+      </div>
+
+      <div hlmCard class="p-4 text-sm">
+        <h3 class="mb-3 text-sm font-semibold">Trazabilidad</h3>
+        <dl class="grid grid-cols-2 gap-y-2">
+          @if (requisition(); as r) {
+            <dt class="text-muted-foreground">Solicitud</dt>
+            <dd><a [routerLink]="['/apps/purchasing/requisitions', r.id]" class="text-primary hover:underline">{{ r.number }}</a></dd>
+            @if (r.workSheetRef) {
+              <dt class="text-muted-foreground">Hoja de trabajo</dt>
+              <dd>
+                @if (workSheetId(); as wsId) {
+                  <a [routerLink]="['/apps/production/work-sheets', wsId]" class="text-primary hover:underline">{{ r.workSheetRef }}</a>
+                } @else {
+                  {{ r.workSheetRef }}
+                }
+              </dd>
+            }
+          }
+          @if (quotation(); as q) {
+            <dt class="text-muted-foreground">Cotización</dt>
+            <dd><a [routerLink]="['/apps/purchasing/sourcing', q.id]" class="text-primary hover:underline">{{ q.number }}</a></dd>
+          }
+          <dt class="text-muted-foreground">Orden de compra</dt>
+          <dd class="font-medium">{{ p.number }}</dd>
+          @if (invoices().length) {
+            <dt class="text-muted-foreground">Factura(s)</dt>
+            <dd>
+              @for (inv of invoices(); track inv.id; let last = $last) {
+                <a [routerLink]="['/apps/invoicing/invoices', inv.id]" class="text-primary hover:underline">{{ inv.number }}</a>{{ last ? '' : ', ' }}
+              }
+            </dd>
+          }
         </dl>
       </div>
 

@@ -20,7 +20,14 @@
         <div class="grid grid-cols-2 gap-3 text-sm">
           <div>
             <p class="text-muted-foreground text-xs">Esperada</p>
-            <p class="font-medium">{{ r.expectedDate }} · {{ r.expectedTime }}</p>
+            @if (editable()) {
+              <div class="mt-1 flex gap-2">
+                <input hlmInput type="date" class="w-full" [ngModel]="r.expectedDate" (ngModelChange)="setExpectedDate($event)" />
+                <input hlmInput type="time" class="w-28" [ngModel]="r.expectedTime" (ngModelChange)="setExpectedTime($event)" />
+              </div>
+            } @else {
+              <p class="font-medium">{{ r.expectedDate }} · {{ r.expectedTime }}</p>
+            }
           </div>
           <div>
             <p class="text-muted-foreground text-xs">Real</p>
@@ -30,26 +37,86 @@
       </div>
 
       <div hlmCard class="p-4">
-        <h3 class="mb-3 text-sm font-semibold">Materiales</h3>
+        <h3 class="mb-3 text-sm font-semibold">Materiales{{ editable() ? ' — conteo' : '' }}</h3>
         <div class="flex flex-col gap-3">
           @for (line of r.lines; track line.itemId) {
             <div class="rounded-lg border p-3 text-sm">
               <div class="flex flex-wrap items-center justify-between gap-2">
                 <p class="font-medium">{{ itemLabel(line.itemId) }}</p>
-                <app-status-badge [label]="inspectionLabel(line.inspectionResult)" [tone]="inspectionTone(line.inspectionResult)" />
+                @if (!editable()) {
+                  <app-status-badge [label]="inspectionLabel(line.inspectionResult)" [tone]="inspectionTone(line.inspectionResult)" />
+                }
               </div>
-              <div class="text-muted-foreground mt-2 grid grid-cols-2 gap-y-1 sm:grid-cols-4">
-                <span>Esperado: <span class="text-foreground font-medium">{{ line.expectedQuantity }}</span></span>
-                <span>Recibido: <span class="text-foreground font-medium">{{ line.receivedQuantity }}</span></span>
-                <span>Aceptado: <span class="text-foreground font-medium">{{ line.acceptedQuantity }}</span></span>
-                <span [class.text-destructive]="line.claimedQuantity > 0">En reclamo: <span class="font-medium">{{ line.claimedQuantity }}</span></span>
-              </div>
-              <div class="text-muted-foreground mt-1 grid grid-cols-2 gap-y-1 sm:grid-cols-4">
-                @if (line.lot) { <span>Lote: {{ line.lot }}</span> }
-                <span>Ubicación: {{ locationName(line.locationId) }}</span>
-              </div>
-              @if (line.note) {
-                <p class="mt-2 rounded-md bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">{{ line.note }}</p>
+
+              @if (editable()) {
+                <div class="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel class="text-xs">Esperado</label>
+                    <p class="font-medium">{{ line.expectedQuantity }} {{ itemUnit(line.itemId) }}</p>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel class="text-xs">Recibido</label>
+                    <input hlmInput type="number" min="0" [ngModel]="line.receivedQuantity" (ngModelChange)="setReceivedQuantity(line, $event)" />
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel class="text-xs">Aceptado</label>
+                    <input hlmInput type="number" min="0" [ngModel]="line.acceptedQuantity" (ngModelChange)="setAcceptedQuantity(line.itemId, $event)" />
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel class="text-xs">En reclamo</label>
+                    <input hlmInput type="number" min="0" [ngModel]="line.claimedQuantity" (ngModelChange)="setClaimedQuantity(line.itemId, $event)" />
+                  </div>
+                </div>
+                <div class="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel class="text-xs">Lote</label>
+                    <input hlmInput [ngModel]="line.lot ?? ''" (ngModelChange)="setLot(line.itemId, $event)" placeholder="Opcional" />
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel class="text-xs">Ubicación</label>
+                    <hlm-select class="block w-full" [value]="line.locationId" (valueChange)="setLocation(line.itemId, $event ?? '')" [itemToString]="locationToString">
+                      <hlm-select-trigger size="sm" class="w-full">
+                        <hlm-select-value placeholder="Selecciona" />
+                      </hlm-select-trigger>
+                      <hlm-select-content *hlmSelectPortal>
+                        @for (option of locationOptions; track option.value) {
+                          <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+                        }
+                      </hlm-select-content>
+                    </hlm-select>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel class="text-xs">Inspección</label>
+                    <hlm-select class="block w-full" [value]="line.inspectionResult" (valueChange)="setInspectionResult(line.itemId, $event ?? 'compliant')" [itemToString]="inspectionToString">
+                      <hlm-select-trigger size="sm" class="w-full">
+                        <hlm-select-value placeholder="Selecciona" />
+                      </hlm-select-trigger>
+                      <hlm-select-content *hlmSelectPortal>
+                        @for (option of inspectionOptions; track option.value) {
+                          <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+                        }
+                      </hlm-select-content>
+                    </hlm-select>
+                  </div>
+                </div>
+                <div class="mt-3 flex flex-col gap-1">
+                  <label hlmLabel class="text-xs">Observación</label>
+                  <input hlmInput [ngModel]="line.note ?? ''" (ngModelChange)="setNote(line.itemId, $event)" placeholder="Ej. golpes en el empaque, faltantes, etc." />
+                </div>
+              } @else {
+                <div class="text-muted-foreground mt-2 grid grid-cols-2 gap-y-1 sm:grid-cols-4">
+                  <span>Esperado: <span class="text-foreground font-medium">{{ line.expectedQuantity }}</span></span>
+                  <span>Recibido: <span class="text-foreground font-medium">{{ line.receivedQuantity }}</span></span>
+                  <span>Aceptado: <span class="text-foreground font-medium">{{ line.acceptedQuantity }}</span></span>
+                  <span [class.text-destructive]="line.claimedQuantity > 0">En reclamo: <span class="font-medium">{{ line.claimedQuantity }}</span></span>
+                </div>
+                <div class="text-muted-foreground mt-1 grid grid-cols-2 gap-y-1 sm:grid-cols-4">
+                  @if (line.lot) { <span>Lote: {{ line.lot }}</span> }
+                  <span>Ubicación: {{ locationName(line.locationId) }}</span>
+                </div>
+                @if (line.note) {
+                  <p class="mt-2 rounded-md bg-amber-50 p-2 text-xs text-amber-800 dark:bg-amber-950 dark:text-amber-300">{{ line.note }}</p>
+                }
               }
             </div>
           }
@@ -58,6 +125,76 @@
     </div>
 
     <div class="flex flex-col gap-4">
+      @if (canScheduleFollowUpFromReceipt()) {
+        <div hlmCard class="border-amber-200 p-4 dark:border-amber-900">
+          <h3 class="mb-1 text-sm font-semibold">Saldo pendiente en la orden de compra</h3>
+          <p class="text-muted-foreground mb-3 text-xs">
+            El proveedor no completó todo lo pedido. Programa cuándo traerá el resto para que quede en la agenda.
+          </p>
+          <ul class="mb-3 flex flex-col gap-1 text-sm">
+            @for (line of pendingLines(); track line.itemId) {
+              <li class="flex justify-between">
+                <span>{{ itemLabel(line.itemId) }}</span>
+                <span class="font-medium text-amber-600">{{ line.quantity - line.receivedQuantity }} {{ line.unitOfMeasure }}</span>
+              </li>
+            }
+          </ul>
+          <hlm-dialog>
+            <button hlmDialogTrigger hlmBtn size="sm" class="w-full" (click)="openFollowUpDraft()">Programar recepción del saldo</button>
+            <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-sm">
+              <hlm-dialog-header>
+                <h3 hlmDialogTitle>Programar recepción del saldo</h3>
+                <p hlmDialogDescription>Indica cuándo traerá el proveedor lo que falta.</p>
+              </hlm-dialog-header>
+              <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-1.5">
+                  <label hlmLabel for="gr-followup-date">Fecha esperada</label>
+                  <input hlmInput id="gr-followup-date" type="date" [ngModel]="followUpDate()" (ngModelChange)="followUpDate.set($event)" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label hlmLabel for="gr-followup-time">Hora esperada</label>
+                  <input hlmInput id="gr-followup-time" type="time" [ngModel]="followUpTime()" (ngModelChange)="followUpTime.set($event)" />
+                </div>
+              </div>
+              <hlm-dialog-footer>
+                <button hlmBtn variant="outline" hlmDialogClose>Cancelar</button>
+                <button hlmBtn [disabled]="!canScheduleFollowUp()" hlmDialogClose (click)="confirmScheduleFollowUp()">Programar</button>
+              </hlm-dialog-footer>
+            </hlm-dialog-content>
+          </hlm-dialog>
+        </div>
+      }
+
+      <div hlmCard class="p-4 text-sm">
+        <h3 class="mb-3 text-sm font-semibold">Trazabilidad</h3>
+        <dl class="grid grid-cols-2 gap-y-2">
+          @if (requisition(); as req) {
+            <dt class="text-muted-foreground">Solicitud</dt>
+            <dd><a [routerLink]="['/apps/purchasing/requisitions', req.id]" class="text-primary hover:underline">{{ req.number }}</a></dd>
+            @if (req.workSheetRef) {
+              <dt class="text-muted-foreground">Hoja de trabajo</dt>
+              <dd>
+                @if (workSheetId(); as wsId) {
+                  <a [routerLink]="['/apps/production/work-sheets', wsId]" class="text-primary hover:underline">{{ req.workSheetRef }}</a>
+                } @else {
+                  {{ req.workSheetRef }}
+                }
+              </dd>
+            }
+          }
+          @if (quotation(); as q) {
+            <dt class="text-muted-foreground">Cotización</dt>
+            <dd><a [routerLink]="['/apps/purchasing/sourcing', q.id]" class="text-primary hover:underline">{{ q.number }}</a></dd>
+          }
+          @if (purchaseOrder(); as po) {
+            <dt class="text-muted-foreground">Orden de compra</dt>
+            <dd><a [routerLink]="['/apps/purchasing/purchase-orders', po.id]" class="text-primary hover:underline">{{ po.number }}</a></dd>
+          }
+          <dt class="text-muted-foreground">Recepción</dt>
+          <dd class="font-medium">{{ r.number }}</dd>
+        </dl>
+      </div>
+
       <div hlmCard class="p-4">
         <h3 class="mb-3 text-sm font-semibold">Evidencias fotográficas</h3>
         @if (r.photos.length) {
@@ -96,8 +233,22 @@
         </dl>
       </div>
 
-      @if (r.status === 'scheduled' || r.status === 'in_progress') {
-        <button hlmBtn class="w-full">Confirmar recepción</button>
+      @if (editable()) {
+        <hlm-alert-dialog>
+          <button hlmAlertDialogTrigger hlmBtn class="w-full" [disabled]="!canConfirm()">Confirmar recepción</button>
+          <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+            <hlm-alert-dialog-header>
+              <h3 hlmAlertDialogTitle>¿Confirmar esta recepción?</h3>
+              <p hlmAlertDialogDescription>
+                Se registrará el conteo tal como está y las cantidades aceptadas se sumarán a la orden de compra. Ya no podrás editar esta recepción después.
+              </p>
+            </hlm-alert-dialog-header>
+            <hlm-alert-dialog-footer>
+              <button hlmAlertDialogCancel>Cancelar</button>
+              <button hlmAlertDialogAction (click)="confirmReceipt()">Confirmar</button>
+            </hlm-alert-dialog-footer>
+          </hlm-alert-dialog-content>
+        </hlm-alert-dialog>
       }
     </div>
   </div>

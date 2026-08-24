@@ -1,16 +1,34 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { HlmButtonImports } from '@ui/button';
 import { HlmCardImports } from '@ui/card';
+import { HlmDialogImports } from '@ui/dialog';
+import { HlmInputImports } from '@ui/input';
+import { HlmLabelImports } from '@ui/label';
+import { HlmAlertDialogImports } from '@ui/alert-dialog';
+import { toast } from '@shared/toast';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { ApprovalTimeline } from '@shared/components/approval-timeline/approval-timeline';
 import { DocumentAttachments } from '@shared/components/document-attachments/document-attachments';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
-import { SUPPLIERS, ITEMS, APPROVALS, GOODS_RECEIPTS } from '@core/mock-data';
-import { Attachment, PurchaseInvoice, PurchaseOrder, PurchaseOrderStatus, PURCHASE_ORDER_STATUS_LABEL, Tone } from '@core/models';
+import { StatusBadge } from '@shared/components/status-badge/status-badge';
+import { SUPPLIERS, ITEMS, APPROVALS, WORK_SHEETS } from '@core/mock-data';
+import {
+  Attachment,
+  GoodsReceiptStatus,
+  GOODS_RECEIPT_STATUS_LABEL,
+  PurchaseInvoice,
+  PurchaseOrder,
+  PurchaseOrderStatus,
+  PURCHASE_ORDER_STATUS_LABEL,
+  Tone,
+} from '@core/models';
+import { AuthState } from '@shell/auth-state';
 import { PurchasingState } from '../../purchasing-state';
 import { InvoicingState } from '../../../invoicing/invoicing-state';
+import { WarehouseOpsState } from '../../../inventory/warehouse-ops-state';
 
 const IGV_RATE = 0.18;
 const TODAY = '2026-08-23';
@@ -30,15 +48,42 @@ const STATUS_TONE: Record<PurchaseOrderStatus, Tone> = {
   rejected: 'danger',
 };
 
+const RECEIPT_STATUS_TONE: Record<GoodsReceiptStatus, Tone> = {
+  scheduled: 'neutral',
+  in_progress: 'info',
+  partial: 'warning',
+  received: 'success',
+  with_discrepancies: 'danger',
+  in_claim: 'danger',
+  closed: 'success',
+};
+
 @Component({
   selector: 'app-purchase-order-detail',
-  imports: [RouterLink, DecimalPipe, ...HlmButtonImports, ...HlmCardImports, EntityHeader, ApprovalTimeline, DocumentAttachments, EmptyState],
+  imports: [
+    FormsModule,
+    RouterLink,
+    DecimalPipe,
+    ...HlmButtonImports,
+    ...HlmCardImports,
+    ...HlmDialogImports,
+    ...HlmInputImports,
+    ...HlmLabelImports,
+    ...HlmAlertDialogImports,
+    EntityHeader,
+    ApprovalTimeline,
+    DocumentAttachments,
+    EmptyState,
+    StatusBadge,
+  ],
   templateUrl: './purchase-order-detail.html',
 })
 export class PurchaseOrderDetail {
   private readonly router = inject(Router);
   private readonly purchasingState = inject(PurchasingState);
   private readonly invoicingState = inject(InvoicingState);
+  private readonly warehouseOpsState = inject(WarehouseOpsState);
+  protected readonly auth = inject(AuthState);
 
   private nextInvoiceSeq = 1;
 
@@ -46,7 +91,39 @@ export class PurchaseOrderDetail {
 
   protected readonly po = computed(() => this.purchasingState.purchaseOrders().find((p) => p.id === this.id()));
   protected readonly approval = computed(() => APPROVALS.find((a) => a.id === this.po()?.approvalId));
-  protected readonly receipts = computed(() => GOODS_RECEIPTS.filter((r) => r.purchaseOrderId === this.id()));
+  protected readonly receipts = computed(() => this.warehouseOpsState.goodsReceipts().filter((r) => r.purchaseOrderId === this.id()));
+
+  // --- Traceability: HT → Solicitud → Cotización → esta OC → Recepciones → Factura(s) ---
+  protected readonly quotation = computed(() => this.purchasingState.quotations().find((q) => q.id === this.po()?.quotationId));
+  protected readonly requisition = computed(() => this.purchasingState.requisitions().find((r) => r.id === this.quotation()?.requisitionId));
+  protected readonly workSheetId = computed(() => WORK_SHEETS.find((ws) => ws.number === this.requisition()?.workSheetRef)?.id);
+  protected readonly invoices = computed(() =>
+    this.invoicingState.invoices().filter((inv): inv is PurchaseInvoice => inv.documentType === 'purchase' && inv.purchaseOrderId === this.id()),
+  );
+
+  protected readonly pendingLines = computed(() => (this.po()?.lines ?? []).filter((line) => line.quantity - line.receivedQuantity > 0));
+
+  protected readonly followUpDate = signal('');
+  protected readonly followUpTime = signal('09:00');
+
+  protected openFollowUpDraft(): void {
+    this.followUpDate.set('');
+    this.followUpTime.set('09:00');
+  }
+
+  protected canScheduleFollowUp(): boolean {
+    return this.followUpDate().length > 0 && this.followUpTime().length > 0;
+  }
+
+  protected confirmScheduleFollowUp(): void {
+    const po = this.po();
+    if (!po || !this.canScheduleFollowUp()) return;
+    const receipt = this.warehouseOpsState.scheduleFollowUpReceipt(po, this.followUpDate(), this.followUpTime());
+    if (receipt) {
+      toast.success(`Recepción del saldo programada — ${receipt.number}`);
+      this.router.navigate(['/apps/inventory/goods-receipt', receipt.id]);
+    }
+  }
 
   protected readonly attachments = computed<Attachment[]>(() => {
     const po = this.po();
@@ -59,6 +136,14 @@ export class PurchaseOrderDetail {
 
   protected supplierName(supplierId: string): string {
     return SUPPLIERS.find((s) => s.id === supplierId)?.legalName ?? supplierId;
+  }
+
+  protected receiptStatusLabel(status: GoodsReceiptStatus): string {
+    return GOODS_RECEIPT_STATUS_LABEL[status];
+  }
+
+  protected receiptStatusTone(status: GoodsReceiptStatus): Tone {
+    return RECEIPT_STATUS_TONE[status];
   }
 
   protected itemLabel(itemId: string): string {
@@ -108,6 +193,7 @@ export class PurchaseOrderDetail {
     };
 
     this.invoicingState.addInvoice(invoice);
+    toast.success(`Factura ${invoice.number} registrada`, { description: `${po.currency} ${total.toFixed(2)}` });
     this.router.navigate(['/apps/invoicing/invoices', invoice.id]);
   }
 }

@@ -11,3 +11,4 @@ export * from './crm.model';
 export * from './sales.model';
 export * from './finance.model';
 export * from './invoicing.model';
+export * from './user.model';

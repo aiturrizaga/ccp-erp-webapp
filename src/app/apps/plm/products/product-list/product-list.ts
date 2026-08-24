@@ -67,7 +67,7 @@ export class ProductList {
       const matchesSearch = !term || p.name.toLowerCase().includes(term) || p.code.toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(p.status);
       return matchesSearch && matchesStatus;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size);

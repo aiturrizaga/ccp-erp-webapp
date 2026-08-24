@@ -51,6 +51,19 @@
     </table>
   </div>
 
+  @if (stockIssue(); as issue) {
+    <div hlmCard class="mt-4 p-4">
+      <div class="flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-semibold">Salida de materiales de Almacén</h3>
+          <p class="text-muted-foreground text-xs">Lo que Almacén ha entregado realmente para esta HT, independiente de lo planificado arriba.</p>
+        </div>
+        <app-status-badge [label]="issueStatusLabel(issue.status)" [tone]="issueStatusTone(issue.status)" />
+      </div>
+      <a [routerLink]="['/apps/inventory/stock-issues', issue.id]" class="text-primary mt-2 inline-block text-sm hover:underline">Ver {{ issue.number }}</a>
+    </div>
+  }
+
   <div class="mt-4 flex gap-2">
     <button hlmBtn variant="outline">Reservar materiales</button>
     <button hlmBtn>Agregar a bolsa de salida</button>

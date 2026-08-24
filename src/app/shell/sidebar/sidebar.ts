@@ -1,10 +1,11 @@
 import { Component, computed, inject, signal } from '@angular/core';
-import { RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { NgIcon } from '@ng-icons/core';
 import { HlmSidebarImports } from '@ui/sidebar';
 import { HlmAvatarImports } from '@ui/avatar';
 import { HlmDropdownMenuImports } from '@ui/dropdown-menu';
 import { ActiveApp } from '../active-app';
+import { AuthState } from '../auth-state';
 import { NavItem } from '../nav-item.model';
 import { AppLauncherState } from '../app-launcher-state';
 import { Company, COMPANIES } from '../company';
@@ -38,14 +39,25 @@ const NAV_BY_APP: Record<string, NavItem[]> = {
 })
 export class Sidebar {
   private readonly activeApp = inject(ActiveApp);
+  private readonly router = inject(Router);
+  protected readonly auth = inject(AuthState);
   protected readonly appLauncher = inject(AppLauncherState);
 
-  protected readonly navItems = computed<NavItem[]>(() => NAV_BY_APP[this.activeApp.id() ?? ''] ?? []);
+  protected readonly navItems = computed<NavItem[]>(() => {
+    const role = this.auth.currentUser()?.role;
+    const items = NAV_BY_APP[this.activeApp.id() ?? ''] ?? [];
+    return items.filter((item) => !item.roles || (role && item.roles.includes(role)));
+  });
 
   protected readonly companies = COMPANIES;
   protected readonly activeCompany = signal<Company>(COMPANIES[0]);
 
   protected selectCompany(company: Company): void {
     this.activeCompany.set(company);
+  }
+
+  protected logout(): void {
+    this.auth.logout();
+    this.router.navigate(['/login']);
   }
 }

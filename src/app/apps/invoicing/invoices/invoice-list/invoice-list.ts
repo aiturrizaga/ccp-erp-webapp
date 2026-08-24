@@ -84,7 +84,7 @@ export class InvoiceList {
       const matchesType = types.size === 0 || types.has(invoice.documentType);
       const matchesStatus = statuses.size === 0 || statuses.has(invoice.status);
       return matchesSearch && matchesType && matchesStatus;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.documentTypeFilter().size + this.statusFilter().size);

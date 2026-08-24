@@ -49,12 +49,11 @@ export interface GoodsReceipt {
   supervisorSignature?: string;
 }
 
-export type StockLedgerMovementType = 'inbound' | 'outbound' | 'transfer' | 'adjustment' | 'consumption';
+export type StockLedgerMovementType = 'inbound' | 'outbound' | 'adjustment' | 'consumption';
 
 export const STOCK_LEDGER_MOVEMENT_LABEL: Record<StockLedgerMovementType, string> = {
   inbound: 'Entrada',
   outbound: 'Salida',
-  transfer: 'Transferencia',
   adjustment: 'Ajuste',
   consumption: 'Consumo',
 };
@@ -76,6 +75,57 @@ export interface StockLedgerEntry {
   balance: number;
   unitCost: number;
   user: string;
+}
+
+export type StockIssueOrigin = 'work_sheet' | 'other';
+
+export const STOCK_ISSUE_ORIGIN_LABEL: Record<StockIssueOrigin, string> = {
+  work_sheet: 'Hoja de trabajo',
+  other: 'Otro motivo',
+};
+
+export type StockIssueStatus = 'pending' | 'partial' | 'dispatched' | 'cancelled';
+
+export const STOCK_ISSUE_STATUS_LABEL: Record<StockIssueStatus, string> = {
+  pending: 'Pendiente',
+  partial: 'Parcial',
+  dispatched: 'Despachada',
+  cancelled: 'Cancelada',
+};
+
+export interface StockIssueLine {
+  itemId: string;
+  requiredQuantity: number;
+  dispatchedQuantity: number;
+  unitOfMeasure: string;
+}
+
+/** One withdrawal event against a StockIssue — a pending issue can be attended in more than one trip as stock becomes available. */
+export interface StockIssueDispatch {
+  date: string;
+  time: string;
+  dispatchedBy: string;
+  receivedBy: string;
+  lines: { itemId: string; quantity: number }[];
+}
+
+/**
+ * A Hoja de Trabajo gets its pending outbound order the moment it's created — Almacén then attends
+ * it (fully or partially) as the requested materials arrive. An issue not tied to a HT ("otro
+ * motivo") is created and dispatched in the same step instead, since there's no upstream document
+ * driving it.
+ */
+export interface StockIssue {
+  id: string;
+  number: string;
+  origin: StockIssueOrigin;
+  workSheetId?: string;
+  reason?: string;
+  status: StockIssueStatus;
+  createdAt: string;
+  plant: string;
+  lines: StockIssueLine[];
+  dispatches: StockIssueDispatch[];
 }
 
 export type StockStatus = 'available' | 'reserved' | 'in_transit' | 'quarantine' | 'claimed' | 'blocked';

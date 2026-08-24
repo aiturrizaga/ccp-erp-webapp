@@ -11,6 +11,7 @@ import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { SUPPLIERS } from '@core/mock-data';
 import { Invoice, InvoiceStatus, INVOICE_STATUS_LABEL, INVOICE_STATUS_TONE, PaymentMethod, PAYMENT_METHOD_LABEL, Tone } from '@core/models';
+import { toast } from '@shared/toast';
 import { InvoicingState } from '../../invoicing-state';
 
 const PAYMENT_METHOD_OPTIONS: { value: PaymentMethod; label: string }[] = (Object.keys(PAYMENT_METHOD_LABEL) as PaymentMethod[]).map((value) => ({
@@ -77,5 +78,6 @@ export class InvoiceDetail {
       date: this.paymentDate(),
       method: this.paymentMethod(),
     });
+    toast.success('Pago registrado', { description: `${PAYMENT_METHOD_LABEL[this.paymentMethod()]} · ${amount.toFixed(2)}` });
   }
 }

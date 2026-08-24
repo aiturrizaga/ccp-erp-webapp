@@ -1,20 +1,78 @@
-<div hlmTableContainer class="min-w-0 border-t">
-  <table hlmTable>
+<div hlmTableContainer class="min-w-0 border-t" [class.overflow-y-auto]="maxHeight()" [style.max-height]="maxHeight()">
+  <table hlmTable [style.min-width]="naturalWidth() ? totalNaturalWidth() : null">
     <thead hlmTHead>
       <tr hlmTr>
-        @for (col of columns(); track col.key) {
-          <th hlmTh [class]="alignClass(col.align)" [style.width]="col.width">{{ col.header }}</th>
+        @for (group of headerGroups(); track $index) {
+          @if (group.label) {
+            <th
+              hlmTh
+              class="text-center"
+              [class.sticky]="!!maxHeight()"
+              [class.top-0]="!!maxHeight()"
+              [class.z-20]="!!maxHeight()"
+              [class.bg-background]="!!maxHeight()"
+              [attr.colspan]="group.columns.length"
+            >
+              {{ group.label }}
+            </th>
+          } @else {
+            <th
+              hlmTh
+              [attr.rowspan]="hasGroupedHeaders() ? 2 : 1"
+              [class]="alignClass(group.columns[0].align)"
+              [style.width]="group.columns[0].width"
+              [class.sticky]="isFrozen(group.startIndex) || !!maxHeight()"
+              [class.top-0]="!!maxHeight()"
+              [style.left]="frozenLeft(group.startIndex)"
+              [style.z-index]="headerZIndex(group.startIndex)"
+              [class.bg-background]="isFrozen(group.startIndex) || !!maxHeight()"
+              [class.border-e]="isFrozen(group.startIndex) && isLastFrozen(group.startIndex)"
+            >
+              {{ group.columns[0].header }}
+            </th>
+          }
         }
         @if (actionsTemplate()) {
-          <th hlmTh class="text-end">Acciones</th>
+          <th hlmTh class="text-end" [attr.rowspan]="hasGroupedHeaders() ? 2 : 1" [class.sticky]="!!maxHeight()" [class.top-0]="!!maxHeight()" [class.z-20]="!!maxHeight()" [class.bg-background]="!!maxHeight()">
+            Acciones
+          </th>
         }
       </tr>
+      @if (hasGroupedHeaders()) {
+        <tr hlmTr>
+          @for (group of headerGroups(); track $index) {
+            @if (group.label) {
+              @for (col of group.columns; let i = $index; track col.key) {
+                <th
+                  hlmTh
+                  [class]="alignClass(col.align)"
+                  [style.width]="col.width"
+                  [class.sticky]="!!maxHeight()"
+                  [class.top-9]="!!maxHeight()"
+                  [class.z-20]="!!maxHeight()"
+                  [class.bg-background]="!!maxHeight()"
+                >
+                  {{ col.header }}
+                </th>
+              }
+            }
+          }
+        </tr>
+      }
     </thead>
     <tbody hlmTBody>
       @for (row of rows(); track $index) {
         <tr hlmTr [class.cursor-pointer]="rowClickable()" (click)="onRowClick(row)">
-          @for (col of columns(); track col.key) {
-            <td hlmTd [class]="alignClass(col.align)">
+          @for (col of columns(); let i = $index; track col.key) {
+            <td
+              hlmTd
+              [class]="alignClass(col.align)"
+              [class.sticky]="isFrozen(i)"
+              [style.left]="frozenLeft(i)"
+              [class.z-10]="isFrozen(i)"
+              [class.bg-background]="isFrozen(i)"
+              [class.border-e]="isFrozen(i) && isLastFrozen(i)"
+            >
               @if (cellTemplate(); as tpl) {
                 <ng-container *ngTemplateOutlet="tpl; context: { $implicit: row, key: col.key }" />
               } @else {

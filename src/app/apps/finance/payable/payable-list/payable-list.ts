@@ -16,6 +16,7 @@ import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { StatCard } from '@shared/components/stat-card/stat-card';
 import { SelectFilter, SelectFilterOption } from '@shared/components/select-filter/select-filter';
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
+import { toast } from '@shared/toast';
 import { SUPPLIERS } from '@core/mock-data';
 import { PurchaseInvoice, Tone } from '@core/models';
 import { INVOICE_STATUS_LABEL, INVOICE_STATUS_TONE, InvoiceStatus, PAYMENT_METHOD_LABEL, PaymentMethod } from '@core/models/finance.model';
@@ -108,7 +109,7 @@ export class PayableList {
       const matchesSearch = !term || invoice.number.toLowerCase().includes(term) || this.supplierName(invoice.supplierId).toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(invoice.status);
       return matchesSearch && matchesStatus;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size);
@@ -178,5 +179,6 @@ export class PayableList {
     const amount = this.paymentAmount();
     if (amount <= 0) return;
     this.invoicingState.registerPayment(invoice.id, { amount, date: this.paymentDate(), method: this.paymentMethod() as PaymentMethod });
+    toast.success('Pago registrado', { description: `${this.supplierName(invoice.supplierId)} · ${amount.toFixed(2)}` });
   }
 }

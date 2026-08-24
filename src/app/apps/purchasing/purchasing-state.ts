@@ -1,21 +1,116 @@
 import { Injectable, signal } from '@angular/core';
-import { PURCHASE_ORDERS, QUOTATIONS } from '@core/mock-data';
-import { PurchaseOrder, PurchaseOrderLine, PurchaseRequisition, Quotation, QuotationLine } from '@core/models';
+import { PURCHASE_ORDERS, PURCHASE_REQUISITIONS, QUOTATIONS } from '@core/mock-data';
+import {
+  PurchaseOrder,
+  PurchaseOrderLine,
+  PurchaseOrderStatus,
+  PurchaseRequisition,
+  PurchaseRequisitionLine,
+  Quotation,
+  QuotationLine,
+  QuotationOffer,
+  RequisitionPriority,
+} from '@core/models';
 
 const TODAY = '2026-08-23';
 
 /**
  * Mutable in-memory copy of the purchasing fixtures so contextual actions (generate quotation from
- * a requisition, award a quotation into a purchase order) can append new documents without touching
- * the shared fixture arrays. No persistence — resets on reload.
+ * a requisition, award a quotation into a purchase order, Almacén editing an auto-generated
+ * requisition) can append/mutate documents without touching the shared fixture arrays. No
+ * persistence — resets on reload.
  */
 @Injectable({ providedIn: 'root' })
 export class PurchasingState {
+  readonly requisitions = signal<PurchaseRequisition[]>([...PURCHASE_REQUISITIONS]);
   readonly quotations = signal<Quotation[]>([...QUOTATIONS]);
   readonly purchaseOrders = signal<PurchaseOrder[]>([...PURCHASE_ORDERS]);
 
   private nextQuotationSeq = QUOTATIONS.length + 1;
   private nextPurchaseOrderSeq = PURCHASE_ORDERS.length + 1;
+
+  private updateRequisition(id: string, patch: (r: PurchaseRequisition) => PurchaseRequisition): void {
+    this.requisitions.update((rows) => rows.map((r) => (r.id === id ? patch(r) : r)));
+  }
+
+  private nextRequisitionNumber(): string {
+    let max = 0;
+    for (const r of this.requisitions()) {
+      const n = parseInt(r.number.replace('SC-2026-', ''), 10);
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+    return `SC-2026-${String(max + 1).padStart(4, '0')}`;
+  }
+
+  /** Almacén (or another area) manually files a requisition that isn't tied to a Hoja de Trabajo — starts as a draft, same as an auto-generated one. */
+  createRequisition(input: {
+    origin: PurchaseRequisition['origin'];
+    requestedBy: string;
+    area: string;
+    plant: string;
+    priority: RequisitionPriority;
+    neededBy: string;
+    note?: string;
+    lines: PurchaseRequisitionLine[];
+  }): PurchaseRequisition {
+    const seq = this.requisitions().length + 1;
+    const requisition: PurchaseRequisition = {
+      id: `PR-${String(seq).padStart(3, '0')}`,
+      number: this.nextRequisitionNumber(),
+      status: 'draft',
+      createdAt: TODAY,
+      origin: input.origin,
+      requestedBy: input.requestedBy,
+      area: input.area,
+      plant: input.plant,
+      priority: input.priority,
+      neededBy: input.neededBy,
+      note: input.note,
+      lines: input.lines,
+    };
+    this.requisitions.update((rows) => [...rows, requisition]);
+    return requisition;
+  }
+
+  updateLineQuantity(requisitionId: string, lineIndex: number, quantity: number): void {
+    this.updateRequisition(requisitionId, (r) => ({
+      ...r,
+      lines: r.lines.map((line, i) => (i === lineIndex ? { ...line, quantity } : line)),
+    }));
+  }
+
+  addLine(requisitionId: string, line: PurchaseRequisitionLine): void {
+    this.updateRequisition(requisitionId, (r) => ({ ...r, lines: [...r.lines, { ...line, addedManually: true }] }));
+  }
+
+  removeLine(requisitionId: string, lineIndex: number): void {
+    this.updateRequisition(requisitionId, (r) => ({ ...r, lines: r.lines.filter((_, i) => i !== lineIndex) }));
+  }
+
+  setLineNotNeeded(requisitionId: string, lineIndex: number, notNeeded: boolean): void {
+    this.updateRequisition(requisitionId, (r) => ({
+      ...r,
+      lines: r.lines.map((line, i) => (i === lineIndex ? { ...line, notNeeded } : line)),
+    }));
+  }
+
+  updateNote(requisitionId: string, note: string): void {
+    this.updateRequisition(requisitionId, (r) => ({ ...r, note }));
+  }
+
+  submitForApproval(requisitionId: string): void {
+    this.updateRequisition(requisitionId, (r) => ({ ...r, status: 'pending_approval' as const }));
+  }
+
+  /** Logística approves a requisition Almacén submitted, clearing it for sourcing/quotation. */
+  approveRequisition(requisitionId: string): void {
+    this.updateRequisition(requisitionId, (r) => ({ ...r, status: 'approved' as const }));
+  }
+
+  /** Logística sends a requisition back to Almacén for changes instead of approving it. */
+  observeRequisition(requisitionId: string): void {
+    this.updateRequisition(requisitionId, (r) => ({ ...r, status: 'draft' as const }));
+  }
 
   createQuotationFromRequisition(requisition: PurchaseRequisition): Quotation {
     const seq = this.nextQuotationSeq++;
@@ -26,55 +121,114 @@ export class PurchasingState {
       status: 'draft',
       createdAt: TODAY,
       dueDate: TODAY,
-      lines: requisition.lines.map<QuotationLine>((line) => ({
-        itemId: line.itemId,
-        quantity: line.quantity,
-        unitOfMeasure: line.unitOfMeasure,
-        offers: [],
-      })),
+      lines: requisition.lines
+        .filter((line) => !line.notNeeded)
+        .map<QuotationLine>((line) => ({
+          itemId: line.itemId,
+          quantity: line.quantity,
+          unitOfMeasure: line.unitOfMeasure,
+          offers: [],
+        })),
     };
     this.quotations.update((quotations) => [...quotations, quotation]);
     return quotation;
   }
 
-  awardQuotationToSupplier(quotation: Quotation, supplierId: string): PurchaseOrder {
-    const lines = quotation.lines
-      .map<PurchaseOrderLine | null>((line) => {
-        const offer = line.offers.find((o) => o.supplierId === supplierId);
-        if (!offer) return null;
-        return { itemId: line.itemId, quantity: line.quantity, receivedQuantity: 0, unitOfMeasure: line.unitOfMeasure, unitPrice: offer.unitPrice };
-      })
-      .filter((line): line is PurchaseOrderLine => line !== null);
+  /** Conie marks an RFQ as sent once she's requested quotes from suppliers, before any offers come back. */
+  markQuotationSent(quotationId: string): void {
+    this.quotations.update((quotations) => quotations.map((q) => (q.id === quotationId ? { ...q, status: 'sent' as const } : q)));
+  }
 
-    const referenceOffer = quotation.lines.flatMap((l) => l.offers).find((o) => o.supplierId === supplierId);
-
-    const seq = this.nextPurchaseOrderSeq++;
-    const order: PurchaseOrder = {
-      id: `PO-${String(seq).padStart(3, '0')}`,
-      number: `OC-2026-${String(600 + seq).padStart(4, '0')}`,
-      quotationId: quotation.id,
-      supplierId,
-      status: 'draft',
-      currency: referenceOffer?.currency ?? 'PEN',
-      exchangeRate: 1,
-      paymentTerms: referenceOffer?.paymentTerms ?? '',
-      issuedAt: TODAY,
-      committedDeliveryDate: TODAY,
-      committedDeliveryTime: '09:00',
-      plant: 'Planta Lima',
-      termsAndConditions: '',
-      penalties: '',
-      warranty: '',
-      notes: `Generada desde adjudicación de ${quotation.number}.`,
-      lines,
-    };
-
-    this.purchaseOrders.update((orders) => [...orders, order]);
-
+  /** Conie registers a supplier's quotation received by phone/email as a manual offer, attaching the PDF she received as evidence. */
+  addOfferToLine(quotationId: string, itemId: string, offer: QuotationOffer): void {
     this.quotations.update((quotations) =>
-      quotations.map((q) => (q.id === quotation.id ? { ...q, status: 'awarded' as const, awardedSupplierId: supplierId } : q)),
+      quotations.map((q) =>
+        q.id !== quotationId
+          ? q
+          : {
+              ...q,
+              status: q.status === 'draft' || q.status === 'sent' ? ('received' as const) : q.status,
+              lines: q.lines.map((line) => (line.itemId === itemId ? { ...line, offers: [...line.offers, offer] } : line)),
+            },
+      ),
+    );
+  }
+
+  /**
+   * Awards each item to the winning supplier chosen for it — a mixed award across a quotation groups
+   * the winning lines by supplier and creates one Purchase Order per distinct supplier, so two
+   * different suppliers can win different items from the same RFQ.
+   */
+  awardQuotationMixed(quotation: Quotation, winners: Record<string, string>): PurchaseOrder[] {
+    const linesBySupplier = new Map<string, { orderLine: PurchaseOrderLine; offer: QuotationOffer }[]>();
+
+    for (const line of quotation.lines) {
+      const supplierId = winners[line.itemId];
+      if (!supplierId) continue;
+      const offer = line.offers.find((o) => o.supplierId === supplierId);
+      if (!offer) continue;
+      const entry = { orderLine: { itemId: line.itemId, quantity: line.quantity, receivedQuantity: 0, unitOfMeasure: line.unitOfMeasure, unitPrice: offer.unitPrice }, offer };
+      linesBySupplier.set(supplierId, [...(linesBySupplier.get(supplierId) ?? []), entry]);
+    }
+
+    const orders: PurchaseOrder[] = [];
+    for (const [supplierId, entries] of linesBySupplier) {
+      const referenceOffer = entries[0].offer;
+      const seq = this.nextPurchaseOrderSeq++;
+      orders.push({
+        id: `PO-${String(seq).padStart(3, '0')}`,
+        number: `OC-2026-${String(600 + seq).padStart(4, '0')}`,
+        quotationId: quotation.id,
+        supplierId,
+        status: 'draft',
+        currency: referenceOffer.currency,
+        exchangeRate: 1,
+        paymentTerms: referenceOffer.paymentTerms,
+        issuedAt: TODAY,
+        committedDeliveryDate: TODAY,
+        committedDeliveryTime: '09:00',
+        plant: 'Planta Lima',
+        termsAndConditions: '',
+        penalties: '',
+        warranty: '',
+        notes: `Generada desde adjudicación de ${quotation.number}.`,
+        lines: entries.map((e) => e.orderLine),
+      });
+    }
+
+    this.purchaseOrders.update((orders_) => [...orders_, ...orders]);
+
+    const distinctSuppliers = [...linesBySupplier.keys()];
+    this.quotations.update((quotations) =>
+      quotations.map((q) =>
+        q.id !== quotation.id
+          ? q
+          : {
+              ...q,
+              status: 'awarded' as const,
+              awardedSupplierId: distinctSuppliers.length === 1 ? distinctSuppliers[0] : undefined,
+              lines: q.lines.map((line) => ({
+                ...line,
+                offers: line.offers.map((o) => ({ ...o, selected: winners[line.itemId] === o.supplierId })),
+              })),
+            },
+      ),
     );
 
-    return order;
+    return orders;
+  }
+
+  /** Almacén confirmed a goods receipt — rolls the accepted quantities into the PO's cumulative received quantity and updates its status. */
+  applyReceivedQuantities(purchaseOrderId: string, acceptedByItem: Record<string, number>): void {
+    this.purchaseOrders.update((orders) =>
+      orders.map((po) => {
+        if (po.id !== purchaseOrderId) return po;
+        const lines = po.lines.map((line) => ({ ...line, receivedQuantity: line.receivedQuantity + (acceptedByItem[line.itemId] ?? 0) }));
+        const allReceived = lines.every((line) => line.receivedQuantity >= line.quantity);
+        const anyReceived = lines.some((line) => line.receivedQuantity > 0);
+        const status: PurchaseOrderStatus = allReceived ? 'received' : anyReceived ? 'partially_received' : po.status;
+        return { ...po, lines, status };
+      }),
+    );
   }
 }

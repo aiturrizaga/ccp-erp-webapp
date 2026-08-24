@@ -22,39 +22,84 @@
             <table class="w-full text-sm">
               <thead class="text-muted-foreground border-b text-xs">
                 <tr>
-                  <th class="py-1.5 text-start font-medium">Proveedor</th>
-                  <th class="py-1.5 text-end font-medium">Precio total</th>
-                  <th class="py-1.5 text-end font-medium">Plazo máx.</th>
-                  <th class="py-1.5 text-start font-medium">Condición de pago</th>
-                  <th class="py-1.5 text-end font-medium">Artículos cotizados</th>
-                  <th class="py-1.5"></th>
+                  <th class="px-3 py-1.5 text-start font-medium first:ps-0 last:pe-0">Proveedor</th>
+                  <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Precio total</th>
+                  <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Plazo máx.</th>
+                  <th class="px-3 py-1.5 text-start font-medium first:ps-0 last:pe-0">Condición de pago</th>
+                  <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Artículos cotizados</th>
+                  <th class="px-3 py-1.5 first:ps-0 last:pe-0"></th>
                 </tr>
               </thead>
               <tbody class="divide-y">
                 @for (s of summary.suppliers; track s.supplierId) {
                   <tr>
-                    <td class="py-2">{{ s.supplierName }}</td>
-                    <td class="py-2 text-end font-medium">
+                    <td class="px-3 py-2 first:ps-0 last:pe-0">{{ s.supplierName }}</td>
+                    <td class="px-3 py-2 text-end font-medium first:ps-0 last:pe-0">
                       {{ s.currency }} {{ s.totalPrice | number: '1.2-2' }}
                       @if (s.supplierId === summary.bestPriceSupplierId) {
                         <span class="ml-1.5 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-400">Mejor precio</span>
                       }
                     </td>
-                    <td class="py-2 text-end">
+                    <td class="px-3 py-2 text-end first:ps-0 last:pe-0">
                       {{ s.maxDeliveryDays }} días
                       @if (s.supplierId === summary.bestDeliverySupplierId) {
                         <span class="ml-1.5 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-950 dark:text-sky-400">Mejor plazo</span>
                       }
                     </td>
-                    <td class="py-2">{{ s.paymentTerms }}</td>
-                    <td class="py-2 text-end">{{ s.linesQuoted }} / {{ s.totalLines }}</td>
-                    <td class="py-2 text-end">
-                      <button hlmBtn size="sm" (click)="award(summary.quotation, s.supplierId)">Adjudicar</button>
+                    <td class="px-3 py-2 first:ps-0 last:pe-0">{{ s.paymentTerms }}</td>
+                    <td class="px-3 py-2 text-end first:ps-0 last:pe-0">{{ s.linesQuoted }} / {{ s.totalLines }}</td>
+                    <td class="px-3 py-2 text-end first:ps-0 last:pe-0">
+                      <button hlmBtn size="sm" variant="outline" (click)="pickSupplierForAllQuotedLines(summary.quotation, s.supplierId)">Elegir en todo</button>
                     </td>
                   </tr>
                 }
               </tbody>
             </table>
+
+            <div class="mt-4 flex flex-col gap-3">
+              <h4 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Adjudicación por artículo</h4>
+              <p class="text-muted-foreground -mt-1 text-xs">
+                Elige el proveedor ganador de cada artículo — puedes escoger proveedores distintos para artículos distintos (adjudicación mixta), o usar "Elegir en todo" arriba para asignarle todo a un solo proveedor.
+              </p>
+              @for (line of summary.quotation.lines; track line.itemId) {
+                <div class="rounded-lg border p-3">
+                  <p class="mb-2 text-sm font-medium">{{ itemLabel(line.itemId) }} — {{ line.quantity }} {{ line.unitOfMeasure }}</p>
+                  @if (line.offers.length) {
+                    <div class="flex flex-col gap-1.5">
+                      @for (offer of line.offers; track offer.supplierId) {
+                        <label class="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-sm">
+                          <input
+                            type="radio"
+                            [name]="summary.quotation.id + '-' + line.itemId"
+                            [checked]="winnerFor(summary.quotation.id, line.itemId) === offer.supplierId"
+                            (change)="selectWinner(summary.quotation.id, line.itemId, offer.supplierId)"
+                          />
+                          <span class="flex-1">{{ supplierName(offer.supplierId) }}</span>
+                          <span class="text-muted-foreground text-xs">{{ offer.currency }} {{ offer.unitPrice }} · {{ offer.deliveryDays }} días · {{ offer.paymentTerms }}</span>
+                        </label>
+                      }
+                    </div>
+                  } @else {
+                    <p class="text-muted-foreground text-xs">Sin ofertas todavía.</p>
+                  }
+                </div>
+              }
+              <hlm-alert-dialog>
+                <button hlmAlertDialogTrigger hlmBtn size="sm" class="self-start" [disabled]="!hasAnyWinnerSelected(summary.quotation)">Adjudicar selección</button>
+                <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+                  <hlm-alert-dialog-header>
+                    <h3 hlmAlertDialogTitle>¿Adjudicar {{ summary.quotation.number }}?</h3>
+                    <p hlmAlertDialogDescription>
+                      Se generará una orden de compra para: {{ winningSupplierNames(summary.quotation) }}. Esta acción no se puede deshacer.
+                    </p>
+                  </hlm-alert-dialog-header>
+                  <hlm-alert-dialog-footer>
+                    <button hlmAlertDialogCancel>Cancelar</button>
+                    <button hlmAlertDialogAction (click)="award(summary.quotation)">Adjudicar</button>
+                  </hlm-alert-dialog-footer>
+                </hlm-alert-dialog-content>
+              </hlm-alert-dialog>
+            </div>
           } @else {
             <p class="text-muted-foreground text-sm">Esta cotización todavía no tiene ofertas de proveedores.</p>
           }

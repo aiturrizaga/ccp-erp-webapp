@@ -1,7 +1,7 @@
 @if (warehouse(); as wh) {
   <app-entity-header
     [title]="wh.name"
-    [subtitle]="wh.plant + ' · Código ' + wh.code"
+    [subtitle]="wh.shortName + ' · ' + wh.address"
     [crumbs]="[{ label: 'Almacenes', link: '/apps/inventory/warehouses' }, { label: wh.name }]"
   />
 
@@ -11,16 +11,16 @@
       <thead class="text-muted-foreground border-b text-xs">
         <tr>
           <th class="py-1.5 text-start font-medium">Código</th>
+          <th class="py-1.5 text-start font-medium">Nombre corto</th>
           <th class="py-1.5 text-start font-medium">Nombre</th>
-          <th class="py-1.5 text-start font-medium">Tipo</th>
         </tr>
       </thead>
       <tbody class="divide-y">
         @for (loc of wh.locations; track loc.id) {
           <tr>
             <td class="py-2 font-medium">{{ loc.code }}</td>
+            <td class="py-2">{{ loc.shortName }}</td>
             <td class="py-2">{{ loc.name }}</td>
-            <td class="py-2"><app-status-badge [label]="typeLabel(loc.type)" [tone]="typeTone(loc.type)" /></td>
           </tr>
         }
       </tbody>

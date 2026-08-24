@@ -8,6 +8,110 @@
   >
     <div actions class="flex items-center gap-3">
       <a [routerLink]="['/apps/purchasing/requisitions', q.requisitionId]" class="text-primary text-sm hover:underline">Ver solicitud de origen</a>
+      @if (q.status === 'draft') {
+        <hlm-alert-dialog>
+          <button hlmAlertDialogTrigger hlmBtn size="sm" variant="outline">Marcar como enviada a proveedores</button>
+          <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
+            <hlm-alert-dialog-header>
+              <h3 hlmAlertDialogTitle>¿Marcar {{ q.number }} como enviada?</h3>
+              <p hlmAlertDialogDescription>Confirma que ya solicitaste cotización a los proveedores para esta RFQ.</p>
+            </hlm-alert-dialog-header>
+            <hlm-alert-dialog-footer>
+              <button hlmAlertDialogCancel>Cancelar</button>
+              <button hlmAlertDialogAction (click)="markSent()">Marcar como enviada</button>
+            </hlm-alert-dialog-footer>
+          </hlm-alert-dialog-content>
+        </hlm-alert-dialog>
+      }
+
+      <hlm-dialog>
+        <button hlmDialogTrigger hlmBtn size="sm" variant="outline" (click)="openBulkOfferDraft()">Agregar cotización de proveedor</button>
+        <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-md">
+          <hlm-dialog-header>
+            <h3 hlmDialogTitle>Agregar cotización de proveedor</h3>
+            <p hlmDialogDescription>Registra de una vez todos los artículos que un mismo proveedor cotizó en esta RFQ, con el PDF que envió como evidencia.</p>
+          </hlm-dialog-header>
+          <div class="flex flex-col gap-3">
+            <div class="flex flex-col gap-1.5">
+              <label hlmLabel>Proveedor</label>
+              <hlm-combobox [(value)]="bulkSupplierId" [itemToString]="bulkSupplierPickerToString">
+                <hlm-combobox-input placeholder="Buscar proveedor..." />
+                <hlm-combobox-content *hlmComboboxPortal>
+                  <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+                  <div hlmComboboxList>
+                    @for (option of bulkSupplierOptions(); track option.value) {
+                      <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
+                    }
+                  </div>
+                </hlm-combobox-content>
+              </hlm-combobox>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="flex flex-col gap-1.5">
+                <label hlmLabel>Moneda</label>
+                <hlm-combobox [(value)]="bulkCurrency" [itemToString]="currencyToString">
+                  <hlm-combobox-input placeholder="Moneda..." />
+                  <hlm-combobox-content *hlmComboboxPortal>
+                    <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+                    <div hlmComboboxList>
+                      @for (option of currencyOptions; track option.value) {
+                        <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
+                      }
+                    </div>
+                  </hlm-combobox-content>
+                </hlm-combobox>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label hlmLabel for="bulk-offer-delivery">Días de entrega</label>
+                <input hlmInput id="bulk-offer-delivery" type="number" min="1" [ngModel]="bulkDeliveryDays()" (ngModelChange)="bulkDeliveryDays.set($event)" />
+              </div>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label hlmLabel for="bulk-offer-terms">Condición de pago</label>
+              <input hlmInput id="bulk-offer-terms" placeholder="Ej. Crédito a 30 días" [ngModel]="bulkPaymentTerms()" (ngModelChange)="bulkPaymentTerms.set($event)" />
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label hlmLabel for="bulk-offer-file">Cotización del proveedor (PDF)</label>
+              <input hlmInput id="bulk-offer-file" type="file" accept="application/pdf" (change)="onBulkAttachmentSelected($event)" />
+              @if (bulkAttachmentName()) {
+                <p class="text-muted-foreground flex items-center gap-1 text-xs"><ng-icon name="tablerPaperclip" /> {{ bulkAttachmentName() }}</p>
+              }
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label hlmLabel>Artículos que cotizó</label>
+              @if (bulkAvailableLines().length) {
+                <div class="flex max-h-56 flex-col gap-1 overflow-y-auto">
+                  @for (line of bulkAvailableLines(); track line.itemId) {
+                    <div class="flex items-center gap-2 rounded-md border p-2">
+                      <hlm-checkbox [checked]="!!bulkLineChecked()[line.itemId]" (checkedChange)="toggleBulkLine(line.itemId, $event)" />
+                      <span class="min-w-0 flex-1 truncate text-sm">{{ itemLabel(line.itemId) }} · {{ line.quantity }} {{ line.unitOfMeasure }}</span>
+                      <div class="w-24 shrink-0">
+                        <input
+                          hlmInput
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          class="w-full text-end"
+                          [disabled]="!bulkLineChecked()[line.itemId]"
+                          [ngModel]="bulkLinePrice()[line.itemId] ?? 0"
+                          (ngModelChange)="setBulkLinePrice(line.itemId, $event)"
+                        />
+                      </div>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <p class="text-muted-foreground text-xs">El proveedor seleccionado ya cotizó todos los artículos de esta RFQ.</p>
+              }
+            </div>
+          </div>
+          <hlm-dialog-footer>
+            <button hlmBtn variant="outline" hlmDialogClose>Cancelar</button>
+            <button hlmBtn [disabled]="!canConfirmBulkOffer()" hlmDialogClose (click)="confirmBulkOffer()">Agregar</button>
+          </hlm-dialog-footer>
+        </hlm-dialog-content>
+      </hlm-dialog>
+
       <button hlmBtn size="sm" variant="outline" (click)="goToComparison()">Comparar cotizaciones</button>
     </div>
   </app-entity-header>
@@ -15,35 +119,102 @@
   <div class="flex flex-col gap-4">
     @for (line of q.lines; track line.itemId) {
       <div hlmCard class="p-4">
-        <h3 class="mb-3 text-sm font-semibold">{{ itemLabel(line.itemId) }} — {{ line.quantity }} {{ line.unitOfMeasure }}</h3>
+        <div class="mb-3 flex items-center justify-between">
+          <h3 class="text-sm font-semibold">{{ itemLabel(line.itemId) }} — {{ line.quantity }} {{ line.unitOfMeasure }}</h3>
+
+          <hlm-dialog>
+            <button hlmDialogTrigger hlmBtn size="sm" variant="outline" (click)="openAddOfferDraft(line.itemId)">Agregar cotización</button>
+            <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-sm">
+              <hlm-dialog-header>
+                <h3 hlmDialogTitle>Agregar cotización</h3>
+                <p hlmDialogDescription>Registra la cotización que el proveedor envió por correo, con el PDF recibido como evidencia.</p>
+              </hlm-dialog-header>
+              <div class="flex flex-col gap-3">
+                <div class="flex flex-col gap-1.5">
+                  <label hlmLabel>Proveedor</label>
+                  <hlm-combobox [(value)]="newSupplierId" [itemToString]="supplierPickerToString">
+                    <hlm-combobox-input placeholder="Buscar proveedor..." />
+                    <hlm-combobox-content *hlmComboboxPortal>
+                      <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+                      <div hlmComboboxList>
+                        @for (option of supplierOptionsForActiveLine(); track option.value) {
+                          <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
+                        }
+                      </div>
+                    </hlm-combobox-content>
+                  </hlm-combobox>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div class="flex flex-col gap-1.5">
+                    <label hlmLabel for="offer-price">Precio unitario</label>
+                    <input hlmInput id="offer-price" type="number" min="0" step="0.01" [ngModel]="newUnitPrice()" (ngModelChange)="newUnitPrice.set($event)" />
+                  </div>
+                  <div class="flex flex-col gap-1.5">
+                    <label hlmLabel>Moneda</label>
+                    <hlm-combobox [(value)]="newCurrency" [itemToString]="currencyToString">
+                      <hlm-combobox-input placeholder="Moneda..." />
+                      <hlm-combobox-content *hlmComboboxPortal>
+                        <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+                        <div hlmComboboxList>
+                          @for (option of currencyOptions; track option.value) {
+                            <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
+                          }
+                        </div>
+                      </hlm-combobox-content>
+                    </hlm-combobox>
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label hlmLabel for="offer-delivery">Días de entrega</label>
+                  <input hlmInput id="offer-delivery" type="number" min="1" [ngModel]="newDeliveryDays()" (ngModelChange)="newDeliveryDays.set($event)" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label hlmLabel for="offer-terms">Condición de pago</label>
+                  <input hlmInput id="offer-terms" placeholder="Ej. Crédito a 30 días" [ngModel]="newPaymentTerms()" (ngModelChange)="newPaymentTerms.set($event)" />
+                </div>
+                <div class="flex flex-col gap-1.5">
+                  <label hlmLabel for="offer-file">Cotización del proveedor (PDF)</label>
+                  <input hlmInput id="offer-file" type="file" accept="application/pdf" (change)="onAttachmentSelected($event)" />
+                  @if (newAttachmentName()) {
+                    <p class="text-muted-foreground flex items-center gap-1 text-xs"><ng-icon name="tablerPaperclip" /> {{ newAttachmentName() }}</p>
+                  }
+                </div>
+              </div>
+              <hlm-dialog-footer>
+                <button hlmBtn variant="outline" hlmDialogClose>Cancelar</button>
+                <button hlmBtn [disabled]="!canAddOffer()" hlmDialogClose (click)="confirmAddOffer()">Agregar</button>
+              </hlm-dialog-footer>
+            </hlm-dialog-content>
+          </hlm-dialog>
+        </div>
 
         @if (line.offers.length) {
           <table class="w-full text-sm">
             <thead class="text-muted-foreground border-b text-xs">
               <tr>
-                <th class="py-1.5 text-start font-medium">Proveedor</th>
-                <th class="py-1.5 text-end font-medium">Precio unitario</th>
-                <th class="py-1.5 text-end font-medium">Entrega</th>
-                <th class="py-1.5 text-start font-medium">Condición de pago</th>
-                <th class="py-1.5 text-start font-medium">Evidencia</th>
-                <th class="py-1.5"></th>
+                <th class="px-3 py-1.5 text-start font-medium first:ps-0 last:pe-0">Proveedor</th>
+                <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Precio unitario</th>
+                <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Entrega</th>
+                <th class="px-3 py-1.5 text-start font-medium first:ps-0 last:pe-0">Condición de pago</th>
+                <th class="px-3 py-1.5 text-start font-medium first:ps-0 last:pe-0">Evidencia</th>
+                <th class="px-3 py-1.5 first:ps-0 last:pe-0"></th>
               </tr>
             </thead>
             <tbody class="divide-y">
               @for (offer of line.offers; track offer.supplierId) {
                 <tr [class.bg-emerald-50]="offer.selected" [class.dark:bg-emerald-950]="offer.selected">
-                  <td class="py-2">{{ supplierName(offer.supplierId) }}</td>
-                  <td class="py-2 text-end font-medium">{{ offer.currency }} {{ offer.unitPrice }}</td>
-                  <td class="py-2 text-end">{{ offer.deliveryDays }} días</td>
-                  <td class="py-2">{{ offer.paymentTerms }}</td>
-                  <td class="py-2">
+                  <td class="px-3 py-2 first:ps-0 last:pe-0">{{ supplierName(offer.supplierId) }}</td>
+                  <td class="px-3 py-2 text-end font-medium first:ps-0 last:pe-0">{{ offer.currency }} {{ offer.unitPrice }}</td>
+                  <td class="px-3 py-2 text-end first:ps-0 last:pe-0">{{ offer.deliveryDays }} días</td>
+                  <td class="px-3 py-2 first:ps-0 last:pe-0">{{ offer.paymentTerms }}</td>
+                  <td class="px-3 py-2 first:ps-0 last:pe-0">
                     @if (offer.attachmentName) {
                       <span class="text-primary inline-flex items-center gap-1 text-xs"><ng-icon name="tablerPaperclip" /> {{ offer.attachmentName }}</span>
                     } @else {
                       <span class="text-muted-foreground text-xs">—</span>
                     }
                   </td>
-                  <td class="py-2 text-end">
+                  <td class="px-3 py-2 text-end first:ps-0 last:pe-0">
                     @if (offer.selected) {
                       <span class="text-xs font-medium text-emerald-600">Adjudicada</span>
                     }

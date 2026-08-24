@@ -95,7 +95,7 @@ export class StockList {
       const matchesSearch = !term || r.itemLabel.toLowerCase().includes(term) || r.lot.toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(r.status);
       return matchesSearch && matchesStatus;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size);

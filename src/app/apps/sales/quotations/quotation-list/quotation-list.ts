@@ -74,7 +74,7 @@ export class QuotationList {
       const matchesStatus = statuses.size === 0 || statuses.has(q.status);
       const matchesCurrency = currencies.size === 0 || currencies.has(q.currency);
       return matchesSearch && matchesStatus && matchesCurrency;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.currencyFilter().size);

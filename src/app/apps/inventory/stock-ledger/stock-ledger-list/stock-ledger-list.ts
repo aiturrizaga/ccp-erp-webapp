@@ -1,4 +1,4 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { NgIcon } from '@ng-icons/core';
 import { HlmButtonImports } from '@ui/button';
 import { HlmCheckboxImports } from '@ui/checkbox';
@@ -7,13 +7,13 @@ import { ListToolbar } from '@shared/components/list-toolbar/list-toolbar';
 import { ListPagination } from '@shared/components/list-pagination/list-pagination';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
-import { ITEMS, STOCK_LEDGER, WAREHOUSES } from '@core/mock-data';
+import { ITEMS, WAREHOUSES } from '@core/mock-data';
 import { STOCK_LEDGER_MOVEMENT_LABEL, StockLedgerMovementType, Tone } from '@core/models';
+import { WarehouseOpsState } from '../../warehouse-ops-state';
 
 const TYPE_TONE: Record<StockLedgerMovementType, Tone> = {
   inbound: 'success',
   outbound: 'info',
-  transfer: 'neutral',
   adjustment: 'warning',
   consumption: 'info',
 };
@@ -28,6 +28,8 @@ const TYPE_OPTIONS: { value: StockLedgerMovementType; label: string }[] = (
   templateUrl: './stock-ledger-list.html',
 })
 export class StockLedgerList {
+  private readonly warehouseOpsState = inject(WarehouseOpsState);
+
   protected readonly search = signal('');
   protected readonly view = signal<'list' | 'grid' | 'kanban'>('list');
   protected readonly page = signal(1);
@@ -53,11 +55,11 @@ export class StockLedgerList {
   protected readonly filteredRows = computed(() => {
     const term = this.search().trim().toLowerCase();
     const types = this.typeFilter();
-    return STOCK_LEDGER.filter((m) => {
+    return this.warehouseOpsState.stockLedger().filter((m) => {
       const matchesType = types.size === 0 || types.has(m.type);
       const matchesSearch = !term || m.documentNumber.toLowerCase().includes(term) || this.itemLabel(m.itemId).toLowerCase().includes(term);
       return matchesType && matchesSearch;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.typeFilter().size);

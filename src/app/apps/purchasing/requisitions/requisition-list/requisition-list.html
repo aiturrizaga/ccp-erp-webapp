@@ -9,6 +9,7 @@
   [filterCount]="filterCount()"
   [hasSecondaryActions]="true"
   actionLabel="Nueva solicitud"
+  (action)="createRequisition()"
 >
   <div filters class="flex flex-col gap-3">
     <div>
@@ -100,6 +101,17 @@
 
 <ng-template #cellTpl let-row let-key="key">
   @switch (key) {
+    @case ('workSheetRef') {
+      @if (row.workSheetRef; as ref) {
+        @if (workSheetId(ref); as wsId) {
+          <a [routerLink]="['/apps/production/work-sheets', wsId]" class="text-primary hover:underline" (click)="$event.stopPropagation()">{{ ref }}</a>
+        } @else {
+          {{ ref }}
+        }
+      } @else {
+        <span class="text-muted-foreground">—</span>
+      }
+    }
     @case ('priority') {
       {{ priorityLabel(row.priority) }}
     }

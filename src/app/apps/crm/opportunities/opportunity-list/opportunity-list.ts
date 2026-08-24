@@ -66,7 +66,7 @@ export class OpportunityList {
       const matchesSearch = !term || o.title.toLowerCase().includes(term) || this.customerName(o.customerId).toLowerCase().includes(term);
       const matchesStage = stages.size === 0 || stages.has(o.stage);
       return matchesSearch && matchesStage;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.stageFilter().size);

@@ -69,7 +69,7 @@ export class BomList {
       const matchesSearch = !term || this.productName(b.productId).toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(b.status);
       return matchesSearch && matchesStatus;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size);

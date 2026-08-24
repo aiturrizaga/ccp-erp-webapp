@@ -82,7 +82,7 @@ export class OutputBundleList {
       const matchesStatus = statuses.size === 0 || statuses.has(b.status);
       const matchesPlant = plants.size === 0 || plants.has(b.plant);
       return matchesSearch && matchesStatus && matchesPlant;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.plantFilter().size);

@@ -9,3 +9,4 @@ export * from './approvals.fixture';
 export * from './crm.fixture';
 export * from './sales.fixture';
 export * from './invoicing.fixture';
+export * from './users.fixture';

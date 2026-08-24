@@ -1,0 +1,110 @@
+<app-list-toolbar
+  [(search)]="search"
+  searchPlaceholder="Buscar por número o motivo..."
+  [views]="views"
+  [(view)]="view"
+  [groupByOptions]="groupByOptions"
+  [(groupBy)]="groupBy"
+  [hasFilters]="true"
+  [filterCount]="filterCount()"
+  [hasSecondaryActions]="true"
+  actionLabel="Nueva salida"
+  (action)="createIssue()"
+>
+  <div filters class="flex flex-col gap-3">
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Estado</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of statusOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="statusFilter().has(opt.value)" (checkedChange)="toggleStatusFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Origen</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of originOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="originFilter().has(opt.value)" (checkedChange)="toggleOriginFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    @if (filterCount() > 0) {
+      <button hlmBtn variant="ghost" size="sm" class="justify-start gap-1.5" (click)="clearFilters()">
+        <ng-icon name="tablerFilter" />
+        Limpiar filtros
+      </button>
+    }
+  </div>
+
+  <div secondaryActions class="flex flex-col gap-0.5">
+    <button hlmBtn variant="ghost" size="sm" class="justify-start gap-2">
+      <ng-icon name="tablerDownload" />
+      Exportar a Excel
+    </button>
+  </div>
+</app-list-toolbar>
+
+@if (groupedSections(); as sections) {
+  <div class="flex flex-col gap-5">
+    @for (section of sections; track section.label) {
+      <div>
+        <h3 class="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{{ section.label }} · {{ section.rows.length }}</h3>
+        @if (view() === 'list') {
+          <app-data-table [columns]="columns" [rows]="section.rows" [rowClickable]="true" (rowClick)="openDetail($event)" [cellTemplate]="cellTpl" />
+        } @else {
+          <app-data-grid [rows]="section.rows" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" />
+        }
+      </div>
+    }
+  </div>
+} @else {
+  @if (view() === 'list') {
+    <app-data-table
+      [columns]="columns"
+      [rows]="paginatedRows()"
+      [rowClickable]="true"
+      (rowClick)="openDetail($event)"
+      emptyMessage="No se encontraron salidas."
+      [cellTemplate]="cellTpl"
+    />
+  } @else {
+    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron salidas." />
+  }
+  <app-list-pagination [total]="filteredRows().length" [(page)]="page" [(pageSize)]="pageSize" />
+}
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('origin') {
+      {{ originLabel(row.origin) }}
+    }
+    @case ('workSheetId') {
+      @if (workSheetNumber(row.workSheetId); as ref) {
+        <a [routerLink]="['/apps/production/work-sheets', row.workSheetId]" class="text-primary hover:underline" (click)="$event.stopPropagation()">{{ ref }}</a>
+      } @else {
+        <span class="text-muted-foreground">—</span>
+      }
+    }
+    @case ('status') {
+      <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
+    }
+    @default {
+      {{ row[key] }}
+    }
+  }
+</ng-template>
+
+<ng-template #cardTpl let-row>
+  <div class="flex items-start justify-between gap-2">
+    <p class="text-sm font-medium">{{ row.number }}</p>
+    <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
+  </div>
+  <p class="text-muted-foreground mt-1 text-xs">{{ originLabel(row.origin) }}</p>
+  <p class="text-muted-foreground mt-2 text-xs">{{ row.plant }} · {{ row.createdAt }}</p>
+</ng-template>

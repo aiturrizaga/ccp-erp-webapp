@@ -74,7 +74,7 @@ export class QuotationList {
       const matchesSearch = !term || q.number.toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(q.status);
       return matchesSearch && matchesStatus;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size);

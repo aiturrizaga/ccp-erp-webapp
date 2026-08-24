@@ -1,0 +1,130 @@
+<app-entity-header
+  title="Nuevo artículo"
+  [crumbs]="[{ label: 'Artículos', link: '/apps/inventory/items' }, { label: 'Nuevo artículo' }]"
+/>
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 md:grid-cols-2">
+  <div hlmCard class="flex flex-col gap-4 p-4">
+    <h3 class="text-sm font-semibold">Datos generales</h3>
+
+    <div class="flex flex-col gap-1.5">
+      <label hlmLabel for="description">Descripción</label>
+      <input hlmInput id="description" type="text" placeholder="Ej. ARANDELA PLANA 1&quot;" [ngModel]="description()" (ngModelChange)="description.set($event)" />
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Tipo de existencia</label>
+        <hlm-select class="block w-full" [value]="stockType()" (valueChange)="stockType.set($event ?? '')" [itemToString]="stockTypeToString">
+          <hlm-select-trigger size="sm" class="w-full">
+            <hlm-select-value placeholder="Selecciona" />
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (option of stockTypeOptions; track option.value) {
+              <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Unidad de medida</label>
+        <hlm-select class="block w-full" [value]="unitOfMeasure()" (valueChange)="unitOfMeasure.set($event ?? '')" [itemToString]="unitOfMeasureToString">
+          <hlm-select-trigger size="sm" class="w-full">
+            <hlm-select-value placeholder="Selecciona" />
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (group of uomGroups; track group.label) {
+              <hlm-select-group>
+                <hlm-select-label>{{ group.label }}</hlm-select-label>
+                @for (option of group.options; track option.value) {
+                  <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+                }
+              </hlm-select-group>
+            }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Grupo</label>
+        <hlm-combobox [(value)]="itemGroup" [itemToString]="itemGroupToString">
+          <hlm-combobox-input placeholder="Sin grupo" />
+          <hlm-combobox-content *hlmComboboxPortal>
+            <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+            <div hlmComboboxList>
+              @for (option of itemGroupOptions; track option.value) {
+                <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
+              }
+            </div>
+          </hlm-combobox-content>
+        </hlm-combobox>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Centro de costo</label>
+        <hlm-combobox [(value)]="costCenter" [itemToString]="costCenterToString">
+          <hlm-combobox-input placeholder="Sin centro de costo" />
+          <hlm-combobox-content *hlmComboboxPortal>
+            <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+            <div hlmComboboxList>
+              @for (option of costCenterOptions; track option.value) {
+                <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
+              }
+            </div>
+          </hlm-combobox-content>
+        </hlm-combobox>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2.5 pt-1">
+      <label class="flex cursor-pointer items-center gap-2 text-sm">
+        <hlm-checkbox [checked]="tracksLot()" (checkedChange)="tracksLot.set($event)" />
+        Controla lote
+      </label>
+      <label class="flex cursor-pointer items-center gap-2 text-sm">
+        <hlm-checkbox [checked]="tracksExpiration()" (checkedChange)="tracksExpiration.set($event)" />
+        Controla vencimiento
+      </label>
+      <label class="flex cursor-pointer items-center gap-2 text-sm">
+        <hlm-checkbox [checked]="active()" (checkedChange)="active.set($event)" />
+        Activo
+      </label>
+    </div>
+  </div>
+
+  <div hlmCard class="flex flex-col gap-4 p-4">
+    <h3 class="text-sm font-semibold">Costos e inventario</h3>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Moneda</label>
+        <app-select-filter [options]="currencyOptions" [(value)]="currency" placeholder="Selecciona" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="standardCost">Costo estándar</label>
+        <input hlmInput id="standardCost" type="number" min="0" step="0.01" [ngModel]="standardCost()" (ngModelChange)="standardCost.set($event)" />
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label hlmLabel for="minStock">Stock mínimo</label>
+      <input hlmInput id="minStock" type="number" min="0" [ngModel]="minStock()" (ngModelChange)="minStock.set($event)" />
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label hlmLabel for="reorderPoint">Punto de reposición</label>
+      <input hlmInput id="reorderPoint" type="number" min="0" [ngModel]="reorderPoint()" (ngModelChange)="reorderPoint.set($event)" />
+    </div>
+
+    <div class="flex flex-col gap-1.5">
+      <label hlmLabel for="maxStock">Stock máximo</label>
+      <input hlmInput id="maxStock" type="number" min="0" [ngModel]="maxStock()" (ngModelChange)="maxStock.set($event)" />
+    </div>
+  </div>
+</div>
+
+<div class="mt-4 flex justify-end gap-2">
+  <button hlmBtn variant="outline" (click)="cancel()">Cancelar</button>
+  <button hlmBtn [disabled]="!canSubmit()" (click)="submit()">Crear artículo</button>
+</div>

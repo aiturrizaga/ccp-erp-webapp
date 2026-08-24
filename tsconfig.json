@@ -41,7 +41,10 @@
       "@apps/*": ["./src/app/apps/*"],
       "@ui/collapsible": ["./src/app/shared/ui/collapsible/src/index.ts"],
       "@ui/sidebar": ["./src/app/shared/ui/sidebar/src/index.ts"],
-      "@ui/skeleton": ["./src/app/shared/ui/skeleton/src/index.ts"]
+      "@ui/skeleton": ["./src/app/shared/ui/skeleton/src/index.ts"],
+      "@ui/combobox": ["./src/app/shared/ui/combobox/src/index.ts"],
+      "@ui/input-group": ["./src/app/shared/ui/input-group/src/index.ts"],
+      "@ui/alert-dialog": ["./src/app/shared/ui/alert-dialog/src/index.ts"]
     }
   },
   "angularCompilerOptions": {

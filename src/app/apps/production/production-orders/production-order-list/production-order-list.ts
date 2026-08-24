@@ -89,7 +89,7 @@ export class ProductionOrderList {
       const matchesStatus = statuses.size === 0 || statuses.has(o.status);
       const matchesPlant = plants.size === 0 || plants.has(o.plant);
       return matchesSearch && matchesStatus && matchesPlant;
-    });
+    }).reverse();
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.plantFilter().size);
