@@ -9,8 +9,8 @@ export interface AppDescriptor {
 }
 
 export const APP_CATALOG: AppDescriptor[] = [
-  { id: 'purchasing', name: 'Compras', description: 'Solicitudes, cotizaciones, órdenes de compra y proveedores', icon: '🛒', route: '/apps/purchasing', implemented: true },
-  { id: 'inventory', name: 'Inventario', description: 'Artículos, almacenes, stock, kardex y recepciones', icon: '📦', route: '/apps/inventory', implemented: true },
+  { id: 'purchasing', name: 'Logística', description: 'Solicitudes, cotizaciones, órdenes de compra y proveedores', icon: '🛒', route: '/apps/purchasing', implemented: true },
+  { id: 'inventory', name: 'Almacén', description: 'Artículos, almacenes, stock, kardex y recepciones', icon: '📦', route: '/apps/inventory', implemented: true },
   { id: 'production', name: 'Producción', description: 'Órdenes de fabricación, hojas de trabajo y bolsas de salida', icon: '🏭', route: '/apps/production', implemented: true },
   { id: 'plm', name: 'PLM', description: 'Productos, recetas, especificaciones, versiones y cambios', icon: '🧬', route: '/apps/plm', implemented: true },
   { id: 'sales', name: 'Ventas', description: 'Clientes, cotizaciones, pedidos y despachos', icon: '💼', route: '/apps/sales', implemented: true },
