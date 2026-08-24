@@ -123,7 +123,7 @@ export class RequisitionDetail {
   protected removeLine(lineIndex: number): void {
     const line = this.requisition()?.lines[lineIndex];
     this.purchasingState.removeLine(this.id(), lineIndex);
-    if (line) toast.success(`${this.itemLabel(line.itemId)} quitado de la solicitud`);
+    if (line) toast.success(`${this.itemLabel(line.itemId)} quitado del requerimiento`);
   }
 
   protected setLineNotNeeded(lineIndex: number, notNeeded: boolean): void {
@@ -136,17 +136,17 @@ export class RequisitionDetail {
 
   protected submitForApproval(): void {
     this.purchasingState.submitForApproval(this.id());
-    toast.success('Solicitud enviada a aprobación');
+    toast.success('Requerimiento enviado a aprobación');
   }
 
   protected approveRequisition(): void {
     this.purchasingState.approveRequisition(this.id());
-    toast.success('Solicitud aprobada', { description: 'Ya puede generarse la cotización.' });
+    toast.success('Requerimiento aprobado', { description: 'Ya puede generarse la cotización.' });
   }
 
   protected observeRequisition(): void {
     this.purchasingState.observeRequisition(this.id());
-    toast.warning('Solicitud observada', { description: 'Se devolvió a Almacén como borrador para ajustes.' });
+    toast.warning('Requerimiento observado', { description: 'Se devolvió a Almacén como borrador para ajustes.' });
   }
 
   protected openAddLineDraft(): void {
@@ -172,6 +172,6 @@ export class RequisitionDetail {
       neededBy: requisition.neededBy,
       availableStock,
     });
-    toast.success(`${item.code} — ${item.description} agregado a la solicitud`);
+    toast.success(`${item.code} — ${item.description} agregado al requerimiento`);
   }
 }

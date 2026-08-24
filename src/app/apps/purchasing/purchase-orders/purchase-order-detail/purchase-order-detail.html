@@ -139,7 +139,7 @@
         <h3 class="mb-3 text-sm font-semibold">Trazabilidad</h3>
         <dl class="grid grid-cols-2 gap-y-2">
           @if (requisition(); as r) {
-            <dt class="text-muted-foreground">Solicitud</dt>
+            <dt class="text-muted-foreground">Requerimiento</dt>
             <dd><a [routerLink]="['/apps/purchasing/requisitions', r.id]" class="text-primary hover:underline">{{ r.number }}</a></dd>
             @if (r.workSheetRef) {
               <dt class="text-muted-foreground">Hoja de trabajo</dt>

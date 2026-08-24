@@ -133,7 +133,7 @@ export class RequisitionCreate {
       lines,
     });
 
-    toast.success(`Solicitud ${requisition.number} creada`, { description: 'Queda en Borrador — puedes seguir editándola antes de enviarla a aprobación.' });
+    toast.success(`Requerimiento ${requisition.number} creado`, { description: 'Queda en Borrador — puedes seguir editándolo antes de enviarlo a aprobación.' });
     this.router.navigate(['/apps/purchasing/requisitions', requisition.id]);
   }
 

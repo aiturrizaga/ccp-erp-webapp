@@ -8,7 +8,7 @@
   [hasFilters]="true"
   [filterCount]="filterCount()"
   [hasSecondaryActions]="true"
-  actionLabel="Nueva solicitud"
+  actionLabel="Nuevo requerimiento"
   (action)="createRequisition()"
 >
   <div filters class="flex flex-col gap-3">
@@ -90,11 +90,11 @@
       [rows]="paginatedRows()"
       [rowClickable]="true"
       (rowClick)="openDetail($event)"
-      emptyMessage="No se encontraron solicitudes."
+      emptyMessage="No se encontraron requerimientos."
       [cellTemplate]="cellTpl"
     />
   } @else {
-    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron solicitudes." />
+    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron requerimientos." />
   }
   <app-list-pagination [total]="filteredRows().length" [(page)]="page" [(pageSize)]="pageSize" />
 }

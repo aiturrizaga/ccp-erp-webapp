@@ -165,6 +165,9 @@ export interface Item {
   id: string;
   code: string;
   description: string;
+  /** Free-text brand/model — not a catalog, just captured for reference and suggested from what's already been entered on other items. */
+  brand?: string;
+  model?: string;
   category: ItemCategory;
   group: string;
   /** Real CCP accounting classification (01/03/05/06) — distinct from `category`, which is this prototype's own simplified grouping. */

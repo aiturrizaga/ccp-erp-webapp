@@ -74,45 +74,45 @@ export const WORK_SHEETS: WorkSheet[] = [
     materials: [
       { itemId: 'MP00008', required: 160, available: 900, reserved: 0, consumed: 0, unitOfMeasure: 'BOL', isSupply: false },
       { itemId: 'MP00003', required: 8.1, available: 18, reserved: 0, consumed: 0, unitOfMeasure: 'M3', isSupply: false },
-      { itemId: 'MA00031', required: 180, available: 45, reserved: 0, consumed: 0, unitOfMeasure: 'UND', isSupply: false, exception: 'Stock insuficiente de tubería PVC — se generó una solicitud de compra automática.' },
+      { itemId: 'MA00031', required: 180, available: 45, reserved: 0, consumed: 0, unitOfMeasure: 'UND', isSupply: false, exception: 'Stock insuficiente de tubería PVC — se generó un requerimiento de compra automático.' },
     ],
-    responsible: 'Cristian Espinoza', atRisk: true, riskReason: 'Faltante de tubería PVC (MA00031) para cubrir la producción — solicitud de compra generada automáticamente (SC-2026-0148).',
+    responsible: 'Cristian Espinoza', atRisk: true, riskReason: 'Faltante de tubería PVC (MA00031) para cubrir la producción — requerimiento de compra generado automáticamente (SC-2026-0148).',
   },
   {
     id: 'WS-008', number: 'HT-2026-0332', productionOrderId: 'MO-003', productId: 'PROD-004', plannedQuantity: 35, plant: 'Planta Accesorios',
     bomId: 'BOM-004', bomVersion: 'v1.4', scheduledDate: '2026-08-26', committedDate: '2026-08-30', status: 'planned',
     materials: [
-      { itemId: 'MP00009', required: 98, available: 60, reserved: 0, consumed: 0, unitOfMeasure: 'BOL', isSupply: false, exception: 'Faltan 38 bolsas — cubierto con solicitud de compra automática.' },
+      { itemId: 'MP00009', required: 98, available: 60, reserved: 0, consumed: 0, unitOfMeasure: 'BOL', isSupply: false, exception: 'Faltan 38 bolsas — cubierto con un requerimiento de compra automático.' },
       { itemId: 'SU01122', required: 35, available: 72, reserved: 0, consumed: 0, unitOfMeasure: 'UND', isSupply: true },
     ],
-    responsible: 'Haldeer Vasquez', atRisk: true, riskReason: 'Faltante de cemento (MP00009) para cubrir la producción — solicitud de compra generada automáticamente (SC-2026-0149).',
+    responsible: 'Haldeer Vasquez', atRisk: true, riskReason: 'Faltante de cemento (MP00009) para cubrir la producción — requerimiento de compra generado automáticamente (SC-2026-0149).',
   },
   {
     id: 'WS-009', number: 'HT-2026-0335', productionOrderId: 'MO-005', productId: 'PROD-005', plannedQuantity: 30, plant: 'Planta Accesorios',
     bomId: 'BOM-005', bomVersion: 'v1.0', scheduledDate: '2026-08-27', committedDate: '2026-08-31', status: 'preparing',
     materials: [
-      { itemId: 'MP00009', required: 75, available: 60, reserved: 0, consumed: 0, unitOfMeasure: 'BOL', isSupply: false, exception: 'Faltan 15 bolsas — cubierto con solicitud de compra automática.' },
+      { itemId: 'MP00009', required: 75, available: 60, reserved: 0, consumed: 0, unitOfMeasure: 'BOL', isSupply: false, exception: 'Faltan 15 bolsas — cubierto con un requerimiento de compra automático.' },
       { itemId: 'MP00004', required: 2.7, available: 18, reserved: 0, consumed: 0, unitOfMeasure: 'M3', isSupply: false },
     ],
-    responsible: 'Cristian Espinoza', atRisk: true, riskReason: 'Faltante de cemento (MP00009) para cubrir la producción — solicitud de compra generada automáticamente (SC-2026-0150).',
+    responsible: 'Cristian Espinoza', atRisk: true, riskReason: 'Faltante de cemento (MP00009) para cubrir la producción — requerimiento de compra generado automáticamente (SC-2026-0150).',
   },
   {
     id: 'WS-010', number: 'HT-2026-0340', productionOrderId: 'MO-001', productId: 'PROD-001', plannedQuantity: 25, plant: 'Planta Lima — P2',
     bomId: 'BOM-001', bomVersion: 'v2.1', scheduledDate: '2026-08-28', committedDate: '2026-09-02', status: 'planned',
     materials: [
-      { itemId: 'MP00006', required: 200, available: 150, reserved: 0, consumed: 0, unitOfMeasure: 'BOL', isSupply: false, exception: 'Faltan 50 bolsas — cubierto con solicitud de compra automática.' },
+      { itemId: 'MP00006', required: 200, available: 150, reserved: 0, consumed: 0, unitOfMeasure: 'BOL', isSupply: false, exception: 'Faltan 50 bolsas — cubierto con un requerimiento de compra automático.' },
       { itemId: 'MP00013', required: 150, available: 1740, reserved: 0, consumed: 0, unitOfMeasure: 'UND', isSupply: false },
     ],
-    responsible: 'Alex Vasquez', atRisk: true, riskReason: 'Faltante de cemento (MP00006) para cubrir la producción — solicitud de compra generada automáticamente (SC-2026-0151).',
+    responsible: 'Alex Vasquez', atRisk: true, riskReason: 'Faltante de cemento (MP00006) para cubrir la producción — requerimiento de compra generado automáticamente (SC-2026-0151).',
   },
   {
     id: 'WS-011', number: 'HT-2026-0342', productionOrderId: 'MO-003', productId: 'PROD-004', plannedQuantity: 20, plant: 'Planta Accesorios',
     bomId: 'BOM-004', bomVersion: 'v1.4', scheduledDate: '2026-08-29', committedDate: '2026-09-03', status: 'planned',
     materials: [
-      { itemId: 'MP00004', required: 6, available: 4, reserved: 0, consumed: 0, unitOfMeasure: 'M3', isSupply: false, exception: 'Faltan 2 m³ de arena fina — cubierto con solicitud de compra automática.' },
+      { itemId: 'MP00004', required: 6, available: 4, reserved: 0, consumed: 0, unitOfMeasure: 'M3', isSupply: false, exception: 'Faltan 2 m³ de arena fina — cubierto con un requerimiento de compra automático.' },
       { itemId: 'SU01122', required: 20, available: 72, reserved: 0, consumed: 0, unitOfMeasure: 'UND', isSupply: true },
     ],
-    responsible: 'Haldeer Vasquez', atRisk: true, riskReason: 'Faltante de arena fina (MP00004) para cubrir la producción — solicitud de compra generada automáticamente (SC-2026-0152).',
+    responsible: 'Haldeer Vasquez', atRisk: true, riskReason: 'Faltante de arena fina (MP00004) para cubrir la producción — requerimiento de compra generado automáticamente (SC-2026-0152).',
   },
 ];
 

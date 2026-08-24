@@ -14,6 +14,27 @@
 
     <div class="grid grid-cols-2 gap-3">
       <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="brand">Marca</label>
+        <input hlmInput id="brand" type="text" list="brand-suggestions" placeholder="Ej. SOLDITEC" [ngModel]="brand()" (ngModelChange)="brand.set($event)" />
+        <datalist id="brand-suggestions">
+          @for (option of brandSuggestions(); track option) {
+            <option [value]="option">{{ option }}</option>
+          }
+        </datalist>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="model">Modelo</label>
+        <input hlmInput id="model" type="text" list="model-suggestions" placeholder="Ej. 6011" [ngModel]="model()" (ngModelChange)="model.set($event)" />
+        <datalist id="model-suggestions">
+          @for (option of modelSuggestions(); track option) {
+            <option [value]="option">{{ option }}</option>
+          }
+        </datalist>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1.5">
         <label hlmLabel>Tipo de existencia</label>
         <hlm-select class="block w-full" [value]="stockType()" (valueChange)="stockType.set($event ?? '')" [itemToString]="stockTypeToString">
           <hlm-select-trigger size="sm" class="w-full">

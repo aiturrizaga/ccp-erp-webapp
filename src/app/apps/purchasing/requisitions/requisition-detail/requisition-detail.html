@@ -3,7 +3,7 @@
     [title]="r.number"
     [statusLabel]="statusLabel(r.status)"
     [statusTone]="statusTone(r.status)"
-    [crumbs]="[{ label: 'Solicitudes de compra', link: '/apps/purchasing/requisitions' }, { label: r.number }]"
+    [crumbs]="[{ label: 'Requerimientos de compra', link: '/apps/purchasing/requisitions' }, { label: r.number }]"
   >
     <div actions class="flex gap-2">
       @if (r.status === 'pending_approval' && auth.isPurchasing()) {
@@ -31,7 +31,7 @@
           <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
             <hlm-alert-dialog-header>
               <h3 hlmAlertDialogTitle>¿Generar cotización para {{ r.number }}?</h3>
-              <p hlmAlertDialogDescription>Se creará una nueva RFQ con los artículos de esta solicitud para empezar a pedir precios a los proveedores.</p>
+              <p hlmAlertDialogDescription>Se creará una nueva RFQ con los artículos de este requerimiento para empezar a pedir precios a los proveedores.</p>
             </hlm-alert-dialog-header>
             <hlm-alert-dialog-footer>
               <button hlmAlertDialogCancel>Cancelar</button>
@@ -214,10 +214,10 @@
       @if (approval(); as a) {
         <app-approval-timeline [levels]="a.levels" />
       } @else {
-        <app-empty-state icon="tablerClockHour4" title="Sin flujo de aprobación" description="Esta solicitud no requirió aprobación según las reglas configuradas." />
+        <app-empty-state icon="tablerClockHour4" title="Sin flujo de aprobación" description="Este requerimiento no requirió aprobación según las reglas configuradas." />
       }
     </div>
   </div>
 } @else {
-  <app-empty-state icon="tablerClipboardList" title="Solicitud no encontrada" />
+  <app-empty-state icon="tablerClipboardList" title="Requerimiento no encontrado" />
 }

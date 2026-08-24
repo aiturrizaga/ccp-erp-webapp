@@ -91,12 +91,12 @@ export class RequisitionList {
   protected readonly statusKey = (row: PurchaseRequisition): string => row.status;
 
   protected readonly columns: DataTableColumn[] = [
-    { key: 'number', header: 'Solicitud', width: '130px' },
+    { key: 'number', header: 'Requerimiento', width: '130px' },
     { key: 'requestedBy', header: 'Solicitante' },
     { key: 'area', header: 'Área', width: '150px' },
     { key: 'workSheetRef', header: 'H. Trabajo', width: '130px' },
     { key: 'priority', header: 'Prioridad', width: '100px' },
-    { key: 'createdAt', header: 'Fecha de solicitud', width: '140px' },
+    { key: 'createdAt', header: 'Fecha de requerimiento', width: '140px' },
     { key: 'neededBy', header: 'Fecha requerida', width: '130px' },
     { key: 'status', header: 'Estado', width: '160px' },
   ];

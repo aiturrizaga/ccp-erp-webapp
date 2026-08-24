@@ -97,7 +97,7 @@
     <p class="text-sm font-medium">{{ row.number }}</p>
     <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
   </div>
-  <p class="text-muted-foreground mt-1 text-xs">Solicitud {{ row.requisitionId }} · {{ row.lines.length }} artículos</p>
+  <p class="text-muted-foreground mt-1 text-xs">Requerimiento {{ row.requisitionId }} · {{ row.lines.length }} artículos</p>
   <p class="text-muted-foreground mt-2 text-xs">{{ supplierName(row.awardedSupplierId) }}</p>
   <p class="text-muted-foreground mt-2 text-xs">Vence {{ row.dueDate }}</p>
 </ng-template>

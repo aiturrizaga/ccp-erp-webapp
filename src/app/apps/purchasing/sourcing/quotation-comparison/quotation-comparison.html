@@ -2,10 +2,10 @@
   <app-entity-header
     [title]="'Comparación de cotizaciones — ' + r.number"
     [subtitle]="r.area + ' · ' + r.plant"
-    [crumbs]="[{ label: 'Solicitudes de compra', link: '/apps/purchasing/requisitions' }, { label: r.number, link: '/apps/purchasing/requisitions/' + r.id }, { label: 'Comparación' }]"
+    [crumbs]="[{ label: 'Requerimientos de compra', link: '/apps/purchasing/requisitions' }, { label: r.number, link: '/apps/purchasing/requisitions/' + r.id }, { label: 'Comparación' }]"
   >
     <div actions>
-      <a [routerLink]="['/apps/purchasing/requisitions', r.id]" class="text-primary text-sm hover:underline">Ver solicitud de origen</a>
+      <a [routerLink]="['/apps/purchasing/requisitions', r.id]" class="text-primary text-sm hover:underline">Ver requerimiento de origen</a>
     </div>
   </app-entity-header>
 
@@ -107,8 +107,8 @@
       }
     </div>
   } @else {
-    <app-empty-state icon="tablerFileSearch" title="Sin cotizaciones" description="Esta solicitud todavía no tiene cotizaciones generadas." />
+    <app-empty-state icon="tablerFileSearch" title="Sin cotizaciones" description="Este requerimiento todavía no tiene cotizaciones generadas." />
   }
 } @else {
-  <app-empty-state icon="tablerClipboardList" title="Solicitud no encontrada" />
+  <app-empty-state icon="tablerClipboardList" title="Requerimiento no encontrado" />
 }

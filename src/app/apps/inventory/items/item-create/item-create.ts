@@ -16,6 +16,7 @@ import {
   CostCenterCode,
   COST_CENTER_LABEL,
   Currency,
+  Item,
   ItemCategory,
   ItemGroupCode,
   ITEM_GROUP_LABEL,
@@ -89,6 +90,8 @@ export class ItemCreate {
   private readonly inventoryState = inject(InventoryState);
 
   protected readonly description = signal('');
+  protected readonly brand = signal('');
+  protected readonly model = signal('');
   protected readonly stockType = signal<string>('03');
   protected readonly itemGroup = signal<string>(NONE);
   protected readonly costCenter = signal<string>(NONE);
@@ -113,6 +116,19 @@ export class ItemCreate {
 
   protected readonly canSubmit = computed(() => this.description().trim().length > 0);
 
+  /** Suggests brands/models already typed on other items — plain free text underneath, never a closed list. */
+  protected readonly brandSuggestions = computed(() => this.uniqueValues((i) => i.brand));
+  protected readonly modelSuggestions = computed(() => this.uniqueValues((i) => i.model));
+
+  private uniqueValues(pick: (item: Item) => string | undefined): string[] {
+    const values = new Set<string>();
+    for (const item of this.inventoryState.items()) {
+      const value = pick(item)?.trim();
+      if (value) values.add(value);
+    }
+    return Array.from(values).sort((a, b) => a.localeCompare(b));
+  }
+
   protected itemGroupToString = (value: string): string => this.itemGroupOptions.find((o) => o.value === value)?.label ?? value;
   protected costCenterToString = (value: string): string => this.costCenterOptions.find((o) => o.value === value)?.label ?? value;
   protected stockTypeToString = (value: string): string => this.stockTypeOptions.find((o) => o.value === value)?.label ?? value;
@@ -129,6 +145,8 @@ export class ItemCreate {
 
     const item = this.inventoryState.addItem({
       description: this.description().trim().toUpperCase(),
+      brand: this.brand().trim() || undefined,
+      model: this.model().trim() || undefined,
       category: CATEGORY_BY_STOCK_TYPE[stockType],
       group: itemGroup ? ITEM_GROUP_LABEL[itemGroup] : '',
       stockType,

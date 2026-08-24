@@ -8,7 +8,7 @@ export type ApprovalProcess =
 
 export const APPROVAL_PROCESS_LABEL: Record<ApprovalProcess, string> = {
   supplier: 'Alta de proveedor',
-  purchase_requisition: 'Solicitud de compra',
+  purchase_requisition: 'Requerimiento de compra',
   quotation_award: 'Adjudicación de cotización',
   purchase_order: 'Orden de compra',
   bom_change: 'Cambio de BOM',

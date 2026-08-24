@@ -24,6 +24,8 @@
         <div hlmCard class="p-4">
           <h3 class="mb-3 text-sm font-semibold">Datos generales</h3>
           <dl class="grid grid-cols-2 gap-y-2 text-sm">
+            <dt class="text-muted-foreground">Marca</dt><dd>{{ it.brand || '—' }}</dd>
+            <dt class="text-muted-foreground">Modelo</dt><dd>{{ it.model || '—' }}</dd>
             <dt class="text-muted-foreground">Tipo de existencia</dt><dd>{{ stockTypeLabel(it.stockType) }}</dd>
             <dt class="text-muted-foreground">Grupo</dt><dd>{{ itemGroupLabel(it.itemGroup) }}</dd>
             <dt class="text-muted-foreground">Centro de costo</dt><dd>{{ costCenterLabel(it.costCenter) }}</dd>
