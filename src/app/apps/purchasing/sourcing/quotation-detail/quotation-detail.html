@@ -4,7 +4,7 @@
     subtitle="Matriz comparativa de ofertas por artículo"
     [statusLabel]="statusLabel(q.status)"
     [statusTone]="statusTone(q.status)"
-    [crumbs]="[{ label: 'Abastecimiento', link: '/apps/purchasing/sourcing' }, { label: q.number }]"
+    [crumbs]="[{ label: 'Cotizaciones', link: '/apps/purchasing/sourcing' }, { label: q.number }]"
   >
     <div actions class="flex items-center gap-3">
       <a [routerLink]="['/apps/purchasing/requisitions', q.requisitionId]" class="text-primary text-sm hover:underline">Ver requerimiento de origen</a>
