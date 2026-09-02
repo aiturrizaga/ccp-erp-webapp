@@ -3,8 +3,8 @@
     <app-stat-card label="Artículos activos" [value]="totalItems() + ''" hint="en el catálogo" />
     <app-stat-card label="Valor de inventario" [value]="'S/ ' + (inventoryValue() | number: '1.2-2')" hint="disponible + reservado" />
     <app-stat-card label="Stock crítico" [value]="criticalStockItems().length + ''" hint="por debajo del punto de reposición" [trend]="criticalStockItems().length ? 'down' : 'flat'" />
-    <app-stat-card label="Recepciones pendientes" [value]="pendingReceipts().length + ''" hint="agendadas o en curso" />
-    <app-stat-card label="Salidas pendientes" [value]="pendingIssues().length + ''" hint="por despachar" />
+    <app-stat-card label="Notas de ingreso pendientes" [value]="pendingReceipts().length + ''" hint="agendadas o en curso" />
+    <app-stat-card label="Notas de salida pendientes" [value]="pendingIssues().length + ''" hint="por despachar" />
   </div>
 
   <div hlmCard class="flex flex-col gap-4 p-4">
@@ -130,8 +130,8 @@
 
     <div class="rounded-lg border">
       <div class="flex items-center justify-between border-b px-4 py-3">
-        <h2 class="text-sm font-semibold">Recepciones pendientes</h2>
-        <a routerLink="/apps/inventory/goods-receipt" class="text-primary text-xs hover:underline">Ver recepciones</a>
+        <h2 class="text-sm font-semibold">Notas de ingreso pendientes</h2>
+        <a routerLink="/apps/inventory/goods-receipt" class="text-primary text-xs hover:underline">Ver notas de ingreso</a>
       </div>
       <ul class="divide-y">
         @for (r of pendingReceipts(); track r.id) {
@@ -143,7 +143,7 @@
             <p class="text-muted-foreground text-xs">Esperada {{ r.expectedDate }} {{ r.expectedTime }}</p>
           </li>
         } @empty {
-          <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin recepciones pendientes.</li>
+          <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin notas de ingreso pendientes.</li>
         }
       </ul>
     </div>
@@ -151,8 +151,8 @@
 
   <div class="rounded-lg border">
     <div class="flex items-center justify-between border-b px-4 py-3">
-      <h2 class="text-sm font-semibold">Salidas pendientes</h2>
-      <a routerLink="/apps/inventory/stock-issues" class="text-primary text-xs hover:underline">Ver salidas</a>
+      <h2 class="text-sm font-semibold">Notas de salida pendientes</h2>
+      <a routerLink="/apps/inventory/stock-issues" class="text-primary text-xs hover:underline">Ver notas de salida</a>
     </div>
     <ul class="divide-y">
       @for (i of pendingIssues(); track i.id) {
@@ -164,7 +164,7 @@
           <span class="text-muted-foreground text-xs">{{ issueStatusLabel(i.status) }}</span>
         </li>
       } @empty {
-        <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin salidas pendientes.</li>
+        <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin notas de salida pendientes.</li>
       }
     </ul>
   </div>

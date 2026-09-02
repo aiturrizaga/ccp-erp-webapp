@@ -7,6 +7,7 @@ import { HlmInputImports } from '@ui/input';
 import { HlmLabelImports } from '@ui/label';
 import { HlmTextareaImports } from '@ui/textarea';
 import { HlmComboboxImports } from '@ui/combobox';
+import { HlmSelectImports } from '@ui/select';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { SelectFilterOption } from '@shared/components/select-filter/select-filter';
 import { toast } from '@shared/toast';
@@ -18,11 +19,17 @@ interface DraftLine {
   itemId: string;
   quantity: number;
   unitOfMeasure: string;
+  lotId: string;
 }
+
+/** Real plantas (ubicaciones de tipo producción) del almacén — "AL01 · Planta 02", etc. */
+const PLANT_OPTIONS: { value: string; label: string }[] = (WAREHOUSES[0]?.locations ?? [])
+  .filter((l) => l.type === 'production')
+  .map((l) => ({ value: `${WAREHOUSES[0].shortName} · ${l.name}`, label: `${WAREHOUSES[0].shortName} · ${l.name}` }));
 
 @Component({
   selector: 'app-stock-issue-create',
-  imports: [FormsModule, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmTextareaImports, ...HlmComboboxImports, EntityHeader],
+  imports: [FormsModule, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmTextareaImports, ...HlmComboboxImports, ...HlmSelectImports, EntityHeader],
   templateUrl: './stock-issue-create.html',
 })
 export class StockIssueCreate {
@@ -31,12 +38,16 @@ export class StockIssueCreate {
   private readonly auth = inject(AuthState);
 
   protected readonly reason = signal('');
-  protected readonly plant = signal(WAREHOUSES[0]?.name ?? '');
+  protected readonly plant = signal(PLANT_OPTIONS[0]?.value ?? '');
   protected readonly receivedBy = signal('');
   protected readonly lines = signal<DraftLine[]>([]);
 
+  protected readonly plantOptions = PLANT_OPTIONS;
+  protected plantToString = (value: string): string => PLANT_OPTIONS.find((o) => o.value === value)?.label ?? value;
+
   protected readonly newItemId = signal('');
   protected readonly newQuantity = signal(0);
+  protected readonly newLotId = signal('');
 
   protected readonly availableItemOptions = computed<SelectFilterOption[]>(() => {
     const linkedIds = new Set(this.lines().map((l) => l.itemId));
@@ -45,21 +56,38 @@ export class StockIssueCreate {
 
   protected itemPickerToString = (value: string): string => this.availableItemOptions().find((o) => o.value === value)?.label ?? value;
 
+  protected readonly newItemLots = computed(() => this.warehouseOpsState.availableLotsFor(this.newItemId()));
+
+  protected lotPickerToString = (value: string): string => {
+    const lot = this.newItemLots().find((l) => l.id === value);
+    return lot ? `${lot.lot} · disp. ${lot.quantity}` : value;
+  };
+
+  protected onNewItemChange(itemId: string): void {
+    this.newItemId.set(itemId);
+    this.newLotId.set(this.warehouseOpsState.availableLotsFor(itemId)[0]?.id ?? '');
+  }
+
   protected itemLabel(itemId: string): string {
     const item = ITEMS.find((i) => i.id === itemId);
     return item ? `${item.code} — ${item.description}` : itemId;
   }
 
+  protected lotLabel(lotId: string): string {
+    return this.warehouseOpsState.stockLots().find((l) => l.id === lotId)?.lot ?? lotId;
+  }
+
   protected canAddLine(): boolean {
-    return this.newItemId().length > 0 && this.newQuantity() > 0;
+    return this.newItemId().length > 0 && this.newQuantity() > 0 && this.newLotId().length > 0;
   }
 
   protected addLine(): void {
     const item = ITEMS.find((i) => i.id === this.newItemId());
-    if (!item || this.newQuantity() <= 0) return;
-    this.lines.update((lines) => [...lines, { itemId: item.id, quantity: this.newQuantity(), unitOfMeasure: item.unitOfMeasure }]);
+    if (!item || this.newQuantity() <= 0 || !this.newLotId()) return;
+    this.lines.update((lines) => [...lines, { itemId: item.id, quantity: this.newQuantity(), unitOfMeasure: item.unitOfMeasure, lotId: this.newLotId() }]);
     this.newItemId.set('');
     this.newQuantity.set(0);
+    this.newLotId.set('');
   }
 
   protected removeLine(itemId: string): void {
@@ -81,7 +109,7 @@ export class StockIssueCreate {
       lines: this.lines(),
     });
 
-    toast.success(`Salida ${issue.number} registrada`, { description: `Entregado a ${this.receivedBy()}` });
+    toast.success(`Nota de salida ${issue.number} registrada`, { description: `Entregado a ${this.receivedBy()}` });
     this.router.navigate(['/apps/inventory/stock-issues', issue.id]);
   }
 

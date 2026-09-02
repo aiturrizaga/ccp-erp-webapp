@@ -11,7 +11,7 @@ import { ListPagination } from '@shared/components/list-pagination/list-paginati
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { SelectFilterOption } from '@shared/components/select-filter/select-filter';
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
-import { PRODUCTION_ORDERS, PRODUCTS } from '@core/mock-data';
+import { PRODUCTION_ORDERS, PRODUCTS, WAREHOUSES } from '@core/mock-data';
 import { ProductionOrder, ProductionOrderStatus, PRODUCTION_ORDER_STATUS_LABEL, Tone } from '@core/models';
 
 const STATUS_TONE: Record<ProductionOrderStatus, Tone> = {
@@ -34,11 +34,10 @@ const STATUS_OPTIONS: { value: ProductionOrderStatus; label: string }[] = [
   { value: 'cancelled', label: 'Cancelada' },
 ];
 
-const PLANT_OPTIONS: { value: string; label: string }[] = [
-  { value: 'Planta Lima — P2', label: 'Planta Lima — P2' },
-  { value: 'Planta Lima — P3', label: 'Planta Lima — P3' },
-  { value: 'Planta Accesorios', label: 'Planta Accesorios' },
-];
+/** Real plantas (ubicaciones de tipo producción) del almacén — "AL01 · Planta 02", etc. */
+const PLANT_OPTIONS: { value: string; label: string }[] = (WAREHOUSES[0]?.locations ?? [])
+  .filter((l) => l.type === 'production')
+  .map((l) => ({ value: `${WAREHOUSES[0].shortName} · ${l.name}`, label: `${WAREHOUSES[0].shortName} · ${l.name}` }));
 
 const GROUP_BY_OPTIONS: SelectFilterOption[] = [
   { value: 'none', label: 'Sin agrupar' },

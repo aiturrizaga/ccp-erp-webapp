@@ -138,7 +138,7 @@ export class QuotationDetail {
   protected goToComparison(): void {
     const q = this.quotation();
     if (!q) return;
-    this.router.navigate(['/apps/purchasing/sourcing/comparison', q.requisitionId]);
+    this.router.navigate(['/apps/purchasing/sourcing/comparison', q.requirementId]);
   }
 
   protected markSent(): void {

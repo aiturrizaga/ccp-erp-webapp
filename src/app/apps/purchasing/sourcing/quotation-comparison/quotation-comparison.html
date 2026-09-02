@@ -1,11 +1,11 @@
-@if (requisition(); as r) {
+@if (requirement(); as r) {
   <app-entity-header
     [title]="'Comparación de cotizaciones — ' + r.number"
     [subtitle]="r.area + ' · ' + r.plant"
-    [crumbs]="[{ label: 'Requerimientos de compra', link: '/apps/purchasing/requisitions' }, { label: r.number, link: '/apps/purchasing/requisitions/' + r.id }, { label: 'Comparación' }]"
+    [crumbs]="[{ label: 'Requerimiento de Compra', link: '/apps/purchasing/requirements' }, { label: r.number, link: '/apps/purchasing/requirements/' + r.id }, { label: 'Comparación' }]"
   >
     <div actions>
-      <a [routerLink]="['/apps/purchasing/requisitions', r.id]" class="text-primary text-sm hover:underline">Ver requerimiento de origen</a>
+      <a [routerLink]="['/apps/purchasing/requirements', r.id]" class="text-primary text-sm hover:underline">Ver Requerimiento de Compra de origen</a>
     </div>
   </app-entity-header>
 

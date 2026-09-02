@@ -1,0 +1,12 @@
+<app-list-toolbar [(search)]="search" searchPlaceholder="Buscar por número o cliente..." actionLabel="Nueva guía" (action)="onNew()" />
+
+<app-data-table [columns]="columns" [rows]="rows()" emptyMessage="Sin guías de remisión." [cellTemplate]="cellTpl" />
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('kind') { <span class="font-mono text-xs">{{ row.series }}</span> <span class="text-muted-foreground text-xs">· {{ row.kind === 'sunat' ? 'SUNAT' : 'Interna' }}</span> }
+    @case ('glosa') { {{ glosaLabel(row.glosa) }} }
+    @case ('status') { <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" /> }
+    @default { {{ row[key] }} }
+  }
+</ng-template>

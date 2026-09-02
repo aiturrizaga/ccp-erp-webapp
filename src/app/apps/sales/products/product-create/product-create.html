@@ -1,0 +1,134 @@
+<app-entity-header
+  [title]="isEdit() ? 'Editar producto' : 'Nuevo producto terminado'"
+  [crumbs]="[{ label: 'Productos', link: '/apps/sales/products' }, { label: isEdit() ? 'Editar' : 'Nuevo producto' }]"
+/>
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-[1.5fr_1fr]">
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Identificación del producto</h3>
+
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="name">Nombre (familia)</label>
+        <input hlmInput id="name" type="text" placeholder="Ej. POSTES DE C.A.C" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="dimension">Dimensión</label>
+          <input hlmInput id="dimension" type="text" placeholder="Ej. 9/300/2/150/285" [ngModel]="dimension()" (ngModelChange)="dimension.set($event)" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="spec">Especificación</label>
+          <input hlmInput id="spec" type="text" placeholder="Ej. C/PERILLA" [ngModel]="spec()" (ngModelChange)="spec.set($event)" />
+        </div>
+      </div>
+
+      <div class="bg-muted/40 rounded-md border p-3">
+        <p class="text-muted-foreground text-[11px] uppercase tracking-wide">Nombre completo resultante</p>
+        <p class="mt-0.5 text-sm font-medium">{{ preview() || '—' }}</p>
+        @if (dimensionSegments().length) {
+          <div class="mt-2 flex flex-wrap gap-1.5">
+            @for (seg of dimensionSegments(); track seg.label) {
+              <span class="bg-background rounded border px-1.5 py-0.5 text-[11px]">{{ seg.label }}: <b class="tabular-nums">{{ seg.value }}{{ seg.unit ? ' ' + seg.unit : '' }}</b></span>
+            }
+          </div>
+        }
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel>Categoría</label>
+          <hlm-select class="block w-full" [value]="category()" (valueChange)="category.set($event ?? '')" [itemToString]="categoryToString">
+            <hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Selecciona" /></hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (o of categoryOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+            </hlm-select-content>
+          </hlm-select>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="legacyCode">Código sistema</label>
+          <input hlmInput id="legacyCode" type="text" placeholder="Opcional" [ngModel]="legacyCode()" (ngModelChange)="legacyCode.set($event)" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel>Unidad</label>
+          <hlm-select class="block w-full" [value]="unitOfMeasure()" (valueChange)="unitOfMeasure.set($event ?? '')" [itemToString]="uomToString">
+            <hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="U.M." /></hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (o of uomOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+            </hlm-select-content>
+          </hlm-select>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel>Moneda</label>
+          <hlm-select class="block w-full" [value]="currency()" (valueChange)="currency.set($event ?? '')" [itemToString]="currencyToString">
+            <hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Moneda" /></hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (o of currencyOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+            </hlm-select-content>
+          </hlm-select>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel>Estado</label>
+          <hlm-select class="block w-full" [value]="status()" (valueChange)="status.set($event ?? '')" [itemToString]="statusToString">
+            <hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Estado" /></hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (o of statusOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+            </hlm-select-content>
+          </hlm-select>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="brand">Marca / fabricante</label>
+        <input hlmInput id="brand" type="text" [ngModel]="brand()" (ngModelChange)="brand.set($event)" />
+        <p class="text-muted-foreground text-xs">CCP es el fabricante — prellenado con la razón social de la empresa.</p>
+      </div>
+    </div>
+
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Costo y banda viable <span class="text-muted-foreground font-normal">— sin IGV</span></h3>
+      <div class="grid grid-cols-3 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="pcost">Costo de producción</label>
+          <input hlmInput id="pcost" type="number" min="0" step="0.01" [ngModel]="productionUnitCost()" (ngModelChange)="productionUnitCost.set(+$event)" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="cmin">Costo viable mínimo</label>
+          <input hlmInput id="cmin" type="number" min="0" step="0.01" [ngModel]="costMin()" (ngModelChange)="costMin.set(+$event)" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="cmax">Costo viable máximo</label>
+          <input hlmInput id="cmax" type="number" min="0" step="0.01" [ngModel]="costMax()" (ngModelChange)="costMax.set(+$event)" />
+        </div>
+      </div>
+      <p class="text-muted-foreground text-xs">El costo de producción es referencial (proviene del módulo de Producción). Mínimo y máximo definen el rango de negociación.</p>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Cuenta contable</h3>
+      <p class="text-muted-foreground text-xs">Derivada de la categoría. Solo lectura — verifica que corresponde.</p>
+      <div class="bg-muted/40 mt-2 rounded-md border p-3">
+        <p class="font-mono text-sm font-medium">{{ account().code }}</p>
+        <p class="text-muted-foreground text-xs">{{ account().name }}</p>
+      </div>
+    </div>
+
+    <div hlmCard class="p-4">
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="notes">Observaciones</label>
+        <textarea hlmInput id="notes" rows="3" [ngModel]="notes()" (ngModelChange)="notes.set($event)"></textarea>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <button hlmBtn size="sm" [disabled]="!canSubmit()" (click)="submit()">{{ isEdit() ? 'Guardar cambios' : 'Crear producto' }}</button>
+      <button hlmBtn size="sm" variant="ghost" (click)="cancel()">Cancelar</button>
+    </div>
+  </div>
+</div>

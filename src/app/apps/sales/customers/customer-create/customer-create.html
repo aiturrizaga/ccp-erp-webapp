@@ -1,0 +1,140 @@
+<app-entity-header
+  title="Nuevo cliente"
+  [crumbs]="[{ label: 'Clientes', link: '/apps/sales/customers' }, { label: 'Nuevo cliente' }]"
+/>
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-[1.4fr_1fr]">
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Identificación</h3>
+      <div class="flex items-end gap-3">
+        <div class="flex w-28 flex-col gap-1.5">
+          <label hlmLabel>Documento</label>
+          <hlm-select class="block w-full" [value]="docType()" (valueChange)="onDocTypeChange($any($event))">
+            <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              <hlm-select-item value="RUC">RUC</hlm-select-item>
+              <hlm-select-item value="DNI">DNI</hlm-select-item>
+            </hlm-select-content>
+          </hlm-select>
+        </div>
+        <div class="flex flex-1 flex-col gap-1.5">
+          <label hlmLabel for="docn">Número</label>
+          <div class="relative">
+            <input
+              hlmInput
+              id="docn"
+              type="text"
+              inputmode="numeric"
+              class="w-full pr-9"
+              [maxlength]="docType() === 'RUC' ? 11 : 8"
+              [ngModel]="docNumber()"
+              (ngModelChange)="onDocNumberChange($event)"
+              [placeholder]="docType() === 'RUC' ? 'Ingresa los 11 dígitos del RUC' : 'Ingresa los 8 dígitos del DNI'"
+            />
+            @if (looking()) {
+              <span class="absolute end-3 top-1/2 -translate-y-1/2" aria-label="Consultando…">
+                <span class="border-muted-foreground/30 border-t-primary block size-4 animate-spin rounded-full border-2"></span>
+              </span>
+            }
+          </div>
+        </div>
+      </div>
+      @if (looking()) {
+        <p class="text-muted-foreground px-1 text-xs">Consultando {{ docType() === 'RUC' ? 'SUNAT' : 'RENIEC' }} vía API PERU…</p>
+      } @else if (lookupResult()) {
+        <p class="text-muted-foreground rounded-md border bg-muted/40 px-3 py-2 text-xs">{{ lookupResult() }}</p>
+      }
+
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="ln">Nombre / razón social</label>
+        <input hlmInput id="ln" type="text" [ngModel]="legalName()" (ngModelChange)="legalName.set($event)" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="tn">Nombre comercial</label>
+          <input hlmInput id="tn" type="text" [ngModel]="tradeName()" (ngModelChange)="tradeName.set($event)" />
+        </div>
+        <label class="mt-6 flex cursor-pointer items-center gap-2 text-sm">
+          <input type="checkbox" [checked]="isRetentionAgent()" (change)="isRetentionAgent.set(!isRetentionAgent())" />
+          Agente de retención
+        </label>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="fa">Dirección fiscal</label>
+        <input hlmInput id="fa" type="text" [ngModel]="fiscalAddress()" (ngModelChange)="fiscalAddress.set($event)" />
+      </div>
+    </div>
+
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold">Contactos</h3>
+        <button hlmBtn size="sm" variant="outline" (click)="addContactRow()"><ng-icon name="tablerPlus" class="mr-1.5" /> Agregar contacto</button>
+      </div>
+      @for (c of contacts(); track $index) {
+        <div class="rounded-md border p-3">
+          <div class="mb-2 flex items-center justify-between">
+            <div class="w-52">
+              <hlm-select class="block w-full" [value]="c.type" (valueChange)="setContact($index, { type: $any($event) })" [itemToString]="contactTypeToString">
+                <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+                <hlm-select-content *hlmSelectPortal>
+                  @for (o of contactTypeOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+                </hlm-select-content>
+              </hlm-select>
+            </div>
+            @if (contacts().length > 1) {
+              <button hlmBtn size="sm" variant="ghost" (click)="removeContactRow($index)"><ng-icon name="tablerX" /></button>
+            }
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <input hlmInput type="text" placeholder="Nombres" [ngModel]="c.firstName" (ngModelChange)="setContact($index, { firstName: $event })" />
+            <input hlmInput type="text" placeholder="Apellidos" [ngModel]="c.lastName" (ngModelChange)="setContact($index, { lastName: $event })" />
+            <input hlmInput type="text" placeholder="Teléfono" [ngModel]="c.phone" (ngModelChange)="setContact($index, { phone: $event })" />
+            <input hlmInput type="text" placeholder="Celular" [ngModel]="c.mobile" (ngModelChange)="setContact($index, { mobile: $event })" />
+            <input hlmInput type="email" placeholder="Email" class="col-span-2" [ngModel]="c.email" (ngModelChange)="setContact($index, { email: $event })" />
+          </div>
+        </div>
+      }
+      <p class="text-muted-foreground text-xs">El representante legal se registra como contacto de ese tipo; los demás se tipifican (Comercial, Sistemas, Facturación…).</p>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Condiciones comerciales</h3>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Modalidad de venta</label>
+        <hlm-select class="block w-full" [value]="paymentMode()" (valueChange)="paymentMode.set($any($event))" [itemToString]="modeToString">
+          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (o of modeOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Moneda</label>
+        <hlm-select class="block w-full" [value]="currency()" (valueChange)="currency.set($any($event))" [itemToString]="currencyToString">
+          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (o of currencyOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+          </hlm-select-content>
+        </hlm-select>
+        <p class="text-muted-foreground text-xs">La moneda del cliente fija la moneda de sus pedidos.</p>
+      </div>
+      @if (paymentMode() === 'credit') {
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="cl">Límite de crédito</label>
+          <input hlmInput id="cl" type="number" min="0" [ngModel]="creditLimit()" (ngModelChange)="creditLimit.set(+$event)" />
+          <p class="text-muted-foreground text-xs">El convenio de crédito se formaliza luego en Cobranzas.</p>
+        </div>
+      } @else {
+        <p class="text-muted-foreground rounded-md border bg-muted/40 px-3 py-2 text-xs">Venta al contado: cada pedido pedirá la OC del cliente y el voucher del adelanto del 50% para que Cobranzas valide.</p>
+      }
+    </div>
+
+    <div class="flex gap-2">
+      <button hlmBtn size="sm" [disabled]="!canSubmit()" (click)="submit()">Registrar cliente</button>
+      <button hlmBtn size="sm" variant="ghost" (click)="cancel()">Cancelar</button>
+    </div>
+  </div>
+</div>

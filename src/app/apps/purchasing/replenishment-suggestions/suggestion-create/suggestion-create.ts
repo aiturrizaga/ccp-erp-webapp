@@ -12,11 +12,11 @@ import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { SelectFilterOption } from '@shared/components/select-filter/select-filter';
 import { toast } from '@shared/toast';
 import { ITEMS, STOCK_LOTS, WAREHOUSES } from '@core/mock-data';
-import { PurchaseRequisition, PurchaseRequisitionLine, REQUISITION_PRIORITY_LABEL, RequisitionPriority } from '@core/models';
+import { ReplenishmentSuggestion, ReplenishmentSuggestionLine, REQUISITION_PRIORITY_LABEL, RequisitionPriority } from '@core/models';
 import { AuthState } from '@shell/auth-state';
 import { PurchasingState } from '../../purchasing-state';
 
-type ManualOrigin = Extract<PurchaseRequisition['origin'], 'inventory' | 'other'>;
+type ManualOrigin = Extract<ReplenishmentSuggestion['origin'], 'inventory' | 'other'>;
 
 const ORIGIN_OPTIONS: { value: ManualOrigin; label: string }[] = [
   { value: 'inventory', label: 'Almacén' },
@@ -27,8 +27,10 @@ const PRIORITY_OPTIONS: { value: RequisitionPriority; label: string }[] = (
   Object.entries(REQUISITION_PRIORITY_LABEL) as [RequisitionPriority, string][]
 ).map(([value, label]) => ({ value, label }));
 
-/** Real production locations Almacén dispatches to — same 3 plants used across Inventario/Producción. */
-const PLANT_OPTIONS: { value: string; label: string }[] = WAREHOUSES[0]?.locations.map((l) => ({ value: l.name, label: l.name })) ?? [];
+/** Real plantas (ubicaciones de tipo producción) del almacén — "AL01 · Planta 02", etc. */
+const PLANT_OPTIONS: { value: string; label: string }[] = (WAREHOUSES[0]?.locations ?? [])
+  .filter((l) => l.type === 'production')
+  .map((l) => ({ value: `${WAREHOUSES[0].shortName} · ${l.name}`, label: `${WAREHOUSES[0].shortName} · ${l.name}` }));
 
 interface DraftLine {
   itemId: string;
@@ -37,7 +39,7 @@ interface DraftLine {
 }
 
 @Component({
-  selector: 'app-requisition-create',
+  selector: 'app-suggestion-create',
   imports: [
     FormsModule,
     ...HlmButtonImports,
@@ -49,9 +51,9 @@ interface DraftLine {
     ...HlmComboboxImports,
     EntityHeader,
   ],
-  templateUrl: './requisition-create.html',
+  templateUrl: './suggestion-create.html',
 })
-export class RequisitionCreate {
+export class SuggestionCreate {
   private readonly router = inject(Router);
   private readonly purchasingState = inject(PurchasingState);
   private readonly auth = inject(AuthState);
@@ -114,7 +116,7 @@ export class RequisitionCreate {
   protected submit(): void {
     if (!this.canSubmit()) return;
 
-    const lines: PurchaseRequisitionLine[] = this.lines().map((l) => ({
+    const lines: ReplenishmentSuggestionLine[] = this.lines().map((l) => ({
       itemId: l.itemId,
       quantity: l.quantity,
       unitOfMeasure: l.unitOfMeasure,
@@ -122,7 +124,7 @@ export class RequisitionCreate {
       availableStock: this.availableStock(l.itemId),
     }));
 
-    const requisition = this.purchasingState.createRequisition({
+    const suggestion = this.purchasingState.createSuggestion({
       origin: this.origin(),
       requestedBy: this.auth.currentUser()?.name ?? '',
       area: this.area().trim(),
@@ -133,11 +135,11 @@ export class RequisitionCreate {
       lines,
     });
 
-    toast.success(`Requerimiento ${requisition.number} creado`, { description: 'Queda en Borrador — puedes seguir editándolo antes de enviarlo a aprobación.' });
-    this.router.navigate(['/apps/purchasing/requisitions', requisition.id]);
+    toast.success(`Sugerencia ${suggestion.number} creada`, { description: 'Queda disponible para agruparla en un Requerimiento de Compra.' });
+    this.router.navigate(['/apps/purchasing/replenishment-suggestions', suggestion.id]);
   }
 
   protected cancel(): void {
-    this.router.navigate(['/apps/purchasing/requisitions']);
+    this.router.navigate(['/apps/purchasing/replenishment-suggestions']);
   }
 }

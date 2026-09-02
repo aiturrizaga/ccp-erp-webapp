@@ -1,0 +1,14 @@
+<app-list-toolbar [(search)]="search" searchPlaceholder="Buscar por convenio o cliente..." />
+
+<p class="text-muted-foreground mb-4 max-w-2xl text-sm">Convenios de crédito por cliente. Se definen en conjunto entre Ventas, Gerencia y Contabilidad; el límite alimenta el control de crédito del cliente.</p>
+
+<app-data-table [columns]="columns" [rows]="rows()" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="Sin convenios." [cellTemplate]="cellTpl" />
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('limit') { <span class="tabular-nums">{{ row.currency }} {{ row.limit | number: '1.2-2' }}</span> }
+    @case ('termDays') { {{ row.termDays }} días }
+    @case ('status') { <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" /> }
+    @default { {{ row[key] }} }
+  }
+</ng-template>

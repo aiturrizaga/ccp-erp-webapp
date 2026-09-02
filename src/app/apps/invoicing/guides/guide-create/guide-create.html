@@ -1,0 +1,61 @@
+<app-entity-header title="Nueva guía de remisión" [crumbs]="[{ label: 'Guías', link: '/apps/invoicing/guides' }, { label: 'Nueva guía' }]" />
+
+<div hlmCard class="flex max-w-2xl flex-col gap-4 p-4">
+  <div class="flex flex-col gap-1.5">
+    <label hlmLabel>Pedido / OP</label>
+    <hlm-select class="block w-full" [value]="orderId()" (valueChange)="orderId.set($event ?? '')" [itemToString]="orderToString">
+      <hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Selecciona el pedido" /></hlm-select-trigger>
+      <hlm-select-content *hlmSelectPortal>
+        @for (o of orders(); track o.id) { <hlm-select-item [value]="o.id">{{ o.number }} — {{ o.customerName }}</hlm-select-item> }
+      </hlm-select-content>
+    </hlm-select>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3">
+    <div class="flex flex-col gap-1.5">
+      <label hlmLabel>Serie</label>
+      <hlm-select class="block w-full" [value]="kind()" (valueChange)="kind.set($any($event))" [itemToString]="kindToString">
+        <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+        <hlm-select-content *hlmSelectPortal>
+          <hlm-select-item value="sunat">SUNAT (electrónica)</hlm-select-item>
+          <hlm-select-item value="interna">Uso interno</hlm-select-item>
+        </hlm-select-content>
+      </hlm-select>
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label hlmLabel>Glosa (validada contra SUNAT)</label>
+      <hlm-select class="block w-full" [value]="glosa()" (valueChange)="glosa.set($any($event))" [itemToString]="glosaToString">
+        <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+        <hlm-select-content *hlmSelectPortal>
+          @for (o of glosaOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+        </hlm-select-content>
+      </hlm-select>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-1.5">
+    <label hlmLabel for="mt">Motivo de traslado</label>
+    <input hlmInput id="mt" type="text" [ngModel]="motivoTraslado()" (ngModelChange)="motivoTraslado.set($event)" />
+  </div>
+  <div class="flex flex-col gap-1.5">
+    <label hlmLabel for="tr">Transportista</label>
+    <input hlmInput id="tr" type="text" [ngModel]="transportista()" (ngModelChange)="transportista.set($event)" />
+  </div>
+  <div class="flex flex-col gap-1.5">
+    <label hlmLabel for="da">Dirección de destino</label>
+    <input hlmInput id="da" type="text" placeholder="Se toma la del pedido si se deja vacío" [ngModel]="destinationAddress()" (ngModelChange)="destinationAddress.set($event)" />
+  </div>
+
+  <label class="flex cursor-pointer items-center gap-2 text-sm">
+    <input type="checkbox" [checked]="generatesInvoice()" (change)="generatesInvoice.set(!generatesInvoice())" />
+    Generar también la factura asociada
+  </label>
+  @if (glosa() === 'guia_custodia') {
+    <p class="text-muted-foreground rounded-md border bg-muted/40 px-3 py-2 text-xs">En "Guía custodia" el bien sale a patio de custodia y no se factura todavía.</p>
+  }
+
+  <div class="flex gap-2">
+    <button hlmBtn size="sm" [disabled]="!canSubmit()" (click)="submit()">Emitir guía</button>
+    <button hlmBtn size="sm" variant="ghost" (click)="cancel()">Cancelar</button>
+  </div>
+</div>

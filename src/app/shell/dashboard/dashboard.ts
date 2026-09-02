@@ -6,7 +6,7 @@ import { APPROVALS, PURCHASE_ORDERS, ITEMS, STOCK_LOTS } from '@core/mock-data';
 import { ApprovalProcess, APPROVAL_PROCESS_LABEL } from '@core/models';
 
 /** Approval processes owned by Compras — the Shell's home is scoped to Compras + Almacén for now. */
-const PURCHASING_PROCESSES = new Set<ApprovalProcess>(['supplier', 'purchase_requisition', 'quotation_award', 'purchase_order']);
+const PURCHASING_PROCESSES = new Set<ApprovalProcess>(['supplier', 'purchase_requirement', 'quotation_award', 'purchase_order']);
 
 /** Shell's global home — scoped to Compras and Almacén, the only two Apps currently exposed in the App Launcher. */
 @Component({

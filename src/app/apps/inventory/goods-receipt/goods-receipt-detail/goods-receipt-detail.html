@@ -4,7 +4,7 @@
     [subtitle]="supplierName(r.supplierId)"
     [statusLabel]="statusLabel(r.status)"
     [statusTone]="statusTone(r.status)"
-    [crumbs]="[{ label: 'Recepciones', link: '/apps/inventory/goods-receipt' }, { label: r.number }]"
+    [crumbs]="[{ label: 'Notas de ingreso', link: '/apps/inventory/goods-receipt' }, { label: r.number }]"
   >
     <div actions>
       @if (purchaseOrder(); as po) {
@@ -168,16 +168,16 @@
       <div hlmCard class="p-4 text-sm">
         <h3 class="mb-3 text-sm font-semibold">Trazabilidad</h3>
         <dl class="grid grid-cols-2 gap-y-2">
-          @if (requisition(); as req) {
-            <dt class="text-muted-foreground">Solicitud</dt>
-            <dd><a [routerLink]="['/apps/purchasing/requisitions', req.id]" class="text-primary hover:underline">{{ req.number }}</a></dd>
-            @if (req.workSheetRef) {
+          @if (requirement(); as req) {
+            <dt class="text-muted-foreground">Requerimiento de Compra</dt>
+            <dd><a [routerLink]="['/apps/purchasing/requirements', req.id]" class="text-primary hover:underline">{{ req.number }}</a></dd>
+            @if (workSheetRef(); as ref) {
               <dt class="text-muted-foreground">Hoja de trabajo</dt>
               <dd>
                 @if (workSheetId(); as wsId) {
-                  <a [routerLink]="['/apps/production/work-sheets', wsId]" class="text-primary hover:underline">{{ req.workSheetRef }}</a>
+                  <a [routerLink]="['/apps/production/work-sheets', wsId]" class="text-primary hover:underline">{{ ref }}</a>
                 } @else {
-                  {{ req.workSheetRef }}
+                  {{ ref }}
                 }
               </dd>
             }
@@ -190,7 +190,7 @@
             <dt class="text-muted-foreground">Orden de compra</dt>
             <dd><a [routerLink]="['/apps/purchasing/purchase-orders', po.id]" class="text-primary hover:underline">{{ po.number }}</a></dd>
           }
-          <dt class="text-muted-foreground">Recepción</dt>
+          <dt class="text-muted-foreground">Nota de ingreso</dt>
           <dd class="font-medium">{{ r.number }}</dd>
         </dl>
       </div>
@@ -253,5 +253,5 @@
     </div>
   </div>
 } @else {
-  <app-empty-state icon="tablerTruckDelivery" title="Recepción no encontrada" />
+  <app-empty-state icon="tablerTruckDelivery" title="Nota de ingreso no encontrada" />
 }

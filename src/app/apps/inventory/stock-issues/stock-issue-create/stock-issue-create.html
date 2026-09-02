@@ -1,16 +1,16 @@
 <app-entity-header
-  title="Nueva salida"
-  [crumbs]="[{ label: 'Salidas', link: '/apps/inventory/stock-issues' }, { label: 'Nueva salida' }]"
+  title="Nueva nota de salida"
+  [crumbs]="[{ label: 'Notas de salida', link: '/apps/inventory/stock-issues' }, { label: 'Nueva nota de salida' }]"
 />
 
 <p class="text-muted-foreground -mt-2 mb-4 text-sm">
-  Para materiales pedidos por una Hoja de Trabajo, la salida ya se generó automáticamente y aparece como "Pendiente" en la lista — solo hace falta despacharla.
+  Para materiales pedidos por una Hoja de Trabajo, la nota de salida ya se generó automáticamente y aparece como "Pendiente" en la lista — solo hace falta despacharla.
   Esta pantalla es para entregas que no están asociadas a ninguna HT.
 </p>
 
 <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 md:grid-cols-2">
   <div hlmCard class="flex flex-col gap-4 p-4">
-    <h3 class="text-sm font-semibold">Datos de la salida</h3>
+    <h3 class="text-sm font-semibold">Datos de la nota de salida</h3>
 
     <div class="flex flex-col gap-1.5">
       <label hlmLabel for="reason">Motivo</label>
@@ -18,8 +18,17 @@
     </div>
 
     <div class="flex flex-col gap-1.5">
-      <label hlmLabel for="plant">Planta</label>
-      <input hlmInput id="plant" [ngModel]="plant()" (ngModelChange)="plant.set($event)" />
+      <label hlmLabel>Planta</label>
+      <hlm-select class="block w-full" [value]="plant()" (valueChange)="plant.set($event ?? '')" [itemToString]="plantToString">
+        <hlm-select-trigger size="sm" class="w-full">
+          <hlm-select-value placeholder="Selecciona" />
+        </hlm-select-trigger>
+        <hlm-select-content *hlmSelectPortal>
+          @for (option of plantOptions; track option.value) {
+            <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+          }
+        </hlm-select-content>
+      </hlm-select>
     </div>
 
     <div class="flex flex-col gap-1.5">
@@ -31,26 +40,48 @@
   <div hlmCard class="flex flex-col gap-4 p-4">
     <h3 class="text-sm font-semibold">Artículos</h3>
 
-    <div class="flex items-end gap-2">
-      <div class="flex flex-1 flex-col gap-1.5">
-        <label hlmLabel>Artículo</label>
-        <hlm-combobox [(value)]="newItemId" [itemToString]="itemPickerToString">
-          <hlm-combobox-input placeholder="Buscar artículo..." />
-          <hlm-combobox-content *hlmComboboxPortal>
-            <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
-            <div hlmComboboxList>
-              @for (option of availableItemOptions(); track option.value) {
-                <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
-              }
-            </div>
-          </hlm-combobox-content>
-        </hlm-combobox>
+    <div class="flex flex-col gap-2">
+      <div class="flex items-end gap-2">
+        <div class="flex flex-1 flex-col gap-1.5">
+          <label hlmLabel>Artículo</label>
+          <hlm-combobox [value]="newItemId()" (valueChange)="onNewItemChange($event ?? '')" [itemToString]="itemPickerToString">
+            <hlm-combobox-input placeholder="Buscar artículo..." />
+            <hlm-combobox-content *hlmComboboxPortal>
+              <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+              <div hlmComboboxList>
+                @for (option of availableItemOptions(); track option.value) {
+                  <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
+                }
+              </div>
+            </hlm-combobox-content>
+          </hlm-combobox>
+        </div>
+        <div class="flex w-24 flex-col gap-1.5">
+          <label hlmLabel for="new-line-qty">Cantidad</label>
+          <input hlmInput id="new-line-qty" type="number" min="0" [ngModel]="newQuantity()" (ngModelChange)="newQuantity.set($event)" />
+        </div>
+        <button hlmBtn variant="outline" [disabled]="!canAddLine()" (click)="addLine()">Agregar</button>
       </div>
-      <div class="flex w-24 flex-col gap-1.5">
-        <label hlmLabel for="new-line-qty">Cantidad</label>
-        <input hlmInput id="new-line-qty" type="number" min="0" [ngModel]="newQuantity()" (ngModelChange)="newQuantity.set($event)" />
-      </div>
-      <button hlmBtn variant="outline" [disabled]="!canAddLine()" (click)="addLine()">Agregar</button>
+      @if (newItemId()) {
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel>Lote de salida</label>
+          @if (newItemLots().length) {
+            <hlm-combobox [(value)]="newLotId" [itemToString]="lotPickerToString">
+              <hlm-combobox-input placeholder="Selecciona un lote..." />
+              <hlm-combobox-content *hlmComboboxPortal>
+                <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+                <div hlmComboboxList>
+                  @for (lot of newItemLots(); track lot.id) {
+                    <hlm-combobox-item [value]="lot.id">{{ lot.lot }} · disp. {{ lot.quantity }}</hlm-combobox-item>
+                  }
+                </div>
+              </hlm-combobox-content>
+            </hlm-combobox>
+          } @else {
+            <p class="text-destructive text-xs">Sin stock disponible en ningún lote para este artículo.</p>
+          }
+        </div>
+      }
     </div>
 
     @if (lines().length) {
@@ -59,6 +90,7 @@
           <tr>
             <th class="px-3 py-1.5 text-start font-medium first:ps-0 last:pe-0">Artículo</th>
             <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Cantidad</th>
+            <th class="px-3 py-1.5 text-start font-medium first:ps-0 last:pe-0">Lote</th>
             <th class="px-3 py-1.5 first:ps-0 last:pe-0"></th>
           </tr>
         </thead>
@@ -67,6 +99,7 @@
             <tr>
               <td class="px-3 py-2 first:ps-0 last:pe-0">{{ itemLabel(line.itemId) }}</td>
               <td class="px-3 py-2 text-end first:ps-0 last:pe-0">{{ line.quantity }} {{ line.unitOfMeasure }}</td>
+              <td class="px-3 py-2 first:ps-0 last:pe-0">{{ lotLabel(line.lotId) }}</td>
               <td class="px-3 py-2 text-end first:ps-0 last:pe-0">
                 <button hlmBtn variant="ghost" size="sm" (click)="removeLine(line.itemId)">Quitar</button>
               </td>
@@ -82,5 +115,5 @@
 
 <div class="mt-4 flex gap-2">
   <button hlmBtn variant="outline" (click)="cancel()">Cancelar</button>
-  <button hlmBtn [disabled]="!canSubmit()" (click)="submit()">Registrar salida</button>
+  <button hlmBtn [disabled]="!canSubmit()" (click)="submit()">Registrar nota de salida</button>
 </div>

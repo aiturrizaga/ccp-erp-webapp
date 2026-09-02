@@ -1,0 +1,170 @@
+<app-entity-header
+  title="Nueva orden de compra"
+  [crumbs]="[{ label: 'Órdenes de compra', link: '/apps/purchasing/purchase-orders' }, { label: 'Nueva' }]"
+/>
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1fr_1.4fr]">
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Datos generales</h3>
+
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Proveedor</label>
+        <hlm-combobox [value]="supplierId()" (valueChange)="supplierId.set($event ?? '')" [itemToString]="supplierPickerToString">
+          <hlm-combobox-input placeholder="Buscar proveedor..." (input)="supplierSearch.set($any($event.target).value)" />
+          <hlm-combobox-content *hlmComboboxPortal>
+            <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+            <div hlmComboboxList>
+              @for (option of supplierOptions(); track option.value) {
+                <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
+              }
+            </div>
+          </hlm-combobox-content>
+        </hlm-combobox>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel>Moneda</label>
+          <hlm-select class="block w-full" [value]="currency()" (valueChange)="currency.set($event ?? 'PEN')" [itemToString]="currencyToString">
+            <hlm-select-trigger size="sm" class="w-full">
+              <hlm-select-value placeholder="Selecciona" />
+            </hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (option of currencyOptions; track option.value) {
+                <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+              }
+            </hlm-select-content>
+          </hlm-select>
+        </div>
+        @if (currency() === 'USD') {
+          <div class="flex flex-col gap-1.5">
+            <label hlmLabel for="exchange-rate">Tipo de cambio</label>
+            <input hlmInput id="exchange-rate" type="number" min="0" step="0.01" [ngModel]="exchangeRate()" (ngModelChange)="exchangeRate.set($event)" />
+          </div>
+        }
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="payment-terms">Condición de pago</label>
+        <input hlmInput id="payment-terms" placeholder="Ej. Crédito a 30 días" [ngModel]="paymentTerms()" (ngModelChange)="paymentTerms.set($event)" />
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Planta</label>
+        <hlm-select class="block w-full" [value]="plant()" (valueChange)="plant.set($event ?? '')" [itemToString]="plantToString">
+          <hlm-select-trigger size="sm" class="w-full">
+            <hlm-select-value placeholder="Selecciona" />
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (option of plantOptions; track option.value) {
+              <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="delivery-date">Entrega comprometida</label>
+          <input hlmInput id="delivery-date" type="date" [ngModel]="committedDeliveryDate()" (ngModelChange)="committedDeliveryDate.set($event)" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="delivery-time">Hora</label>
+          <input hlmInput id="delivery-time" type="time" [ngModel]="committedDeliveryTime()" (ngModelChange)="committedDeliveryTime.set($event)" />
+        </div>
+      </div>
+    </div>
+
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Términos y condiciones</h3>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="terms">Condiciones de entrega</label>
+        <textarea hlmTextarea id="terms" class="w-full" placeholder="Opcional" [ngModel]="termsAndConditions()" (ngModelChange)="termsAndConditions.set($event)"></textarea>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="penalties">Penalidades</label>
+        <textarea hlmTextarea id="penalties" class="w-full" placeholder="Opcional" [ngModel]="penalties()" (ngModelChange)="penalties.set($event)"></textarea>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="warranty">Garantía</label>
+        <textarea hlmTextarea id="warranty" class="w-full" placeholder="Opcional" [ngModel]="warranty()" (ngModelChange)="warranty.set($event)"></textarea>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="notes">Observaciones</label>
+        <textarea hlmTextarea id="notes" class="w-full" placeholder="Opcional" [ngModel]="notes()" (ngModelChange)="notes.set($event)"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div hlmCard class="flex flex-col gap-4 p-4">
+    <h3 class="text-sm font-semibold">Artículos</h3>
+
+    <div class="flex items-end gap-2">
+      <div class="flex flex-1 flex-col gap-1.5">
+        <label hlmLabel>Artículo</label>
+        <hlm-combobox [(value)]="newItemId" [itemToString]="itemPickerToString">
+          <hlm-combobox-input placeholder="Buscar artículo..." />
+          <hlm-combobox-content *hlmComboboxPortal>
+            <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+            <div hlmComboboxList>
+              @for (option of availableItemOptions(); track option.value) {
+                <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
+              }
+            </div>
+          </hlm-combobox-content>
+        </hlm-combobox>
+      </div>
+      <div class="flex w-24 flex-col gap-1.5">
+        <label hlmLabel for="new-line-qty">Cantidad</label>
+        <input hlmInput id="new-line-qty" type="number" min="0" [ngModel]="newQuantity()" (ngModelChange)="newQuantity.set($event)" />
+      </div>
+      <div class="flex w-28 flex-col gap-1.5">
+        <label hlmLabel for="new-line-price">Precio unit.</label>
+        <input hlmInput id="new-line-price" type="number" min="0" step="0.01" [ngModel]="newUnitPrice()" (ngModelChange)="newUnitPrice.set($event)" />
+      </div>
+      <button hlmBtn variant="outline" [disabled]="!canAddLine()" (click)="addLine()">Agregar</button>
+    </div>
+
+    @if (lines().length) {
+      <table class="w-full text-sm">
+        <thead class="text-muted-foreground border-b text-xs">
+          <tr>
+            <th class="px-3 py-1.5 text-start font-medium first:ps-0 last:pe-0">Artículo</th>
+            <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Cantidad</th>
+            <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Precio unit.</th>
+            <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Subtotal</th>
+            <th class="px-3 py-1.5 first:ps-0 last:pe-0"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          @for (line of lines(); track line.itemId) {
+            <tr>
+              <td class="px-3 py-2 first:ps-0 last:pe-0">{{ itemLabel(line.itemId) }}</td>
+              <td class="px-3 py-2 text-end first:ps-0 last:pe-0">{{ line.quantity }} {{ line.unitOfMeasure }}</td>
+              <td class="px-3 py-2 text-end first:ps-0 last:pe-0">{{ currency() }} {{ line.unitPrice }}</td>
+              <td class="px-3 py-2 text-end font-medium first:ps-0 last:pe-0">{{ currency() }} {{ subtotal(line) | number: '1.2-2' }}</td>
+              <td class="px-3 py-2 text-end first:ps-0 last:pe-0">
+                <button hlmBtn variant="ghost" size="sm" (click)="removeLine(line.itemId)">Quitar</button>
+              </td>
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr class="border-t">
+            <td colspan="3" class="px-3 py-2 text-end font-medium first:ps-0 last:pe-0">Total</td>
+            <td class="px-3 py-2 text-end font-medium first:ps-0 last:pe-0">{{ currency() }} {{ total() | number: '1.2-2' }}</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+    } @else {
+      <p class="text-muted-foreground text-sm">Sin artículos agregados.</p>
+    }
+  </div>
+</div>
+
+<div class="mt-4 flex gap-2">
+  <button hlmBtn variant="outline" (click)="cancel()">Cancelar</button>
+  <button hlmBtn [disabled]="!canSubmit()" (click)="submit()">Crear orden de compra</button>
+</div>

@@ -9,5 +9,8 @@ export * from './production.fixture';
 export * from './approvals.fixture';
 export * from './crm.fixture';
 export * from './sales.fixture';
+export * from './sales-products.fixture';
+export * from './sales-ops.fixture';
+export * from './billing.fixture';
 export * from './invoicing.fixture';
 export * from './users.fixture';

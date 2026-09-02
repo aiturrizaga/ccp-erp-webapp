@@ -4,7 +4,7 @@
     [subtitle]="originLabel(i.origin) + (i.reason ? ' · ' + i.reason : '')"
     [statusLabel]="statusLabel(i.status)"
     [statusTone]="statusTone(i.status)"
-    [crumbs]="[{ label: 'Salidas', link: '/apps/inventory/stock-issues' }, { label: i.number }]"
+    [crumbs]="[{ label: 'Notas de salida', link: '/apps/inventory/stock-issues' }, { label: i.number }]"
   >
     <div actions>
       @if (workSheet(); as ws) {
@@ -34,22 +34,48 @@
                   <div class="flex flex-col gap-2">
                     @for (line of i.lines; track line.itemId) {
                       @if (line.requiredQuantity - line.dispatchedQuantity > 0) {
-                        <div class="flex items-center gap-2 rounded-md border p-2">
-                          <div class="min-w-0 flex-1">
-                            <p class="truncate text-sm">{{ itemLabel(line.itemId) }}</p>
-                            <p class="text-muted-foreground text-xs">Pendiente: {{ pending(line.itemId) }} {{ line.unitOfMeasure }} · Stock: {{ availableStock(line.itemId) }}</p>
+                        <div class="rounded-md border p-2">
+                          <div class="flex items-center gap-2">
+                            <div class="min-w-0 flex-1">
+                              <p class="truncate text-sm">{{ itemLabel(line.itemId) }}</p>
+                              <p class="text-muted-foreground text-xs">Solicitada: {{ line.requiredQuantity }} · Despachada: {{ line.dispatchedQuantity }} · Pendiente: {{ pending(line.itemId) }} {{ line.unitOfMeasure }}</p>
+                            </div>
+                            <div class="w-24 shrink-0">
+                              <label class="text-muted-foreground text-[11px]">Cantidad de salida</label>
+                              <input
+                                hlmInput
+                                type="number"
+                                min="0"
+                                [max]="pending(line.itemId)"
+                                class="w-full text-end"
+                                [ngModel]="dispatchQuantities()[line.itemId] ?? 0"
+                                (ngModelChange)="setDispatchQuantity(line.itemId, $event)"
+                              />
+                            </div>
                           </div>
-                          <div class="w-20 shrink-0">
-                            <input
-                              hlmInput
-                              type="number"
-                              min="0"
-                              [max]="pending(line.itemId)"
-                              class="w-full text-end"
-                              [ngModel]="dispatchQuantities()[line.itemId] ?? 0"
-                              (ngModelChange)="setDispatchQuantity(line.itemId, $event)"
-                            />
-                          </div>
+                          @if (availableLots(line.itemId).length) {
+                            <div class="mt-2 flex flex-col gap-1">
+                              <label class="text-muted-foreground text-[11px]">Lote de salida — stock disponible {{ availableStock(line.itemId) }} {{ line.unitOfMeasure }}</label>
+                              <hlm-select
+                                class="block w-full"
+                                size="sm"
+                                [value]="dispatchLots()[line.itemId]"
+                                (valueChange)="setDispatchLot(line.itemId, $event ?? '')"
+                                [itemToString]="lotToString(line.itemId)"
+                              >
+                                <hlm-select-trigger size="sm" class="w-full">
+                                  <hlm-select-value placeholder="Selecciona un lote" />
+                                </hlm-select-trigger>
+                                <hlm-select-content *hlmSelectPortal>
+                                  @for (lot of availableLots(line.itemId); track lot.id) {
+                                    <hlm-select-item [value]="lot.id">{{ lot.lot }} · disp. {{ lot.quantity }} {{ line.unitOfMeasure }}</hlm-select-item>
+                                  }
+                                </hlm-select-content>
+                              </hlm-select>
+                            </div>
+                          } @else {
+                            <p class="text-destructive mt-2 text-[11px]">Sin stock disponible en ningún lote.</p>
+                          }
                         </div>
                       }
                     }
@@ -99,14 +125,14 @@
                 </div>
                 <ul class="text-muted-foreground mt-2 flex flex-col gap-0.5 text-xs">
                   @for (line of dispatch.lines; track line.itemId) {
-                    <li>{{ itemLabel(line.itemId) }} — {{ line.quantity }}</li>
+                    <li>{{ itemLabel(line.itemId) }} — {{ line.quantity }}@if (line.lotId) { · lote {{ lotCode(line.lotId) }} }</li>
                   }
                 </ul>
               </div>
             }
           </div>
         } @else {
-          <app-empty-state icon="tablerTruckDelivery" title="Sin despachos" description="Todavía no se ha entregado nada de esta salida." />
+          <app-empty-state icon="tablerTruckDelivery" title="Sin despachos" description="Todavía no se ha entregado nada de esta nota de salida." />
         }
       </div>
     </div>
@@ -130,5 +156,5 @@
     </div>
   </div>
 } @else {
-  <app-empty-state icon="tablerTruckDelivery" title="Salida no encontrada" />
+  <app-empty-state icon="tablerTruckDelivery" title="Nota de salida no encontrada" />
 }

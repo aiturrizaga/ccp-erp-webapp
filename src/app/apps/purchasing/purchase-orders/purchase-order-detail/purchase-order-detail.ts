@@ -34,6 +34,8 @@ const IGV_RATE = 0.18;
 const TODAY = '2026-08-23';
 const DUE_DATE = '2026-09-22';
 const INVOICEABLE_STATUSES: PurchaseOrderStatus[] = ['received', 'closed'];
+/** Printing is only meaningful once the PO is a real commitment — blocked while still draft, awaiting approval, or rejected outright. */
+const PRINTABLE_STATUSES = new Set<PurchaseOrderStatus>(['approved', 'sent', 'confirmed', 'partially_received', 'received', 'invoiced', 'closed']);
 
 const STATUS_TONE: Record<PurchaseOrderStatus, Tone> = {
   draft: 'neutral',
@@ -93,10 +95,15 @@ export class PurchaseOrderDetail {
   protected readonly approval = computed(() => APPROVALS.find((a) => a.id === this.po()?.approvalId));
   protected readonly receipts = computed(() => this.warehouseOpsState.goodsReceipts().filter((r) => r.purchaseOrderId === this.id()));
 
-  // --- Traceability: HT → Solicitud → Cotización → esta OC → Recepciones → Factura(s) ---
+  // --- Traceability: HT → Sugerencia(s) → RC → Cotización → esta OC → Notas de ingreso → Factura(s) ---
   protected readonly quotation = computed(() => this.purchasingState.quotations().find((q) => q.id === this.po()?.quotationId));
-  protected readonly requisition = computed(() => this.purchasingState.requisitions().find((r) => r.id === this.quotation()?.requisitionId));
-  protected readonly workSheetId = computed(() => WORK_SHEETS.find((ws) => ws.number === this.requisition()?.workSheetRef)?.id);
+  protected readonly requirement = computed(() => this.purchasingState.requirements().find((r) => r.id === this.quotation()?.requirementId));
+  /** First HT grouped into the RC, shown as the quick traceability link — the RC itself lists every grouped HT/sugerencia. */
+  protected readonly workSheetRef = computed(() => {
+    const suggestionIds = this.requirement()?.suggestionIds ?? [];
+    return this.purchasingState.suggestions().find((s) => suggestionIds.includes(s.id) && s.workSheetRef)?.workSheetRef;
+  });
+  protected readonly workSheetId = computed(() => WORK_SHEETS.find((ws) => ws.number === this.workSheetRef())?.id);
   protected readonly invoices = computed(() =>
     this.invoicingState.invoices().filter((inv): inv is PurchaseInvoice => inv.documentType === 'purchase' && inv.purchaseOrderId === this.id()),
   );
@@ -120,7 +127,7 @@ export class PurchaseOrderDetail {
     if (!po || !this.canScheduleFollowUp()) return;
     const receipt = this.warehouseOpsState.scheduleFollowUpReceipt(po, this.followUpDate(), this.followUpTime());
     if (receipt) {
-      toast.success(`Recepción del saldo programada — ${receipt.number}`);
+      toast.success(`Nota de ingreso del saldo programada — ${receipt.number}`);
       this.router.navigate(['/apps/inventory/goods-receipt', receipt.id]);
     }
   }
@@ -161,6 +168,14 @@ export class PurchaseOrderDetail {
 
   protected canRegisterInvoice(po: PurchaseOrder): boolean {
     return INVOICEABLE_STATUSES.includes(po.status);
+  }
+
+  protected canPrint(po: PurchaseOrder): boolean {
+    return PRINTABLE_STATUSES.has(po.status);
+  }
+
+  protected printOrder(): void {
+    window.print();
   }
 
   protected registerInvoice(po: PurchaseOrder): void {

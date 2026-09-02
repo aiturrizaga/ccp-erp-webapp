@@ -72,7 +72,7 @@ export class GoodsReceiptList {
   protected readonly statusKey = (row: GoodsReceipt): string => row.status;
 
   protected readonly columns: DataTableColumn[] = [
-    { key: 'number', header: 'Recepción', width: '150px' },
+    { key: 'number', header: 'Nota de ingreso', width: '150px' },
     { key: 'supplierId', header: 'Proveedor' },
     { key: 'workSheetRef', header: 'H. Trabajo', width: '130px' },
     { key: 'expectedDate', header: 'Fecha esperada', width: '190px' },
@@ -148,12 +148,13 @@ export class GoodsReceiptList {
     return STATUS_TONE[status];
   }
 
-  /** Resolves the Hoja de Trabajo behind a receipt by walking PO → Cotización → Solicitud → HT. */
+  /** Resolves the Hoja de Trabajo behind a receipt by walking PO → Cotización → RC → primera sugerencia con HT. */
   protected workSheetRefFor(purchaseOrderId: string): string | undefined {
     const po = this.purchasingState.purchaseOrders().find((p) => p.id === purchaseOrderId);
     const quotation = this.purchasingState.quotations().find((q) => q.id === po?.quotationId);
-    const requisition = this.purchasingState.requisitions().find((r) => r.id === quotation?.requisitionId);
-    return requisition?.workSheetRef;
+    const requirement = this.purchasingState.requirements().find((r) => r.id === quotation?.requirementId);
+    const suggestionIds = requirement?.suggestionIds ?? [];
+    return this.purchasingState.suggestions().find((s) => suggestionIds.includes(s.id) && s.workSheetRef)?.workSheetRef;
   }
 
   protected workSheetId(workSheetRef: string | undefined): string | undefined {

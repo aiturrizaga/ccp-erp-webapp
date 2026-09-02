@@ -13,6 +13,7 @@
           <th class="py-1.5 text-start font-medium">Código</th>
           <th class="py-1.5 text-start font-medium">Nombre corto</th>
           <th class="py-1.5 text-start font-medium">Nombre</th>
+          <th class="py-1.5 text-start font-medium">Tipo</th>
         </tr>
       </thead>
       <tbody class="divide-y">
@@ -21,6 +22,7 @@
             <td class="py-2 font-medium">{{ loc.code }}</td>
             <td class="py-2">{{ loc.shortName }}</td>
             <td class="py-2">{{ loc.name }}</td>
+            <td class="py-2">{{ locationTypeLabel(loc.type) }}</td>
           </tr>
         }
       </tbody>

@@ -1,17 +1,21 @@
 /** Transversal approval engine — shared across every App's critical documents. */
 export type ApprovalProcess =
   | 'supplier'
-  | 'purchase_requisition'
+  | 'purchase_requirement'
   | 'quotation_award'
   | 'purchase_order'
-  | 'bom_change';
+  | 'bom_change'
+  | 'sales_price'
+  | 'sales_claim';
 
 export const APPROVAL_PROCESS_LABEL: Record<ApprovalProcess, string> = {
   supplier: 'Alta de proveedor',
-  purchase_requisition: 'Requerimiento de compra',
+  purchase_requirement: 'Requerimiento de compra',
   quotation_award: 'Adjudicación de cotización',
   purchase_order: 'Orden de compra',
   bom_change: 'Cambio de BOM',
+  sales_price: 'Precio de venta fuera de rango',
+  sales_claim: 'Resolución de reclamo de cliente',
 };
 
 export type ApprovalLevelStatus = 'pending' | 'approved' | 'rejected' | 'observed';

@@ -1,0 +1,19 @@
+<app-list-toolbar [(search)]="search" searchPlaceholder="Buscar por reclamo, pedido o cliente..." actionLabel="Nuevo reclamo" (action)="onNew()" />
+
+<app-data-table
+  [columns]="columns"
+  [rows]="rows()"
+  [rowClickable]="true"
+  (rowClick)="openDetail($event)"
+  emptyMessage="Sin reclamos registrados."
+  [cellTemplate]="cellTpl"
+/>
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('defectType') { {{ defectLabel(row.defectType) }} }
+    @case ('resolution') { {{ resolutionLabel(row.resolution) }} }
+    @case ('status') { <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" /> }
+    @default { {{ row[key] }} }
+  }
+</ng-template>

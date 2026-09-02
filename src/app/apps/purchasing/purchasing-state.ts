@@ -1,16 +1,18 @@
 import { Injectable, WritableSignal, signal } from '@angular/core';
 import { TableStore } from '@core/supabase/table-store';
-import { PURCHASE_ORDERS, PURCHASE_REQUISITIONS, QUOTATIONS, SUPPLIERS } from '@core/mock-data';
+import { PURCHASE_ORDERS, PURCHASE_REQUIREMENTS, QUOTATIONS, REPLENISHMENT_SUGGESTIONS, SUPPLIERS } from '@core/mock-data';
 import {
   Currency,
   PurchaseOrder,
   PurchaseOrderLine,
   PurchaseOrderStatus,
-  PurchaseRequisition,
-  PurchaseRequisitionLine,
+  PurchaseRequirement,
+  PurchaseRequirementLine,
   Quotation,
   QuotationLine,
   QuotationOffer,
+  ReplenishmentSuggestion,
+  ReplenishmentSuggestionLine,
   RequisitionPriority,
   Supplier,
   SupplierClass,
@@ -19,19 +21,21 @@ import {
 const TODAY = '2026-08-23';
 
 /**
- * Mutable store for Compras' documents, backed by Supabase tables (`purchase_requisitions`,
- * `quotations`, `purchase_orders`, `suppliers`) — one row per document, so two people editing
- * different documents at once never clobber each other. Falls back to the bundled fixtures when
- * Supabase isn't configured or reachable, so the prototype still works standalone.
+ * Mutable store for Compras' documents, backed by Supabase tables (`replenishment_suggestions`,
+ * `purchase_requirements`, `quotations`, `purchase_orders`, `suppliers`) — one row per document, so two
+ * people editing different documents at once never clobber each other. Falls back to the bundled
+ * fixtures when Supabase isn't configured or reachable, so the prototype still works standalone.
  */
 @Injectable({ providedIn: 'root' })
 export class PurchasingState {
-  private readonly requisitionsStore = new TableStore<PurchaseRequisition>('purchase_requisitions');
+  private readonly suggestionsStore = new TableStore<ReplenishmentSuggestion>('replenishment_suggestions');
+  private readonly requirementsStore = new TableStore<PurchaseRequirement>('purchase_requirements');
   private readonly quotationsStore = new TableStore<Quotation>('quotations');
   private readonly purchaseOrdersStore = new TableStore<PurchaseOrder>('purchase_orders');
   private readonly suppliersStore = new TableStore<Supplier>('suppliers');
 
-  readonly requisitions = signal<PurchaseRequisition[]>([...PURCHASE_REQUISITIONS]);
+  readonly suggestions = signal<ReplenishmentSuggestion[]>([...REPLENISHMENT_SUGGESTIONS]);
+  readonly requirements = signal<PurchaseRequirement[]>([...PURCHASE_REQUIREMENTS]);
   readonly quotations = signal<Quotation[]>([...QUOTATIONS]);
   readonly purchaseOrders = signal<PurchaseOrder[]>([...PURCHASE_ORDERS]);
   readonly suppliers = signal<Supplier[]>([...SUPPLIERS]);
@@ -41,9 +45,13 @@ export class PurchasingState {
   private nextSupplierSeq = SUPPLIERS.length + 1;
 
   constructor() {
-    this.requisitionsStore.fetchAll().then((rows) => {
+    this.suggestionsStore.fetchAll().then((rows) => {
       if (!rows?.length) return;
-      this.requisitions.set(rows);
+      this.suggestions.set(rows);
+    });
+    this.requirementsStore.fetchAll().then((rows) => {
+      if (!rows?.length) return;
+      this.requirements.set(rows);
     });
     this.quotationsStore.fetchAll().then((rows) => {
       if (!rows?.length) return;
@@ -61,7 +69,8 @@ export class PurchasingState {
       this.nextSupplierSeq = rows.length + 1;
     });
 
-    this.requisitionsStore.subscribe((r) => this.mergeRow(this.requisitions, r));
+    this.suggestionsStore.subscribe((s) => this.mergeRow(this.suggestions, s));
+    this.requirementsStore.subscribe((r) => this.mergeRow(this.requirements, r));
     this.quotationsStore.subscribe((q) => this.mergeRow(this.quotations, q));
     this.purchaseOrdersStore.subscribe((po) => this.mergeRow(this.purchaseOrders, po));
     this.suppliersStore.subscribe((s) => this.mergeRow(this.suppliers, s));
@@ -99,42 +108,45 @@ export class PurchasingState {
     return supplier;
   }
 
-  private updateRequisition(id: string, patch: (r: PurchaseRequisition) => PurchaseRequisition): void {
-    let patched: PurchaseRequisition | undefined;
-    this.requisitions.update((rows) =>
-      rows.map((r) => {
-        if (r.id !== id) return r;
-        patched = patch(r);
+  // --- Reposición sugerida ---
+
+  private updateSuggestion(id: string, patch: (s: ReplenishmentSuggestion) => ReplenishmentSuggestion): ReplenishmentSuggestion | undefined {
+    let patched: ReplenishmentSuggestion | undefined;
+    this.suggestions.update((rows) =>
+      rows.map((s) => {
+        if (s.id !== id) return s;
+        patched = patch(s);
         return patched;
       }),
     );
-    if (patched) this.requisitionsStore.upsert(patched, (r) => ({ status: r.status, area: r.area }));
+    if (patched) this.suggestionsStore.upsert(patched, (s) => ({ status: s.status, area: s.area }));
+    return patched;
   }
 
-  private nextRequisitionNumber(): string {
+  private nextSuggestionNumber(): string {
     let max = 0;
-    for (const r of this.requisitions()) {
-      const n = parseInt(r.number.replace('SC-2026-', ''), 10);
+    for (const s of this.suggestions()) {
+      const n = parseInt(s.number.replace('SC-2026-', ''), 10);
       if (Number.isFinite(n) && n > max) max = n;
     }
     return `SC-2026-${String(max + 1).padStart(4, '0')}`;
   }
 
-  /** Almacén (or another area) manually files a requisition that isn't tied to a Hoja de Trabajo — starts as a draft, same as an auto-generated one. */
-  createRequisition(input: {
-    origin: PurchaseRequisition['origin'];
+  /** Almacén (or another area) manually files a suggestion that isn't tied to a Hoja de Trabajo — starts as a draft, same as an auto-generated one, and is available to group into an RC right away. */
+  createSuggestion(input: {
+    origin: ReplenishmentSuggestion['origin'];
     requestedBy: string;
     area: string;
     plant: string;
     priority: RequisitionPriority;
     neededBy: string;
     note?: string;
-    lines: PurchaseRequisitionLine[];
-  }): PurchaseRequisition {
-    const seq = this.requisitions().length + 1;
-    const requisition: PurchaseRequisition = {
+    lines: ReplenishmentSuggestionLine[];
+  }): ReplenishmentSuggestion {
+    const seq = this.suggestions().length + 1;
+    const suggestion: ReplenishmentSuggestion = {
       id: `PR-${String(seq).padStart(3, '0')}`,
-      number: this.nextRequisitionNumber(),
+      number: this.nextSuggestionNumber(),
       status: 'draft',
       createdAt: TODAY,
       origin: input.origin,
@@ -145,50 +157,225 @@ export class PurchasingState {
       neededBy: input.neededBy,
       note: input.note,
       lines: input.lines,
+      history: [{ at: TODAY, action: 'created' }],
     };
-    this.requisitions.update((rows) => [...rows, requisition]);
-    this.requisitionsStore.upsert(requisition, (r) => ({ status: r.status, area: r.area }));
-    return requisition;
+    this.suggestions.update((rows) => [...rows, suggestion]);
+    this.suggestionsStore.upsert(suggestion, (s) => ({ status: s.status, area: s.area }));
+    return suggestion;
   }
 
-  updateLineQuantity(requisitionId: string, lineIndex: number, quantity: number): void {
-    this.updateRequisition(requisitionId, (r) => ({
+  updateLineQuantity(suggestionId: string, lineIndex: number, quantity: number): void {
+    this.updateSuggestion(suggestionId, (s) => ({
+      ...s,
+      lines: s.lines.map((line, i) => (i === lineIndex ? { ...line, quantity } : line)),
+    }));
+  }
+
+  addLine(suggestionId: string, line: ReplenishmentSuggestionLine): void {
+    this.updateSuggestion(suggestionId, (s) => ({ ...s, lines: [...s.lines, { ...line, addedManually: true }] }));
+  }
+
+  removeLine(suggestionId: string, lineIndex: number): void {
+    this.updateSuggestion(suggestionId, (s) => ({ ...s, lines: s.lines.filter((_, i) => i !== lineIndex) }));
+  }
+
+  setLineNotNeeded(suggestionId: string, lineIndex: number, notNeeded: boolean): void {
+    this.updateSuggestion(suggestionId, (s) => ({
+      ...s,
+      lines: s.lines.map((line, i) => (i === lineIndex ? { ...line, notNeeded } : line)),
+    }));
+  }
+
+  updateNote(suggestionId: string, note: string): void {
+    this.updateSuggestion(suggestionId, (s) => ({ ...s, note }));
+  }
+
+  // --- Requerimiento de Compra (RC) ---
+
+  private updateRequirement(id: string, patch: (r: PurchaseRequirement) => PurchaseRequirement): PurchaseRequirement | undefined {
+    let patched: PurchaseRequirement | undefined;
+    this.requirements.update((rows) =>
+      rows.map((r) => {
+        if (r.id !== id) return r;
+        patched = patch(r);
+        return patched;
+      }),
+    );
+    if (patched) this.requirementsStore.upsert(patched, (r) => ({ status: r.status, area: r.area }));
+    return patched;
+  }
+
+  private nextRequirementNumber(): string {
+    let max = 0;
+    for (const r of this.requirements()) {
+      const n = parseInt(r.number.replace('RC-2026-', ''), 10);
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+    return `RC-2026-${String(max + 1).padStart(4, '0')}`;
+  }
+
+  /**
+   * Almacén groups several free (status 'draft') Reposición sugerida rows into one Requerimiento de
+   * Compra block. `lines` is the RC's own working copy — the create screen lets Almacén edit
+   * quantities or strike an article out before the block even exists, so it's passed in as-is rather
+   * than re-derived from the suggestions here.
+   */
+  createRequirement(input: {
+    suggestionIds: string[];
+    lines: PurchaseRequirementLine[];
+    requestedBy: string;
+    area: string;
+    plant: string;
+    priority: RequisitionPriority;
+    neededBy: string;
+    note?: string;
+  }): PurchaseRequirement {
+    const seq = this.requirements().length + 1;
+
+    const requirement: PurchaseRequirement = {
+      id: `RC-${String(seq).padStart(3, '0')}`,
+      number: this.nextRequirementNumber(),
+      status: 'draft',
+      suggestionIds: input.suggestionIds,
+      requestedBy: input.requestedBy,
+      area: input.area,
+      plant: input.plant,
+      priority: input.priority,
+      createdAt: TODAY,
+      neededBy: input.neededBy,
+      note: input.note,
+      history: [{ at: TODAY, action: 'created' }],
+      lines: input.lines,
+    };
+    this.requirements.update((rows) => [...rows, requirement]);
+    this.requirementsStore.upsert(requirement, (r) => ({ status: r.status, area: r.area }));
+
+    for (const suggestionId of input.suggestionIds) {
+      this.updateSuggestion(suggestionId, (s) => ({
+        ...s,
+        status: 'grouped',
+        requirementId: requirement.id,
+        history: [...s.history, { at: TODAY, action: 'grouped', requirementId: requirement.id, requirementNumber: requirement.number }],
+      }));
+    }
+
+    return requirement;
+  }
+
+  updateRequirementNote(requirementId: string, note: string): void {
+    this.updateRequirement(requirementId, (r) => ({ ...r, note }));
+  }
+
+  updateRequirementLineQuantity(requirementId: string, lineIndex: number, quantity: number): void {
+    this.updateRequirement(requirementId, (r) => ({
       ...r,
       lines: r.lines.map((line, i) => (i === lineIndex ? { ...line, quantity } : line)),
     }));
   }
 
-  addLine(requisitionId: string, line: PurchaseRequisitionLine): void {
-    this.updateRequisition(requisitionId, (r) => ({ ...r, lines: [...r.lines, { ...line, addedManually: true }] }));
+  /** Almacén adds an article directly to the block — not tied to any grouped suggestion's material list. */
+  addRequirementLine(requirementId: string, line: PurchaseRequirementLine): void {
+    this.updateRequirement(requirementId, (r) => ({ ...r, lines: [...r.lines, { ...line, addedManually: true }] }));
   }
 
-  removeLine(requisitionId: string, lineIndex: number): void {
-    this.updateRequisition(requisitionId, (r) => ({ ...r, lines: r.lines.filter((_, i) => i !== lineIndex) }));
-  }
-
-  setLineNotNeeded(requisitionId: string, lineIndex: number, notNeeded: boolean): void {
-    this.updateRequisition(requisitionId, (r) => ({
+  /** Almacén strikes an article out of the block — kept in `lines` (struck through in the UI) rather than removed, so there's a record it was requested and then decided against. */
+  setRequirementLineNotNeeded(requirementId: string, lineIndex: number, notNeeded: boolean): void {
+    this.updateRequirement(requirementId, (r) => ({
       ...r,
       lines: r.lines.map((line, i) => (i === lineIndex ? { ...line, notNeeded } : line)),
     }));
   }
 
-  updateNote(requisitionId: string, note: string): void {
-    this.updateRequisition(requisitionId, (r) => ({ ...r, note }));
+  /** Almacén marks the block reviewed before it can be sent to Logística — the required checkpoint between 'draft' and 'pending_approval'. */
+  markRequirementReviewed(requirementId: string, by?: string): void {
+    this.updateRequirement(requirementId, (r) => ({
+      ...r,
+      status: 'reviewed' as const,
+      history: [...r.history, { at: TODAY, action: 'reviewed', by }],
+    }));
   }
 
-  submitForApproval(requisitionId: string): void {
-    this.updateRequisition(requisitionId, (r) => ({ ...r, status: 'pending_approval' as const }));
+  submitRequirementForApproval(requirementId: string): void {
+    this.updateRequirement(requirementId, (r) => ({
+      ...r,
+      status: 'pending_approval' as const,
+      history: [...r.history, { at: TODAY, action: 'submitted' }],
+    }));
   }
 
-  /** Logística approves a requisition Almacén submitted, clearing it for sourcing/quotation. */
-  approveRequisition(requisitionId: string): void {
-    this.updateRequisition(requisitionId, (r) => ({ ...r, status: 'approved' as const }));
+  /** Logística approves the RC — its grouped suggestions stay 'grouped', now ready for Compras to generate the RFQ. */
+  approveRequirement(requirementId: string, by?: string): void {
+    this.updateRequirement(requirementId, (r) => ({
+      ...r,
+      status: 'approved' as const,
+      history: [...r.history, { at: TODAY, action: 'approved', by }],
+    }));
   }
 
-  /** Logística sends a requisition back to Almacén for changes instead of approving it. */
-  observeRequisition(requisitionId: string): void {
-    this.updateRequisition(requisitionId, (r) => ({ ...r, status: 'draft' as const }));
+  /**
+   * Logística rejects or observes the RC. Either way the whole block is released: every grouped
+   * suggestion goes back to 'draft' and loses its `requirementId`, so Almacén can regroup it (alone or
+   * with others) into a brand new RC. The rejected/observed RC itself is never deleted or reused — it
+   * stays visible with its full history for audit.
+   */
+  private releaseRequirement(requirementId: string, status: 'rejected' | 'observed', comment: string, by?: string): void {
+    const requirement = this.updateRequirement(requirementId, (r) => ({
+      ...r,
+      status,
+      history: [...r.history, { at: TODAY, action: status, by, comment }],
+    }));
+    if (!requirement) return;
+
+    for (const suggestionId of requirement.suggestionIds) {
+      this.updateSuggestion(suggestionId, (s) => ({
+        ...s,
+        status: 'draft',
+        requirementId: undefined,
+        history: [...s.history, { at: TODAY, action: 'released', requirementId: requirement.id, requirementNumber: requirement.number, reason: comment }],
+      }));
+    }
+  }
+
+  rejectRequirement(requirementId: string, comment: string, by?: string): void {
+    this.releaseRequirement(requirementId, 'rejected', comment, by);
+  }
+
+  observeRequirement(requirementId: string, comment: string, by?: string): void {
+    this.releaseRequirement(requirementId, 'observed', comment, by);
+  }
+
+  /** Compras generates the RFQ from an approved RC — merges the RC's own (possibly edited) lines, summing quantities when the same item was requested by more than one HT/sugerencia, and skipping lines Almacén struck out as "no es necesario". */
+  createQuotationFromRequirement(requirement: PurchaseRequirement): Quotation {
+    const seq = this.nextQuotationSeq++;
+
+    const mergedLines = new Map<string, QuotationLine>();
+    for (const line of requirement.lines) {
+      if (line.notNeeded) continue;
+      const existing = mergedLines.get(line.itemId);
+      if (existing) {
+        existing.quantity += line.quantity;
+      } else {
+        mergedLines.set(line.itemId, { itemId: line.itemId, quantity: line.quantity, unitOfMeasure: line.unitOfMeasure, offers: [] });
+      }
+    }
+
+    const quotation: Quotation = {
+      id: `QT-${String(seq).padStart(3, '0')}`,
+      number: `COT-2026-${String(100 + seq).padStart(4, '0')}`,
+      requirementId: requirement.id,
+      status: 'draft',
+      createdAt: TODAY,
+      dueDate: TODAY,
+      lines: Array.from(mergedLines.values()),
+    };
+    this.quotations.update((quotations) => [...quotations, quotation]);
+    this.quotationsStore.upsert(quotation, (q) => ({ status: q.status, requirement_id: q.requirementId }));
+    return quotation;
+  }
+
+  /** Conie marks an RFQ as sent once she's requested quotes from suppliers, before any offers come back. */
+  markQuotationSent(quotationId: string): void {
+    this.updateQuotation(quotationId, (q) => ({ ...q, status: 'sent' as const }));
   }
 
   private updateQuotation(id: string, patch: (q: Quotation) => Quotation): void {
@@ -200,35 +387,7 @@ export class PurchasingState {
         return patched;
       }),
     );
-    if (patched) this.quotationsStore.upsert(patched, (q) => ({ status: q.status, requisition_id: q.requisitionId }));
-  }
-
-  createQuotationFromRequisition(requisition: PurchaseRequisition): Quotation {
-    const seq = this.nextQuotationSeq++;
-    const quotation: Quotation = {
-      id: `QT-${String(seq).padStart(3, '0')}`,
-      number: `COT-2026-${String(100 + seq).padStart(4, '0')}`,
-      requisitionId: requisition.id,
-      status: 'draft',
-      createdAt: TODAY,
-      dueDate: TODAY,
-      lines: requisition.lines
-        .filter((line) => !line.notNeeded)
-        .map<QuotationLine>((line) => ({
-          itemId: line.itemId,
-          quantity: line.quantity,
-          unitOfMeasure: line.unitOfMeasure,
-          offers: [],
-        })),
-    };
-    this.quotations.update((quotations) => [...quotations, quotation]);
-    this.quotationsStore.upsert(quotation, (q) => ({ status: q.status, requisition_id: q.requisitionId }));
-    return quotation;
-  }
-
-  /** Conie marks an RFQ as sent once she's requested quotes from suppliers, before any offers come back. */
-  markQuotationSent(quotationId: string): void {
-    this.updateQuotation(quotationId, (q) => ({ ...q, status: 'sent' as const }));
+    if (patched) this.quotationsStore.upsert(patched, (q) => ({ status: q.status, requirement_id: q.requirementId }));
   }
 
   /** Conie registers a supplier's quotation received by phone/email as a manual offer, attaching the PDF she received as evidence. */
@@ -238,6 +397,54 @@ export class PurchasingState {
       status: q.status === 'draft' || q.status === 'sent' ? ('received' as const) : q.status,
       lines: q.lines.map((line) => (line.itemId === itemId ? { ...line, offers: [...line.offers, offer] } : line)),
     }));
+  }
+
+  private nextPurchaseOrderNumber(): string {
+    let max = 0;
+    for (const po of this.purchaseOrders()) {
+      const n = parseInt(po.number.replace('OC-2026-', ''), 10);
+      if (Number.isFinite(n) && n > max) max = n;
+    }
+    return `OC-2026-${String(max + 1).padStart(4, '0')}`;
+  }
+
+  /** Compras files a PO by hand — not tied to any RFQ/adjudicación, e.g. a direct purchase or a repeat order with a known supplier. */
+  createPurchaseOrder(input: {
+    supplierId: string;
+    currency: Currency;
+    exchangeRate: number;
+    paymentTerms: string;
+    committedDeliveryDate: string;
+    committedDeliveryTime: string;
+    plant: string;
+    termsAndConditions?: string;
+    penalties?: string;
+    warranty?: string;
+    notes?: string;
+    lines: PurchaseOrderLine[];
+  }): PurchaseOrder {
+    const seq = this.nextPurchaseOrderSeq++;
+    const order: PurchaseOrder = {
+      id: `PO-${String(seq).padStart(3, '0')}`,
+      number: this.nextPurchaseOrderNumber(),
+      supplierId: input.supplierId,
+      status: 'draft',
+      currency: input.currency,
+      exchangeRate: input.exchangeRate,
+      paymentTerms: input.paymentTerms,
+      issuedAt: TODAY,
+      committedDeliveryDate: input.committedDeliveryDate,
+      committedDeliveryTime: input.committedDeliveryTime,
+      plant: input.plant,
+      termsAndConditions: input.termsAndConditions ?? '',
+      penalties: input.penalties ?? '',
+      warranty: input.warranty ?? '',
+      notes: input.notes ?? '',
+      lines: input.lines,
+    };
+    this.purchaseOrders.update((rows) => [...rows, order]);
+    this.purchaseOrdersStore.upsert(order, (po) => ({ status: po.status, supplier_id: po.supplierId }));
+    return order;
   }
 
   /**
@@ -257,13 +464,16 @@ export class PurchasingState {
       linesBySupplier.set(supplierId, [...(linesBySupplier.get(supplierId) ?? []), entry]);
     }
 
+    let nextNumber = this.nextPurchaseOrderNumber();
     const orders: PurchaseOrder[] = [];
     for (const [supplierId, entries] of linesBySupplier) {
       const referenceOffer = entries[0].offer;
       const seq = this.nextPurchaseOrderSeq++;
+      const number = nextNumber;
+      nextNumber = `OC-2026-${String(parseInt(number.replace('OC-2026-', ''), 10) + 1).padStart(4, '0')}`;
       orders.push({
         id: `PO-${String(seq).padStart(3, '0')}`,
-        number: `OC-2026-${String(600 + seq).padStart(4, '0')}`,
+        number,
         quotationId: quotation.id,
         supplierId,
         status: 'draft',
@@ -273,7 +483,7 @@ export class PurchasingState {
         issuedAt: TODAY,
         committedDeliveryDate: TODAY,
         committedDeliveryTime: '09:00',
-        plant: 'Planta Lima',
+        plant: 'AL01 · Planta 01',
         termsAndConditions: '',
         penalties: '',
         warranty: '',

@@ -9,7 +9,7 @@ export function roleGuard(allowed: UserRole[]): CanActivateFn {
     const role = inject(AuthState).currentUser()?.role;
     if (role && allowed.includes(role)) return true;
 
-    inject(Router).navigate(['/apps/purchasing/requisitions']);
+    inject(Router).navigate(['/apps/purchasing/replenishment-suggestions']);
     return false;
   };
 }

@@ -1,0 +1,50 @@
+<app-entity-header title="Despacho" [crumbs]="[{ label: 'Ventas' }, { label: 'Despacho' }]" />
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-2">
+  <div hlmCard class="p-4">
+    <h3 class="mb-1 text-sm font-semibold">Por confirmar salida <span class="text-muted-foreground font-normal">— Ventas</span></h3>
+    <p class="text-muted-foreground mb-3 text-xs">Ventas confirma que el pedido está listo para salir del almacén.</p>
+    <div class="flex flex-col divide-y">
+      @for (o of toConfirm(); track o.id) {
+        <div class="flex items-center justify-between gap-2 py-2 first:pt-0">
+          <div>
+            <a class="text-primary text-sm font-medium hover:underline" [routerLink]="['/apps/sales/orders', o.id]">{{ o.number }}</a>
+            <p class="text-muted-foreground text-xs">{{ o.customerName }} · {{ o.currency }} {{ o.total | number: '1.2-2' }}</p>
+          </div>
+          <button hlmBtn size="sm" variant="outline" (click)="markReady(o)">Marcar listo</button>
+        </div>
+      } @empty {
+        <p class="text-muted-foreground py-2 text-sm">Nada pendiente de confirmar.</p>
+      }
+    </div>
+  </div>
+
+  <div hlmCard class="p-4">
+    <h3 class="mb-1 text-sm font-semibold">Listas para entrega <span class="text-muted-foreground font-normal">— Despacho</span></h3>
+    <p class="text-muted-foreground mb-3 text-xs">Cuando el cliente llega a recoger, Despacho ve si puede entregar o no.</p>
+    <div class="flex flex-col divide-y">
+      @for (r of readyForPickup(); track r.order.id) {
+        <div class="py-2.5 first:pt-0">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <a class="text-primary text-sm font-medium hover:underline" [routerLink]="['/apps/sales/orders', r.order.id]">{{ r.order.number }}</a>
+              <p class="text-muted-foreground text-xs">{{ r.order.customerName }} · {{ r.order.currency }} {{ r.order.total | number: '1.2-2' }}</p>
+            </div>
+            @if (r.canDeliver) {
+              <button hlmBtn size="sm" (click)="markDelivered(r.order)"><ng-icon name="tablerTruckDelivery" class="mr-1.5" /> Entregar</button>
+            } @else {
+              <app-status-badge label="No entregar" tone="danger" />
+            }
+          </div>
+          @if (!r.canDeliver) {
+            <ul class="text-destructive mt-1 list-disc pl-5 text-xs">
+              @for (b of r.blockers; track b) { <li>{{ b }}</li> }
+            </ul>
+          }
+        </div>
+      } @empty {
+        <p class="text-muted-foreground py-2 text-sm">La bandeja de despacho está vacía.</p>
+      }
+    </div>
+  </div>
+</div>

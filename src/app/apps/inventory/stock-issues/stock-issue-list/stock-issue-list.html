@@ -8,7 +8,7 @@
   [hasFilters]="true"
   [filterCount]="filterCount()"
   [hasSecondaryActions]="true"
-  actionLabel="Nueva salida"
+  actionLabel="Nueva nota de salida"
   (action)="createIssue()"
 >
   <div filters class="flex flex-col gap-3">
@@ -43,12 +43,23 @@
   </div>
 
   <div secondaryActions class="flex flex-col gap-0.5">
+    <button hlmBtn variant="ghost" size="sm" class="justify-start gap-2" [routerLink]="['/apps/inventory/stock-issues/dispatch']">
+      <ng-icon name="tablerTruckDelivery" />
+      Despachar en bloque
+    </button>
     <button hlmBtn variant="ghost" size="sm" class="justify-start gap-2">
       <ng-icon name="tablerDownload" />
       Exportar a Excel
     </button>
   </div>
 </app-list-toolbar>
+
+@if (selectedCount() > 0) {
+  <div class="mb-3 flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2">
+    <p class="text-sm">{{ selectedCount() }} nota(s) de salida seleccionada(s)</p>
+    <button hlmBtn size="sm" (click)="dispatchInBulk()">Despachar en bloque</button>
+  </div>
+}
 
 @if (groupedSections(); as sections) {
   <div class="flex flex-col gap-5">
@@ -70,17 +81,22 @@
       [rows]="paginatedRows()"
       [rowClickable]="true"
       (rowClick)="openDetail($event)"
-      emptyMessage="No se encontraron salidas."
+      emptyMessage="No se encontraron notas de salida."
       [cellTemplate]="cellTpl"
     />
   } @else {
-    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron salidas." />
+    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron notas de salida." />
   }
   <app-list-pagination [total]="filteredRows().length" [(page)]="page" [(pageSize)]="pageSize" />
 }
 
 <ng-template #cellTpl let-row let-key="key">
   @switch (key) {
+    @case ('select') {
+      <span (click)="$event.stopPropagation()">
+        <hlm-checkbox [checked]="isSelected(row)" [disabled]="!isSelectable(row)" (checkedChange)="toggleSelected(row, $event)" />
+      </span>
+    }
     @case ('origin') {
       {{ originLabel(row.origin) }}
     }

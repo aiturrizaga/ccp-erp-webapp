@@ -1,0 +1,58 @@
+<app-list-toolbar
+  [(search)]="search"
+  searchPlaceholder="Buscar por razón social o documento..."
+  [hasFilters]="true"
+  [filterCount]="filterCount()"
+  actionLabel="Nuevo cliente"
+  (action)="onNew()"
+>
+  <div filters class="flex flex-col gap-3">
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Modalidad</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of modeOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="modeFilter().has(opt.value)" (checkedChange)="toggleMode(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    @if (filterCount() > 0) {
+      <button hlmBtn variant="ghost" size="sm" class="justify-start gap-1.5" (click)="clearFilters()">
+        <ng-icon name="tablerFilter" /> Limpiar filtros
+      </button>
+    }
+  </div>
+</app-list-toolbar>
+
+<app-data-table
+  [columns]="columns"
+  [rows]="paginatedRows()"
+  [rowClickable]="true"
+  (rowClick)="openDetail($event)"
+  emptyMessage="No se encontraron clientes."
+  [cellTemplate]="cellTpl"
+/>
+<app-list-pagination [total]="rows().length" [(page)]="page" [(pageSize)]="pageSize" />
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('paymentMode') {
+      <app-status-badge [label]="modeLabel(row.paymentMode)" [tone]="row.paymentMode === 'credit' ? 'info' : 'neutral'" />
+    }
+    @case ('credit') {
+      @if (row.paymentMode === 'credit') {
+        <span class="tabular-nums" [class.text-destructive]="creditOver(row)" [class.font-medium]="creditOver(row)">
+          {{ row.currency }} {{ (row.creditUsed ?? 0) | number: '1.0-0' }} / {{ (row.creditLimit ?? 0) | number: '1.0-0' }}
+        </span>
+      } @else {
+        <span class="text-muted-foreground">—</span>
+      }
+    }
+    @case ('retention') {
+      @if (row.isRetentionAgent) { <app-status-badge label="Agente" tone="warning" /> } @else { <span class="text-muted-foreground">No</span> }
+    }
+    @default { {{ row[key] }} }
+  }
+</ng-template>

@@ -9,7 +9,7 @@ import { InvoicingState } from '../invoicing-state';
 
 const SETTLED_STATUSES = new Set(['paid', 'voided']);
 
-/** App-level analytics for Facturación — receivable/payable pending status and overdue exposure. */
+/** App-level analytics for Facturación — comprobantes issued, receivable/payable status and overdue exposure. */
 @Component({
   selector: 'app-invoicing-dashboard',
   imports: [RouterLink, ...HlmCardImports, StatCard, DecimalPipe],
@@ -22,13 +22,10 @@ export class InvoicingDashboard {
   protected readonly pendingReceivable = computed(
     () => this.state.invoices().filter((i) => i.documentType === 'sales' && !SETTLED_STATUSES.has(i.status)).length,
   );
-
   protected readonly pendingPayable = computed(
     () => this.state.invoices().filter((i) => i.documentType === 'purchase' && !SETTLED_STATUSES.has(i.status)).length,
   );
-
   protected readonly overdueInvoices = computed(() => this.state.invoices().filter((i) => i.status === 'overdue'));
-
   protected readonly totalInvoiced = computed(() => this.state.invoices().reduce((sum, i) => sum + i.total, 0));
 
   protected partyName(invoice: Invoice): string {

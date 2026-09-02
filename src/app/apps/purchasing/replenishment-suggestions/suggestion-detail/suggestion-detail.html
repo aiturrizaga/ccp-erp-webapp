@@ -1,58 +1,28 @@
-@if (requisition(); as r) {
+@if (suggestion(); as s) {
   <app-entity-header
-    [title]="r.number"
-    [statusLabel]="statusLabel(r.status)"
-    [statusTone]="statusTone(r.status)"
-    [crumbs]="[{ label: 'Requerimientos de compra', link: '/apps/purchasing/requisitions' }, { label: r.number }]"
-  >
-    <div actions class="flex gap-2">
-      @if (r.status === 'pending_approval' && auth.isPurchasing()) {
-        <button hlmBtn size="sm" variant="outline" (click)="observeRequisition()">Observar</button>
-        <hlm-alert-dialog>
-          <button hlmAlertDialogTrigger hlmBtn size="sm">Aprobar</button>
-          <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
-            <hlm-alert-dialog-header>
-              <h3 hlmAlertDialogTitle>¿Aprobar {{ r.number }}?</h3>
-              <p hlmAlertDialogDescription>Quedará lista para que Logística genere la cotización a los proveedores.</p>
-            </hlm-alert-dialog-header>
-            <hlm-alert-dialog-footer>
-              <button hlmAlertDialogCancel>Cancelar</button>
-              <button hlmAlertDialogAction (click)="approveRequisition()">Aprobar</button>
-            </hlm-alert-dialog-footer>
-          </hlm-alert-dialog-content>
-        </hlm-alert-dialog>
-      }
-      @if (r.status === 'draft' && editable()) {
-        <button hlmBtn size="sm" (click)="submitForApproval()">Enviar a aprobación</button>
-      }
-      @if (r.status === 'approved' && !quotation() && auth.isPurchasing()) {
-        <hlm-alert-dialog>
-          <button hlmAlertDialogTrigger hlmBtn size="sm">Generar cotización</button>
-          <hlm-alert-dialog-content *hlmAlertDialogPortal="let ctx">
-            <hlm-alert-dialog-header>
-              <h3 hlmAlertDialogTitle>¿Generar cotización para {{ r.number }}?</h3>
-              <p hlmAlertDialogDescription>Se creará una nueva RFQ con los artículos de este requerimiento para empezar a pedir precios a los proveedores.</p>
-            </hlm-alert-dialog-header>
-            <hlm-alert-dialog-footer>
-              <button hlmAlertDialogCancel>Cancelar</button>
-              <button hlmAlertDialogAction (click)="generateQuotation()">Generar</button>
-            </hlm-alert-dialog-footer>
-          </hlm-alert-dialog-content>
-        </hlm-alert-dialog>
-      }
-    </div>
-  </app-entity-header>
+    [title]="s.number"
+    [statusLabel]="statusLabel(s.status)"
+    [statusTone]="statusTone(s.status)"
+    [crumbs]="[{ label: 'Reposición sugerida', link: '/apps/purchasing/replenishment-suggestions' }, { label: s.number }]"
+  />
 
   <div class="-mt-3 mb-4 flex flex-wrap items-center gap-2 text-sm">
-    <span class="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-950 dark:text-violet-400">{{ r.area }}</span>
-    <span class="text-muted-foreground">{{ plantDisplay() }}</span>
+    <span class="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-950 dark:text-violet-400">{{ s.area }}</span>
+    <span class="text-muted-foreground">{{ suggestion()?.plant }}</span>
   </div>
+
+  @if (requirement(); as r) {
+    <div hlmCard class="mb-4 flex items-center justify-between p-3 text-sm">
+      <span>Agrupada en <a [routerLink]="['/apps/purchasing/requirements', r.id]" class="text-primary font-medium hover:underline">{{ r.number }}</a></span>
+      <app-status-badge [label]="r.status" [tone]="'info'" />
+    </div>
+  }
 
   <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.6fr_1fr]">
     <div class="flex flex-col gap-4">
       <div hlmCard class="p-4">
         <div class="mb-3 flex items-center justify-between">
-          <h3 class="text-sm font-semibold">Artículos solicitados</h3>
+          <h3 class="text-sm font-semibold">Artículos sugeridos</h3>
           @if (editable()) {
             <hlm-dialog>
               <button hlmDialogTrigger hlmBtn size="sm" variant="outline" (click)="openAddLineDraft()">Agregar artículo</button>
@@ -102,7 +72,7 @@
             </tr>
           </thead>
           <tbody class="divide-y">
-            @for (line of r.lines; track line.itemId; let i = $index) {
+            @for (line of s.lines; track line.itemId; let i = $index) {
               <tr [class.opacity-60]="line.notNeeded">
                 <td class="px-3 py-2 first:ps-0 last:pe-0">
                   <span [class.line-through]="line.notNeeded">{{ itemLabel(line.itemId) }}</span>
@@ -164,27 +134,17 @@
 
       <div hlmCard class="p-4 text-sm">
         <dl class="grid grid-cols-2 gap-y-2">
-          <dt class="text-muted-foreground">Origen</dt><dd>{{ r.origin === 'production' ? 'Producción' : r.origin === 'inventory' ? 'Almacén' : r.origin === 'forecast' ? 'Proyección de inventario' : 'Otro' }}</dd>
-          <dt class="text-muted-foreground">Solicitante</dt><dd>{{ r.requestedBy }}</dd>
-          <dt class="text-muted-foreground">Prioridad</dt><dd>{{ priorityLabel(r.priority) }}</dd>
-          <dt class="text-muted-foreground">Creado</dt><dd>{{ r.createdAt }}</dd>
-          @if (r.workSheetRef) {
+          <dt class="text-muted-foreground">Origen</dt><dd>{{ s.origin === 'production' ? 'Producción' : s.origin === 'inventory' ? 'Almacén' : s.origin === 'forecast' ? 'Proyección de inventario' : 'Otro' }}</dd>
+          <dt class="text-muted-foreground">Solicitante</dt><dd>{{ s.requestedBy }}</dd>
+          <dt class="text-muted-foreground">Prioridad</dt><dd>{{ priorityLabel(s.priority) }}</dd>
+          <dt class="text-muted-foreground">Creado</dt><dd>{{ s.createdAt }}</dd>
+          @if (s.workSheetRef) {
             <dt class="text-muted-foreground">Hoja de trabajo</dt>
             <dd>
               @if (workSheetId(); as wsId) {
-                <a [routerLink]="['/apps/production/work-sheets', wsId]" class="text-primary hover:underline">{{ r.workSheetRef }}</a>
+                <a [routerLink]="['/apps/production/work-sheets', wsId]" class="text-primary hover:underline">{{ s.workSheetRef }}</a>
               } @else {
-                {{ r.workSheetRef }}
-              }
-            </dd>
-          }
-          @if (quotation(); as q) {
-            <dt class="text-muted-foreground">Cotización</dt>
-            <dd>
-              @if (auth.isPurchasing()) {
-                <a [routerLink]="['/apps/purchasing/sourcing', q.id]" class="text-primary hover:underline">{{ q.number }}</a>
-              } @else {
-                {{ q.number }}
+                {{ s.workSheetRef }}
               }
             </dd>
           }
@@ -197,12 +157,12 @@
           <textarea
             hlmTextarea
             class="w-full"
-            placeholder="Agrega cualquier comentario para Logística: cambios frente a la HT, urgencias, artículos agregados, etc."
+            placeholder="Agrega cualquier comentario relevante: cambios frente a la HT, urgencias, artículos agregados, etc."
             [ngModel]="noteDraft()"
             (ngModelChange)="setNote($event)"
           ></textarea>
-        } @else if (r.note) {
-          <p class="text-sm">{{ r.note }}</p>
+        } @else if (s.note) {
+          <p class="text-sm">{{ s.note }}</p>
         } @else {
           <p class="text-muted-foreground text-sm">Sin observaciones.</p>
         }
@@ -210,14 +170,30 @@
     </div>
 
     <div hlmCard class="p-4">
-      <h3 class="mb-3 text-sm font-semibold">Aprobación</h3>
-      @if (approval(); as a) {
-        <app-approval-timeline [levels]="a.levels" />
+      <h3 class="mb-3 text-sm font-semibold">Historial</h3>
+      @if (s.history.length) {
+        <ul class="flex flex-col gap-3">
+          @for (entry of s.history; track $index) {
+            <li class="border-l-2 pl-3 text-sm" [class.border-primary]="entry.action !== 'released'" [class.border-destructive]="entry.action === 'released'">
+              <p class="font-medium">
+                @switch (entry.action) {
+                  @case ('created') { Sugerencia creada }
+                  @case ('grouped') { Agrupada en {{ entry.requirementNumber }} }
+                  @case ('released') { Liberada de {{ entry.requirementNumber }} }
+                }
+              </p>
+              <p class="text-muted-foreground text-xs">{{ entry.at }}</p>
+              @if (entry.reason) {
+                <p class="text-muted-foreground mt-1 text-xs italic">{{ entry.reason }}</p>
+              }
+            </li>
+          }
+        </ul>
       } @else {
-        <app-empty-state icon="tablerClockHour4" title="Sin flujo de aprobación" description="Este requerimiento no requirió aprobación según las reglas configuradas." />
+        <app-empty-state icon="tablerClockHour4" title="Sin historial" />
       }
     </div>
   </div>
 } @else {
-  <app-empty-state icon="tablerClipboardList" title="Requerimiento no encontrado" />
+  <app-empty-state icon="tablerClipboardList" title="Sugerencia no encontrada" />
 }

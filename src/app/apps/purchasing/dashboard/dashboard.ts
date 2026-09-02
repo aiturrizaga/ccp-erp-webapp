@@ -4,19 +4,16 @@ import { ChartConfiguration } from 'chart.js';
 import { HlmCardImports } from '@ui/card';
 import { StatCard } from '@shared/components/stat-card/stat-card';
 import { ChartCanvas } from '@shared/components/chart-canvas/chart-canvas';
-import { PurchaseOrder, PurchaseRequisitionStatus, PURCHASE_REQUISITION_STATUS_LABEL, REQUISITION_PRIORITY_LABEL, Tone } from '@core/models';
+import { PurchaseOrder, PurchaseRequirementStatus, PURCHASE_REQUIREMENT_STATUS_LABEL, REQUISITION_PRIORITY_LABEL, Tone } from '@core/models';
 import { PurchasingState } from '../purchasing-state';
 
-const STATUS_TONE: Record<PurchaseRequisitionStatus, Tone> = {
+const STATUS_TONE: Record<PurchaseRequirementStatus, Tone> = {
   draft: 'neutral',
+  reviewed: 'info',
   pending_approval: 'warning',
-  approved: 'info',
-  sourcing: 'info',
-  awarded: 'info',
-  purchasing: 'info',
-  fulfilled: 'success',
+  approved: 'success',
   rejected: 'danger',
-  cancelled: 'neutral',
+  observed: 'warning',
 };
 
 const TONE_COLOR: Record<Tone, string> = {
@@ -42,7 +39,7 @@ export class PurchasingDashboard {
   private readonly router = inject(Router);
   private readonly purchasingState = inject(PurchasingState);
 
-  protected readonly pendingRequisitions = computed(() => this.purchasingState.requisitions().filter((r) => r.status === 'pending_approval'));
+  protected readonly pendingRequirements = computed(() => this.purchasingState.requirements().filter((r) => r.status === 'pending_approval'));
 
   protected readonly quotationsUnderEvaluation = computed(() =>
     this.purchasingState.quotations().filter((q) => q.status === 'under_evaluation' || q.status === 'sent').length,
@@ -114,11 +111,11 @@ export class PurchasingDashboard {
     };
   });
 
-  // --- Donut de solicitudes por estado ---
+  // --- Donut de Requerimientos de Compra por estado ---
 
-  protected readonly requisitionsByStatusChart = computed<ChartConfiguration>(() => {
-    const totals = new Map<PurchaseRequisitionStatus, number>();
-    for (const r of this.purchasingState.requisitions()) {
+  protected readonly requirementsByStatusChart = computed<ChartConfiguration>(() => {
+    const totals = new Map<PurchaseRequirementStatus, number>();
+    for (const r of this.purchasingState.requirements()) {
       totals.set(r.status, (totals.get(r.status) ?? 0) + 1);
     }
     const entries = Array.from(totals.entries()).sort((a, b) => b[1] - a[1]);
@@ -126,7 +123,7 @@ export class PurchasingDashboard {
     return {
       type: 'doughnut',
       data: {
-        labels: entries.map(([status]) => PURCHASE_REQUISITION_STATUS_LABEL[status]),
+        labels: entries.map(([status]) => PURCHASE_REQUIREMENT_STATUS_LABEL[status]),
         datasets: [{ data: entries.map(([, count]) => count), backgroundColor: entries.map(([status]) => TONE_COLOR[STATUS_TONE[status]]) }],
       },
       options: { plugins: { legend: { position: 'right' } } },
@@ -141,8 +138,8 @@ export class PurchasingDashboard {
     return this.purchasingState.suppliers().find((s) => s.id === supplierId)?.legalName ?? supplierId;
   }
 
-  protected goToRequisition(id: string): void {
-    this.router.navigate(['/apps/purchasing/requisitions', id]);
+  protected goToRequirement(id: string): void {
+    this.router.navigate(['/apps/purchasing/requirements', id]);
   }
 
   protected goToPurchaseOrder(id: string): void {

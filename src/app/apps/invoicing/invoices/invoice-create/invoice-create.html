@@ -1,0 +1,98 @@
+<app-entity-header title="Nuevo comprobante" [crumbs]="[{ label: 'Comprobantes', link: '/apps/invoicing/invoices' }, { label: 'Nuevo' }]" />
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-[1.6fr_1fr]">
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Emisión</h3>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel>Tipo</label>
+          <hlm-select class="block w-full" [value]="docKind()" (valueChange)="docKind.set($any($event))" [itemToString]="kindToString">
+            <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (o of kindOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+            </hlm-select-content>
+          </hlm-select>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel>Pedido (opcional)</label>
+          <hlm-select class="block w-full" [value]="orderId()" (valueChange)="onOrderChange($event ?? '')" [itemToString]="orderToString">
+            <hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Sin pedido (libre)" /></hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              <hlm-select-item value="">Sin pedido (comprobante libre)</hlm-select-item>
+              @for (o of orders(); track o.id) { <hlm-select-item [value]="o.id">{{ o.number }} — {{ o.customerName }}</hlm-select-item> }
+            </hlm-select-content>
+          </hlm-select>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="cn">Cliente</label>
+          <input hlmInput id="cn" type="text" [ngModel]="customerName()" (ngModelChange)="customerName.set($event)" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="ct">RUC / DNI</label>
+          <input hlmInput id="ct" type="text" [ngModel]="customerTaxId()" (ngModelChange)="customerTaxId.set($event)" />
+        </div>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="gl">Glosa</label>
+        <input hlmInput id="gl" type="text" [ngModel]="glosa()" (ngModelChange)="glosa.set($event)" />
+      </div>
+    </div>
+
+    <div hlmCard class="flex flex-col gap-3 p-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold">Detalle</h3>
+        <button hlmBtn size="sm" variant="outline" (click)="addLine()"><ng-icon name="tablerPlus" class="mr-1.5" /> Línea</button>
+      </div>
+      @for (l of lines(); track $index) {
+        <div class="grid grid-cols-[1fr_70px_100px_28px] items-center gap-2">
+          <input hlmInput type="text" placeholder="Descripción" [ngModel]="l.description" (ngModelChange)="setLine($index, { description: $event })" />
+          <input hlmInput type="number" min="0" [ngModel]="l.quantity" (ngModelChange)="setLine($index, { quantity: +$event })" />
+          <input hlmInput type="number" min="0" step="0.01" [ngModel]="l.unitPrice" (ngModelChange)="setLine($index, { unitPrice: +$event })" />
+          <button hlmBtn size="sm" variant="ghost" (click)="removeLine($index)"><ng-icon name="tablerX" /></button>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-3 p-4">
+      <h3 class="text-sm font-semibold">Condiciones</h3>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Condición de pago</label>
+        <hlm-select class="block w-full" [value]="paymentCondition()" (valueChange)="paymentCondition.set($any($event))" [itemToString]="condToString">
+          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            <hlm-select-item value="contado">Contado</hlm-select-item>
+            <hlm-select-item value="credito">Crédito</hlm-select-item>
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="ep">Descuento por pronto pago (%)</label>
+        <input hlmInput id="ep" type="number" min="0" max="100" [ngModel]="earlyPaymentDiscountPct()" (ngModelChange)="earlyPaymentDiscountPct.set(+$event)" />
+      </div>
+      @if (paymentCondition() === 'credito') {
+        <label class="flex cursor-pointer items-center gap-2 text-sm">
+          <input type="checkbox" [checked]="withInstallments()" (change)="withInstallments.set(!withInstallments())" /> En cuotas
+        </label>
+        @if (withInstallments()) {
+          <input hlmInput type="number" min="2" [ngModel]="installmentCount()" (ngModelChange)="installmentCount.set(+$event)" />
+          <p class="text-muted-foreground text-xs">A las cuotas no se les aplican anticipos.</p>
+        }
+      }
+    </div>
+
+    <div hlmCard class="flex flex-col gap-1.5 p-4 text-sm">
+      <div class="flex justify-between"><span class="text-muted-foreground">Valor venta</span><span class="tabular-nums">{{ currency() }} {{ subtotal() | number: '1.2-2' }}</span></div>
+      <div class="flex justify-between"><span class="text-muted-foreground">Descuentos</span><span class="tabular-nums">- {{ discount() | number: '1.2-2' }}</span></div>
+      <div class="flex justify-between"><span class="text-muted-foreground">IGV 18%</span><span class="tabular-nums">{{ igv() | number: '1.2-2' }}</span></div>
+      <div class="mt-1 flex justify-between border-t pt-1 font-semibold"><span>Importe total</span><span class="tabular-nums">{{ currency() }} {{ total() | number: '1.2-2' }}</span></div>
+    </div>
+
+    <div class="flex gap-2">
+      <button hlmBtn size="sm" [disabled]="!canSubmit()" (click)="submit()">Emitir</button>
+      <button hlmBtn size="sm" variant="ghost" (click)="cancel()">Cancelar</button>
+    </div>
+  </div>
+</div>

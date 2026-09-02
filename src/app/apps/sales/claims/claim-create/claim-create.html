@@ -1,0 +1,52 @@
+<app-entity-header title="Nuevo reclamo" [crumbs]="[{ label: 'Reclamos', link: '/apps/sales/claims' }, { label: 'Nuevo reclamo' }]" />
+
+<div hlmCard class="flex max-w-2xl flex-col gap-4 p-4">
+  <div class="flex flex-col gap-1.5">
+    <label hlmLabel>Pedido</label>
+    <hlm-select class="block w-full" [value]="orderId()" (valueChange)="orderId.set($event ?? '')" [itemToString]="orderToString">
+      <hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Selecciona el pedido" /></hlm-select-trigger>
+      <hlm-select-content *hlmSelectPortal>
+        @for (o of orders(); track o.id) { <hlm-select-item [value]="o.id">{{ o.number }} — {{ o.customerName }}</hlm-select-item> }
+      </hlm-select-content>
+    </hlm-select>
+  </div>
+
+  <div class="flex flex-col gap-1.5">
+    <label hlmLabel>Tipo de falla</label>
+    <hlm-select class="block w-full" [value]="defectType()" (valueChange)="defectType.set($any($event))" [itemToString]="defectToString">
+      <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+      <hlm-select-content *hlmSelectPortal>
+        @for (o of defectOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+      </hlm-select-content>
+    </hlm-select>
+  </div>
+
+  <div class="flex flex-col gap-1.5">
+    <label hlmLabel for="desc">Descripción</label>
+    <textarea hlmInput id="desc" rows="4" placeholder="Ej. 3 postes con fisuras longitudinales cerca de la base tras la descarga en obra." [ngModel]="description()" (ngModelChange)="description.set($event)"></textarea>
+  </div>
+
+  <div class="flex flex-col gap-1.5">
+    <label hlmLabel>Evidencias (fotos / informes)</label>
+    <div class="flex gap-2">
+      <input hlmInput type="text" placeholder="nombre-archivo.jpg" [ngModel]="evidenceInput()" (ngModelChange)="evidenceInput.set($event)" (keydown.enter)="addEvidence()" />
+      <button hlmBtn size="sm" variant="outline" (click)="addEvidence()"><ng-icon name="tablerPaperclip" /></button>
+    </div>
+    @if (evidenceNames().length) {
+      <ul class="mt-1 flex flex-col gap-1 text-xs">
+        @for (n of evidenceNames(); track $index) {
+          <li class="flex items-center justify-between rounded border bg-muted/40 px-2 py-1">
+            <span>{{ n }}</span>
+            <button hlmBtn size="sm" variant="ghost" (click)="removeEvidence($index)"><ng-icon name="tablerX" /></button>
+          </li>
+        }
+      </ul>
+    }
+    <p class="text-muted-foreground text-xs">En el prototipo solo se registra el nombre del archivo.</p>
+  </div>
+
+  <div class="flex gap-2">
+    <button hlmBtn size="sm" [disabled]="!canSubmit()" (click)="submit()">Registrar reclamo</button>
+    <button hlmBtn size="sm" variant="ghost" (click)="cancel()">Cancelar</button>
+  </div>
+</div>

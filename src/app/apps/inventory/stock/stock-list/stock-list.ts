@@ -1,4 +1,4 @@
-import { Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { NgIcon } from '@ng-icons/core';
 import { HlmButtonImports } from '@ui/button';
 import { HlmCheckboxImports } from '@ui/checkbox';
@@ -9,8 +9,9 @@ import { ListPagination } from '@shared/components/list-pagination/list-paginati
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { SelectFilterOption } from '@shared/components/select-filter/select-filter';
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
-import { ITEMS, STOCK_LOTS, WAREHOUSES } from '@core/mock-data';
+import { ITEMS, WAREHOUSES } from '@core/mock-data';
 import { STOCK_STATUS_LABEL, StockLot, StockStatus, Tone } from '@core/models';
+import { WarehouseOpsState } from '../../warehouse-ops-state';
 
 const STATUS_TONE: Record<StockStatus, Tone> = {
   available: 'success',
@@ -43,6 +44,8 @@ interface StockRow extends StockLot {
   templateUrl: './stock-list.html',
 })
 export class StockList {
+  private readonly warehouseOpsState = inject(WarehouseOpsState);
+
   protected readonly search = signal('');
   protected readonly view = signal<'list' | 'grid' | 'kanban'>('list');
   protected readonly groupBy = signal('none');
@@ -67,7 +70,7 @@ export class StockList {
 
   private readonly enrichedLots = computed<StockRow[]>(() => {
     const byItem = new Map<string, StockLot[]>();
-    for (const lot of STOCK_LOTS) {
+    for (const lot of this.warehouseOpsState.stockLots()) {
       const list = byItem.get(lot.itemId) ?? [];
       list.push(lot);
       byItem.set(lot.itemId, list);

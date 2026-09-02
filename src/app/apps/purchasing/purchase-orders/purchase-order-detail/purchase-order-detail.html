@@ -7,6 +7,9 @@
     [crumbs]="[{ label: 'Órdenes de compra', link: '/apps/purchasing/purchase-orders' }, { label: p.number }]"
   >
     <div actions class="flex gap-2">
+      @if (canPrint(p)) {
+        <button hlmBtn size="sm" variant="outline" (click)="printOrder()">Imprimir</button>
+      }
       @if (p.status === 'pending_approval') {
         <button hlmBtn size="sm" variant="outline">Rechazar</button>
         <button hlmBtn size="sm">Aprobar</button>
@@ -105,7 +108,7 @@
       </div>
 
       <div hlmCard class="p-4">
-        <h3 class="mb-3 text-sm font-semibold">Recepciones</h3>
+        <h3 class="mb-3 text-sm font-semibold">Notas de ingreso</h3>
         @if (receipts().length) {
           <ul class="divide-y text-sm">
             @for (r of receipts(); track r.id) {
@@ -119,7 +122,7 @@
             }
           </ul>
         } @else {
-          <p class="text-muted-foreground text-sm">Sin recepciones registradas.</p>
+          <p class="text-muted-foreground text-sm">Sin notas de ingreso registradas.</p>
         }
       </div>
     </div>
@@ -138,16 +141,16 @@
       <div hlmCard class="p-4 text-sm">
         <h3 class="mb-3 text-sm font-semibold">Trazabilidad</h3>
         <dl class="grid grid-cols-2 gap-y-2">
-          @if (requisition(); as r) {
-            <dt class="text-muted-foreground">Requerimiento</dt>
-            <dd><a [routerLink]="['/apps/purchasing/requisitions', r.id]" class="text-primary hover:underline">{{ r.number }}</a></dd>
-            @if (r.workSheetRef) {
+          @if (requirement(); as r) {
+            <dt class="text-muted-foreground">Requerimiento de Compra</dt>
+            <dd><a [routerLink]="['/apps/purchasing/requirements', r.id]" class="text-primary hover:underline">{{ r.number }}</a></dd>
+            @if (workSheetRef(); as ref) {
               <dt class="text-muted-foreground">Hoja de trabajo</dt>
               <dd>
                 @if (workSheetId(); as wsId) {
-                  <a [routerLink]="['/apps/production/work-sheets', wsId]" class="text-primary hover:underline">{{ r.workSheetRef }}</a>
+                  <a [routerLink]="['/apps/production/work-sheets', wsId]" class="text-primary hover:underline">{{ ref }}</a>
                 } @else {
-                  {{ r.workSheetRef }}
+                  {{ ref }}
                 }
               </dd>
             }

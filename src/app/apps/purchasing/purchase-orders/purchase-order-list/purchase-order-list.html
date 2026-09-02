@@ -9,6 +9,7 @@
   [filterCount]="filterCount()"
   [hasSecondaryActions]="true"
   actionLabel="Nueva orden"
+  (action)="createOrder()"
 >
   <div filters class="flex flex-col gap-3">
     <div>

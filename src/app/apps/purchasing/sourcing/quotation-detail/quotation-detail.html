@@ -7,7 +7,7 @@
     [crumbs]="[{ label: 'Cotizaciones', link: '/apps/purchasing/sourcing' }, { label: q.number }]"
   >
     <div actions class="flex items-center gap-3">
-      <a [routerLink]="['/apps/purchasing/requisitions', q.requisitionId]" class="text-primary text-sm hover:underline">Ver requerimiento de origen</a>
+      <a [routerLink]="['/apps/purchasing/requirements', q.requirementId]" class="text-primary text-sm hover:underline">Ver Requerimiento de Compra de origen</a>
       @if (q.status === 'draft') {
         <hlm-alert-dialog>
           <button hlmAlertDialogTrigger hlmBtn size="sm" variant="outline">Marcar como enviada a proveedores</button>

@@ -1,14 +1,62 @@
 <div class="flex flex-col gap-6">
   <div>
     <h1 class="text-xl font-semibold tracking-tight">Dashboard</h1>
-    <p class="text-muted-foreground text-sm">Vista general de Ventas — cotizaciones, órdenes y facturación.</p>
+    <p class="text-muted-foreground text-sm">Vista general de Ventas — cotizaciones, pedidos, producción y cobranza al contado.</p>
   </div>
 
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
     <app-stat-card label="Cotizaciones por responder" [value]="pendingQuotations().length + ''" hint="enviadas" />
-    <app-stat-card label="Ventas confirmadas" [value]="confirmedOrders() + ''" hint="órdenes confirmadas" />
-    <app-stat-card label="Órdenes por despachar" [value]="ordersToDispatch() + ''" hint="confirmadas o en preparación" />
-    <app-stat-card label="Total facturado" [value]="'S/ ' + (invoicedTotal() | number: '1.2-2')" hint="órdenes facturadas" />
+    <app-stat-card label="Ventas confirmadas" [value]="confirmedOrders() + ''" hint="pedidos confirmados" />
+    <app-stat-card label="Pedidos por despachar" [value]="ordersToDispatch() + ''" hint="confirmados o en preparación" />
+    <app-stat-card label="Total facturado" [value]="'S/ ' + (invoicedTotal() | number: '1.2-2')" hint="pedidos facturados" />
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+    <div class="rounded-lg border">
+      <div class="flex items-center justify-between border-b px-4 py-3">
+        <h2 class="text-sm font-semibold">Cómo va producción</h2>
+        <a routerLink="/apps/sales/production-board" class="text-primary text-xs hover:underline">Ver tablero</a>
+      </div>
+      <ul class="divide-y">
+        @for (r of productionRows(); track r.order.id) {
+          <li class="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToOrder(r.order.id)">
+            <div class="min-w-0">
+              <p class="font-medium">{{ r.order.number }} · <span class="font-mono text-xs">{{ r.order.workSheetId }}</span></p>
+              <p class="text-muted-foreground truncate text-xs">{{ customerName(r.order) }}</p>
+            </div>
+            <div class="flex items-center gap-2 whitespace-nowrap">
+              <span class="text-muted-foreground text-xs">{{ r.order.committedDeliveryDate }}</span>
+              <app-status-badge [label]="alertLabel(r.alert)" [tone]="alertTone(r.alert)" />
+            </div>
+          </li>
+        } @empty {
+          <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin HT con fecha de entrega comprometida.</li>
+        }
+      </ul>
+    </div>
+
+    <div class="rounded-lg border">
+      <div class="flex items-center justify-between border-b px-4 py-3">
+        <h2 class="text-sm font-semibold">Contado por cobrar</h2>
+        <span class="text-muted-foreground text-xs">adelanto sin validar</span>
+      </div>
+      <ul class="divide-y">
+        @for (row of cashToCollect(); track row.order.id) {
+          <li class="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToOrder(row.order.id)">
+            <div class="min-w-0">
+              <p class="font-medium">{{ row.order.number }}</p>
+              <p class="text-muted-foreground truncate text-xs">{{ customerName(row.order) }}</p>
+            </div>
+            <div class="text-right whitespace-nowrap">
+              <p class="font-medium">S/ {{ (row.order.total * row.gate.advancePct / 100) | number: '1.2-2' }}</p>
+              <p class="text-muted-foreground text-xs">{{ row.gate.advancePct }}% adelanto</p>
+            </div>
+          </li>
+        } @empty {
+          <li class="text-muted-foreground px-4 py-6 text-center text-sm">Nada pendiente de cobrar al contado.</li>
+        }
+      </ul>
+    </div>
   </div>
 
   <div class="rounded-lg border">

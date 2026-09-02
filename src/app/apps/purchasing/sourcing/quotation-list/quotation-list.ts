@@ -60,7 +60,7 @@ export class QuotationList {
 
   protected readonly columns: DataTableColumn[] = [
     { key: 'number', header: 'Cotización', width: '140px' },
-    { key: 'requisitionId', header: 'Requerimiento', width: '110px' },
+    { key: 'requirementId', header: 'Requerimiento', width: '110px' },
     { key: 'lines', header: 'Artículos', width: '90px', align: 'end' },
     { key: 'awardedSupplierId', header: 'Proveedor adjudicado' },
     { key: 'dueDate', header: 'Fecha límite', width: '120px' },

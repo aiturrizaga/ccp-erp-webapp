@@ -1,0 +1,98 @@
+@if (product(); as p) {
+  <app-entity-header
+    [title]="fullName()"
+    [subtitle]="p.legacyCode + ' · ' + p.brand"
+    [statusLabel]="statusLabel(p.status)"
+    [statusTone]="statusTone(p.status)"
+    [crumbs]="[{ label: 'Productos', link: '/apps/sales/products' }, { label: fullName() }]"
+  >
+    <div actions class="flex gap-2">
+      <button hlmBtn size="sm" variant="outline" (click)="edit()">Editar</button>
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.5fr_1fr]">
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Composición del nombre</h3>
+        <dl class="grid grid-cols-[130px_1fr] gap-y-2 text-sm">
+          <dt class="text-muted-foreground">Nombre</dt><dd class="font-medium">{{ p.name }}</dd>
+          <dt class="text-muted-foreground">Dimensión</dt><dd class="font-mono">{{ p.dimension || '—' }}</dd>
+          <dt class="text-muted-foreground">Especificación</dt><dd>{{ p.spec || '—' }}</dd>
+          <dt class="text-muted-foreground">Nombre completo</dt><dd class="font-medium">{{ fullName() }}</dd>
+        </dl>
+
+        @if (dimensionSegments().length) {
+          <div class="mt-4">
+            <p class="text-muted-foreground mb-2 text-xs font-medium">Desglose de la dimensión (interpretación tentativa)</p>
+            <div class="flex flex-wrap gap-2">
+              @for (seg of dimensionSegments(); track seg.label) {
+                <div class="bg-muted/40 rounded-md border px-2.5 py-1.5">
+                  <p class="text-muted-foreground text-[11px] uppercase tracking-wide">{{ seg.label }}</p>
+                  <p class="text-sm font-medium tabular-nums">{{ seg.value }}<span class="text-muted-foreground text-xs">{{ seg.unit ? ' ' + seg.unit : '' }}</span></p>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Costo y banda viable <span class="text-muted-foreground font-normal">— sin IGV</span></h3>
+        <dl class="grid grid-cols-[180px_1fr] gap-y-2 text-sm">
+          <dt class="text-muted-foreground">Costo de producción</dt>
+          <dd class="tabular-nums">{{ p.currency }} {{ p.productionUnitCost | number: '1.2-2' }} <span class="text-muted-foreground text-xs">(origen: Producción)</span></dd>
+          <dt class="text-muted-foreground">Costo viable mínimo</dt>
+          <dd class="tabular-nums font-medium">{{ p.currency }} {{ p.costBand.min | number: '1.2-2' }}</dd>
+          <dt class="text-muted-foreground">Costo viable máximo</dt>
+          <dd class="tabular-nums font-medium">{{ p.currency }} {{ p.costBand.max | number: '1.2-2' }}</dd>
+          @if (margin(); as m) {
+            <dt class="text-muted-foreground">Margen en la banda</dt>
+            <dd class="tabular-nums">{{ m.atMin | percent: '1.0-1' }} → {{ m.atMax | percent: '1.0-1' }}</dd>
+          }
+        </dl>
+        <p class="text-muted-foreground mt-3 text-xs">La negociación de venta no puede cerrar por debajo del costo viable mínimo sin visto bueno de Gerencia.</p>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Categoría y cuenta contable</h3>
+        <dl class="grid grid-cols-[110px_1fr] gap-y-2 text-sm">
+          <dt class="text-muted-foreground">Categoría</dt><dd class="font-medium">{{ categoryLabel(p.category) }}</dd>
+        </dl>
+        @if (account(); as acc) {
+          <div class="bg-muted/40 mt-3 rounded-md border p-3">
+            <p class="text-muted-foreground text-[11px] uppercase tracking-wide">Cuenta contable asociada (solo lectura)</p>
+            <p class="mt-0.5 font-mono text-sm font-medium">{{ acc.code }}</p>
+            <p class="text-muted-foreground text-xs">{{ acc.name }}</p>
+            <label class="mt-2.5 flex cursor-pointer items-center gap-2 text-xs">
+              <input type="checkbox" [checked]="accountConfirmed()" (change)="accountConfirmed.set(!accountConfirmed())" />
+              Verifiqué que el dato es correcto
+            </label>
+            @if (accountConfirmed()) {
+              <p class="mt-1.5 flex items-center gap-1 text-xs text-emerald-600">
+                <ng-icon name="tablerCircleCheck" size="14" /> Confirmado
+              </p>
+            }
+          </div>
+        }
+      </div>
+
+      <div hlmCard class="p-4 text-sm">
+        <h3 class="mb-3 text-sm font-semibold">Ficha</h3>
+        <dl class="grid grid-cols-2 gap-y-2">
+          <dt class="text-muted-foreground">Marca / fabricante</dt><dd>{{ p.brand }}</dd>
+          <dt class="text-muted-foreground">Código sistema</dt><dd class="font-mono">{{ p.legacyCode }}</dd>
+          <dt class="text-muted-foreground">Unidad de medida</dt><dd>{{ p.unitOfMeasure }}</dd>
+          <dt class="text-muted-foreground">Moneda</dt><dd>{{ p.currency }}</dd>
+          @if (p.plmProductId) { <dt class="text-muted-foreground">Producto PLM</dt><dd>{{ p.plmProductId }}</dd> }
+          @if (p.itemId) { <dt class="text-muted-foreground">Ítem inventario</dt><dd>{{ p.itemId }}</dd> }
+        </dl>
+        @if (p.notes) { <p class="text-muted-foreground mt-3 text-xs">{{ p.notes }}</p> }
+      </div>
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerPackage" title="Producto no encontrado" />
+}

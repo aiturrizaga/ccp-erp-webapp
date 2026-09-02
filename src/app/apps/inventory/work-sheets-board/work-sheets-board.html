@@ -1,0 +1,150 @@
+<div class="mb-4">
+  <h1 class="text-lg font-semibold">Ejecución de Hojas de Trabajo</h1>
+  <p class="text-muted-foreground text-sm">En qué estado va cada HT y qué tan cubierta está de materiales — para decidir qué atender primero con un Requerimiento de Compra o qué conviene stockear con anticipación.</p>
+</div>
+
+<div class="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+  <app-stat-card label="HT activas" [value]="activeCount() + ''" hint="planificadas a en producción" />
+  <app-stat-card label="HT en riesgo" [value]="atRiskCount() + ''" hint="con quiebre de materiales" [trend]="atRiskCount() ? 'down' : 'flat'" />
+  <app-stat-card label="Cobertura promedio" [value]="avgCoverage() + '%'" hint="de materiales, HT activas" [trend]="avgCoverage() < 80 ? 'down' : 'flat'" />
+  <app-stat-card label="Sin Requerimiento de Compra" [value]="needsPurchaseAction().length + ''" hint="HT en riesgo sin RC vinculado" [trend]="needsPurchaseAction().length ? 'down' : 'flat'" />
+</div>
+
+<div class="mb-4 flex flex-wrap items-center gap-3 rounded-lg border p-3">
+  <input
+    type="search"
+    class="border-input bg-background h-8 w-56 rounded-md border px-2.5 text-sm"
+    placeholder="Buscar HT o producto..."
+    [ngModel]="search()"
+    (ngModelChange)="search.set($event)"
+  />
+  <label class="flex cursor-pointer items-center gap-2 text-sm">
+    <hlm-checkbox [checked]="onlyAtRisk()" (checkedChange)="onlyAtRisk.set($event)" />
+    Solo en riesgo
+  </label>
+  <div class="flex flex-wrap items-center gap-2">
+    <span class="text-muted-foreground text-xs">Planta:</span>
+    @for (opt of plantOptions; track opt.value) {
+      <button
+        type="button"
+        class="rounded-full border px-2.5 py-1 text-xs"
+        [class.bg-primary]="plantFilter().has(opt.value)"
+        [class.text-primary-foreground]="plantFilter().has(opt.value)"
+        [class.border-primary]="plantFilter().has(opt.value)"
+        (click)="togglePlantFilter(opt.value)"
+      >
+        {{ opt.label }}
+      </button>
+    }
+  </div>
+</div>
+
+<app-data-kanban
+  [columns]="statusColumns"
+  [rows]="filteredCards()"
+  [groupKey]="statusKey"
+  [cardTemplate]="cardTpl"
+  [rowClickable]="false"
+/>
+
+<div class="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-2">
+  <div class="rounded-lg border">
+    <div class="border-b px-4 py-3">
+      <h2 class="text-sm font-semibold">HT que conviene atender primero</h2>
+      <p class="text-muted-foreground text-xs">En riesgo, activas y todavía sin Requerimiento de Compra — ordenadas por urgencia.</p>
+    </div>
+    @if (needsPurchaseAction().length) {
+      <ul class="divide-y">
+        @for (c of needsPurchaseAction(); track c.ws.id) {
+          <li class="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+            <div class="min-w-0">
+              <div class="flex items-center gap-2">
+                <a [routerLink]="['/apps/production/work-sheets', c.ws.id]" class="text-primary font-medium hover:underline">{{ c.ws.number }}</a>
+                <span class="text-muted-foreground text-xs">{{ productName(c.ws.productId) }}</span>
+              </div>
+              <p class="text-muted-foreground mt-0.5 text-xs">
+                {{ c.ws.plant }} · cobertura {{ c.coveragePct }}%
+                @if (c.daysToCommit >= 0) { · compromiso en {{ c.daysToCommit }} día(s) } @else { · compromiso vencido hace {{ -c.daysToCommit }} día(s) }
+              </p>
+            </div>
+            @if (c.suggestion; as s) {
+              <a [routerLink]="['/apps/purchasing/requirements/new']" [queryParams]="{ suggestionIds: s.id }" class="shrink-0">
+                <button hlmBtn size="sm" variant="outline">Agrupar en RC</button>
+              </a>
+            } @else {
+              <a [routerLink]="['/apps/purchasing/replenishment-suggestions/new']" class="shrink-0">
+                <button hlmBtn size="sm" variant="outline">Registrar sugerencia</button>
+              </a>
+            }
+          </li>
+        }
+      </ul>
+    } @else {
+      <app-empty-state icon="tablerCircleCheck" title="Sin pendientes" description="Ninguna HT en riesgo está esperando un Requerimiento de Compra." />
+    }
+  </div>
+
+  <div class="rounded-lg border">
+    <div class="border-b px-4 py-3">
+      <h2 class="text-sm font-semibold">Artículos a considerar para stock anticipado</h2>
+      <p class="text-muted-foreground text-xs">Faltan en más de una HT activa a la vez — señal de que conviene stockearse antes en vez de resolver HT por HT.</p>
+    </div>
+    @if (restockCandidates().length) {
+      <ul class="divide-y">
+        @for (r of restockCandidates(); track r.itemId) {
+          <li class="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
+            <span class="min-w-0 truncate">{{ itemLabel(r.itemId) }}</span>
+            <span class="text-muted-foreground shrink-0 text-xs">Falta en {{ r.htCount }} HT · {{ r.totalMissing }} {{ r.unitOfMeasure }}</span>
+          </li>
+        }
+      </ul>
+    } @else {
+      <app-empty-state icon="tablerStack" title="Sin repeticiones" description="Ningún artículo falta en más de una HT activa por ahora." />
+    }
+  </div>
+</div>
+
+<ng-template #cardTpl let-row>
+  <div class="flex items-start justify-between gap-2">
+    <a [routerLink]="['/apps/production/work-sheets', row.ws.id]" class="text-primary text-sm font-medium hover:underline">{{ row.ws.number }}</a>
+    @if (row.ws.atRisk) {
+      <span class="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-medium text-red-700 dark:bg-red-950 dark:text-red-400">En riesgo</span>
+    }
+  </div>
+  <p class="text-muted-foreground mt-0.5 truncate text-xs">{{ row.productName }}</p>
+  <p class="text-muted-foreground mt-1 text-xs">{{ row.ws.plant }}</p>
+
+  <div class="mt-2 flex items-center gap-1.5">
+    <div class="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
+      <div
+        class="h-full rounded-full"
+        [class.bg-emerald-500]="row.coverageTone === 'success'"
+        [class.bg-amber-500]="row.coverageTone === 'warning'"
+        [class.bg-red-500]="row.coverageTone === 'danger'"
+        [style.width.%]="row.coveragePct"
+      ></div>
+    </div>
+    <span class="text-muted-foreground text-[10px]">{{ row.coveragePct }}%</span>
+  </div>
+
+  <p class="mt-1.5 text-xs" [class.text-destructive]="row.daysToCommit < 2" [class.font-medium]="row.daysToCommit < 2">
+    @if (row.daysToCommit >= 0) { Compromiso en {{ row.daysToCommit }} día(s) } @else { Vencido hace {{ -row.daysToCommit }} día(s) }
+  </p>
+
+  @if (row.gaps.length) {
+    <p class="text-muted-foreground mt-1 text-[11px]">Faltan {{ row.gaps.length }} artículo(s)</p>
+  }
+
+  <div class="mt-2 flex flex-wrap gap-1">
+    @if (row.requirementNumber) {
+      <span class="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-medium text-violet-700 dark:bg-violet-950 dark:text-violet-400">RC {{ row.requirementNumber }}</span>
+    } @else if (row.suggestion) {
+      <span class="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-medium">Sugerencia sin agrupar</span>
+    } @else if (row.ws.atRisk) {
+      <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-950 dark:text-amber-400">Sin sugerencia</span>
+    }
+    @if (row.dispatchLabel) {
+      <app-status-badge [label]="row.dispatchLabel" [tone]="row.dispatchTone" />
+    }
+  </div>
+</ng-template>

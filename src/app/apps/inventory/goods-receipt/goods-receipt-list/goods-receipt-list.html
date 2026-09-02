@@ -1,6 +1,6 @@
 <app-list-toolbar
   [(search)]="search"
-  searchPlaceholder="Buscar por número de recepción..."
+  searchPlaceholder="Buscar por número de nota de ingreso..."
   [views]="views"
   [(view)]="view"
   [groupByOptions]="view() === 'kanban' ? [] : groupByOptions"
@@ -8,7 +8,7 @@
   [hasFilters]="true"
   [filterCount]="filterCount()"
   [hasSecondaryActions]="true"
-  actionLabel="Nueva recepción"
+  actionLabel="Nueva nota de ingreso"
 >
   <div filters class="flex flex-col gap-3">
     <div>
@@ -78,11 +78,11 @@
       [rows]="paginatedRows()"
       [rowClickable]="true"
       (rowClick)="openDetail($event)"
-      emptyMessage="No se encontraron recepciones."
+      emptyMessage="No se encontraron notas de ingreso."
       [cellTemplate]="cellTpl"
     />
   } @else {
-    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron recepciones." />
+    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron notas de ingreso." />
   }
   <app-list-pagination [total]="filteredRows().length" [(page)]="page" [(pageSize)]="pageSize" />
 }

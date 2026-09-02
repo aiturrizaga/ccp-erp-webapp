@@ -1,0 +1,110 @@
+@if (customer(); as c) {
+  <app-entity-header
+    [title]="c.legalName"
+    [subtitle]="(c.docType ?? 'RUC') + ' ' + c.taxId"
+    [crumbs]="[{ label: 'Clientes', link: '/apps/sales/customers' }, { label: c.legalName }]"
+  >
+    <div actions class="flex gap-2">
+      <button hlmBtn size="sm" variant="outline" [disabled]="syncing()" (click)="sync()">
+        <ng-icon name="tablerArrowsExchange" class="mr-1.5" /> {{ syncing() ? 'Sincronizando…' : 'Sincronizar datos' }}
+      </button>
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.4fr_1fr]">
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <div class="mb-3 flex items-center justify-between">
+          <h3 class="text-sm font-semibold">Contactos</h3>
+          <button hlmBtn size="sm" variant="outline" (click)="showContactForm.set(!showContactForm())">
+            <ng-icon name="tablerPlus" class="mr-1.5" /> Agregar contacto
+          </button>
+        </div>
+
+        @if (showContactForm()) {
+          <div class="mb-3 rounded-md border bg-muted/40 p-3">
+            <div class="mb-2 w-52">
+              <hlm-select class="block w-full" [value]="draft().type" (valueChange)="setDraft({ type: $any($event) })" [itemToString]="contactTypeToString">
+                <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+                <hlm-select-content *hlmSelectPortal>
+                  @for (o of contactTypeOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+                </hlm-select-content>
+              </hlm-select>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <input hlmInput type="text" placeholder="Nombres" [ngModel]="draft().firstName" (ngModelChange)="setDraft({ firstName: $event })" />
+              <input hlmInput type="text" placeholder="Apellidos" [ngModel]="draft().lastName" (ngModelChange)="setDraft({ lastName: $event })" />
+              <input hlmInput type="text" placeholder="Teléfono" [ngModel]="draft().phone" (ngModelChange)="setDraft({ phone: $event })" />
+              <input hlmInput type="text" placeholder="Celular" [ngModel]="draft().mobile" (ngModelChange)="setDraft({ mobile: $event })" />
+              <input hlmInput type="email" placeholder="Email" class="col-span-2" [ngModel]="draft().email" (ngModelChange)="setDraft({ email: $event })" />
+            </div>
+            <div class="mt-2 flex gap-2">
+              <button hlmBtn size="sm" (click)="saveContact()">Guardar</button>
+              <button hlmBtn size="sm" variant="ghost" (click)="showContactForm.set(false)">Cancelar</button>
+            </div>
+          </div>
+        }
+
+        <div class="flex flex-col divide-y">
+          @for (contact of contacts(); track contact.id) {
+            <div class="flex items-start justify-between gap-2 py-2 first:pt-0">
+              <div>
+                <p class="text-sm font-medium">{{ contact.name }}</p>
+                <p class="text-muted-foreground text-xs">{{ contactTypeLabel(contact.type) }}</p>
+                <p class="text-muted-foreground text-xs">{{ contact.email }} · {{ contact.phone }}@if (contact.mobile) { · Cel. {{ contact.mobile }} }</p>
+              </div>
+              @if (contact.type === 'representante_legal') { <app-status-badge label="Rep. legal" tone="info" /> }
+            </div>
+          } @empty {
+            <p class="text-muted-foreground py-2 text-sm">Sin contactos registrados.</p>
+          }
+        </div>
+      </div>
+
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Pedidos del cliente</h3>
+        <div class="flex flex-col divide-y">
+          @for (o of orders(); track o.id) {
+            <div class="flex items-center justify-between py-2 text-sm first:pt-0">
+              <a class="text-primary hover:underline" [href]="'/apps/sales/orders/' + o.id">{{ o.number }}</a>
+              <span class="text-muted-foreground">{{ o.currency }} {{ o.total | number: '1.2-2' }}</span>
+            </div>
+          } @empty {
+            <p class="text-muted-foreground py-2 text-sm">Sin pedidos.</p>
+          }
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4 text-sm">
+        <h3 class="mb-3 text-sm font-semibold">Ficha fiscal</h3>
+        <dl class="grid grid-cols-[130px_1fr] gap-y-2">
+          <dt class="text-muted-foreground">Documento</dt><dd>{{ c.docType ?? 'RUC' }} {{ c.taxId }}</dd>
+          <dt class="text-muted-foreground">Nombre comercial</dt><dd>{{ c.tradeName ?? '—' }}</dd>
+          <dt class="text-muted-foreground">Dirección fiscal</dt><dd>{{ c.fiscalAddress ?? c.address }}</dd>
+          <dt class="text-muted-foreground">Agente de retención</dt><dd>{{ c.isRetentionAgent ? 'Sí' : 'No' }}</dd>
+          <dt class="text-muted-foreground">Última sincronización</dt><dd>{{ c.lastSyncedAt ?? '—' }}</dd>
+        </dl>
+      </div>
+
+      <div hlmCard class="p-4 text-sm">
+        <h3 class="mb-3 text-sm font-semibold">Condiciones comerciales</h3>
+        <dl class="grid grid-cols-[130px_1fr] gap-y-2">
+          <dt class="text-muted-foreground">Modalidad</dt><dd>{{ modeLabel(c.paymentMode) }}</dd>
+          <dt class="text-muted-foreground">Moneda</dt><dd>{{ c.currency }}</dd>
+          <dt class="text-muted-foreground">Condición de pago</dt><dd>{{ c.paymentTerms }}</dd>
+          @if (c.paymentMode === 'credit') {
+            <dt class="text-muted-foreground">Crédito</dt>
+            <dd class="tabular-nums" [class.text-destructive]="creditOver()" [class.font-medium]="creditOver()">
+              {{ c.currency }} {{ (c.creditUsed ?? 0) | number: '1.2-2' }} / {{ (c.creditLimit ?? 0) | number: '1.2-2' }}
+              @if (creditOver()) { · excedido }
+            </dd>
+          }
+        </dl>
+      </div>
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerUsers" title="Cliente no encontrado" />
+}

@@ -157,4 +157,8 @@ export class PurchaseOrderList {
   protected openDetail(po: PurchaseOrder): void {
     this.router.navigate(['/apps/purchasing/purchase-orders', po.id]);
   }
+
+  protected createOrder(): void {
+    this.router.navigate(['/apps/purchasing/purchase-orders/new']);
+  }
 }

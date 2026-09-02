@@ -1,0 +1,163 @@
+<app-list-toolbar
+  [(search)]="search"
+  searchPlaceholder="Buscar por número o solicitante..."
+  [views]="views"
+  [(view)]="view"
+  [groupByOptions]="view() === 'kanban' ? [] : groupByOptions"
+  [(groupBy)]="groupBy"
+  [hasFilters]="true"
+  [filterCount]="filterCount()"
+  [hasSecondaryActions]="true"
+  actionLabel="Nueva sugerencia"
+  (action)="createSuggestion()"
+>
+  <div filters class="flex flex-col gap-3">
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Estado</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of statusOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="statusFilter().has(opt.value)" (checkedChange)="toggleStatusFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Prioridad</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of priorityOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="priorityFilter().has(opt.value)" (checkedChange)="togglePriorityFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Origen</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of originOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="originFilter().has(opt.value)" (checkedChange)="toggleOriginFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Estado de la HT</p>
+      <div class="flex flex-col gap-1.5">
+        @for (opt of htStatusOptions; track opt.value) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="htStatusFilter().has(opt.value)" (checkedChange)="toggleHtStatusFilter(opt.value)" />
+            {{ opt.label }}
+          </label>
+        }
+      </div>
+    </div>
+    @if (filterCount() > 0) {
+      <button hlmBtn variant="ghost" size="sm" class="justify-start gap-1.5" (click)="clearFilters()">
+        <ng-icon name="tablerFilter" />
+        Limpiar filtros
+      </button>
+    }
+  </div>
+
+  <div secondaryActions class="flex flex-col gap-0.5">
+    <button hlmBtn variant="ghost" size="sm" class="justify-start gap-2">
+      <ng-icon name="tablerDownload" />
+      Exportar a Excel
+    </button>
+  </div>
+</app-list-toolbar>
+
+@if (selectedCount() > 0) {
+  <div class="mb-3 flex items-center justify-between rounded-lg border bg-muted/40 px-3 py-2">
+    <p class="text-sm">{{ selectedCount() }} sugerencia(s) seleccionada(s)</p>
+    <button hlmBtn size="sm" (click)="groupIntoRequirement()">Agrupar en Requerimiento de Compra</button>
+  </div>
+}
+
+@if (view() === 'kanban') {
+  <app-data-kanban
+    [columns]="statusColumns"
+    [rows]="filteredRows()"
+    [groupKey]="statusKey"
+    [cardTemplate]="cardTpl"
+    [rowClickable]="true"
+    (rowClick)="openDetail($event)"
+  />
+} @else if (groupedSections(); as sections) {
+  <div class="flex flex-col gap-5">
+    @for (section of sections; track section.label) {
+      <div>
+        <h3 class="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{{ section.label }} · {{ section.rows.length }}</h3>
+        @if (view() === 'list') {
+          <app-data-table [columns]="columns" [rows]="section.rows" [rowClickable]="true" (rowClick)="openDetail($event)" [cellTemplate]="cellTpl" />
+        } @else {
+          <app-data-grid [rows]="section.rows" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" />
+        }
+      </div>
+    }
+  </div>
+} @else {
+  @if (view() === 'list') {
+    <app-data-table
+      [columns]="columns"
+      [rows]="paginatedRows()"
+      [rowClickable]="true"
+      (rowClick)="openDetail($event)"
+      emptyMessage="No se encontraron sugerencias de reposición."
+      [cellTemplate]="cellTpl"
+    />
+  } @else {
+    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron sugerencias de reposición." />
+  }
+  <app-list-pagination [total]="filteredRows().length" [(page)]="page" [(pageSize)]="pageSize" />
+}
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('select') {
+      <span (click)="$event.stopPropagation()">
+        <hlm-checkbox [checked]="isSelected(row)" [disabled]="!isSelectable(row)" (checkedChange)="toggleSelected(row, $event)" />
+      </span>
+    }
+    @case ('workSheetRef') {
+      @if (row.workSheetRef; as ref) {
+        <div class="flex items-center gap-1.5">
+          @if (workSheetId(ref); as wsId) {
+            <a [routerLink]="['/apps/production/work-sheets', wsId]" class="text-primary hover:underline" (click)="$event.stopPropagation()">{{ ref }}</a>
+          } @else {
+            {{ ref }}
+          }
+          @if (htStatus(ref); as hts) {
+            <span class="text-muted-foreground text-xs">· {{ htStatusLabel(hts) }}</span>
+          }
+        </div>
+      } @else {
+        <span class="text-muted-foreground">—</span>
+      }
+    }
+    @case ('priority') {
+      {{ priorityLabel(row.priority) }}
+    }
+    @case ('status') {
+      <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
+    }
+    @default {
+      {{ row[key] }}
+    }
+  }
+</ng-template>
+
+<ng-template #cardTpl let-row>
+  <div class="flex items-start justify-between gap-2">
+    <p class="text-sm font-medium">{{ row.number }}</p>
+    <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
+  </div>
+  <p class="text-muted-foreground mt-1 text-xs">{{ row.requestedBy }} · {{ row.area }}</p>
+  <p class="text-muted-foreground mt-2 text-xs">Prioridad {{ priorityLabel(row.priority) }}</p>
+  <p class="text-muted-foreground mt-2 text-xs">Requerido para {{ row.neededBy }}</p>
+</ng-template>

@@ -1,0 +1,221 @@
+<app-entity-header
+  title="Despacho en bloque"
+  [crumbs]="[{ label: 'Notas de salida', link: '/apps/inventory/stock-issues' }, { label: 'Despacho en bloque' }]"
+/>
+
+<p class="text-muted-foreground -mt-2 mb-4 text-sm">
+  Selecciona una o varias HT pendientes para atenderlas en un solo viaje, y agrega artículos sin HT si hace falta — todo queda registrado en el mismo despacho.
+</p>
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1fr_1.6fr]">
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-3 p-4">
+      <h3 class="text-sm font-semibold">Entrega</h3>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="received-by">Entregado a</label>
+        <input hlmInput id="received-by" placeholder="Nombre de quien recibe" [ngModel]="receivedBy()" (ngModelChange)="receivedBy.set($event)" />
+      </div>
+    </div>
+
+    <div hlmCard class="flex flex-col gap-3 p-4">
+      <h3 class="text-sm font-semibold">HT pendientes disponibles</h3>
+      <p class="text-muted-foreground -mt-2 text-xs">Marca las que vas a atender en este viaje.</p>
+      @if (availableIssues().length) {
+        <div class="flex max-h-[420px] flex-col gap-1.5 overflow-y-auto">
+          @for (issue of availableIssues(); track issue.id) {
+            <label class="hover:bg-muted/50 flex cursor-pointer items-start gap-3 rounded-md border p-2.5 text-sm">
+              <hlm-checkbox [checked]="isSelected(issue)" (checkedChange)="toggleSelected(issue, $event)" />
+              <span class="min-w-0 flex-1">
+                <span class="flex items-center justify-between gap-2">
+                  <span class="font-medium">{{ issue.number }}</span>
+                  @if (workSheetNumber(issue.workSheetId); as ref) {
+                    <span class="text-muted-foreground text-xs">{{ ref }}</span>
+                  }
+                </span>
+                <span class="text-muted-foreground block text-xs">{{ issue.plant }} · {{ issue.lines.length }} artículo(s)</span>
+              </span>
+            </label>
+          }
+        </div>
+      } @else {
+        <p class="text-muted-foreground text-sm">No hay notas de salida pendientes por ahora.</p>
+      }
+    </div>
+
+    <div hlmCard class="flex flex-col gap-3 p-4">
+      <label class="flex cursor-pointer items-center gap-2 text-sm font-medium">
+        <hlm-checkbox [checked]="includeOther()" (checkedChange)="includeOther.set($event)" />
+        Incluir artículos sin HT en este despacho
+      </label>
+      @if (includeOther()) {
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="other-reason">Motivo</label>
+          <textarea hlmTextarea id="other-reason" class="w-full" placeholder="Ej. Entrega de EPP para mantenimiento" [ngModel]="otherReason()" (ngModelChange)="otherReason.set($event)"></textarea>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel>Planta</label>
+          <hlm-select class="block w-full" [value]="otherPlant()" (valueChange)="otherPlant.set($event ?? '')" [itemToString]="plantToString">
+            <hlm-select-trigger size="sm" class="w-full">
+              <hlm-select-value placeholder="Selecciona" />
+            </hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (option of plantOptions; track option.value) {
+                <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+              }
+            </hlm-select-content>
+          </hlm-select>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    @if (selectedIssues().length) {
+      @for (issue of selectedIssues(); track issue.id) {
+        <div hlmCard class="p-4">
+          <div class="mb-2 flex items-center justify-between gap-2">
+            <h3 class="text-sm font-semibold">{{ issue.number }}</h3>
+            @if (workSheetNumber(issue.workSheetId); as ref) {
+              <span class="text-muted-foreground text-xs">{{ ref }}</span>
+            }
+          </div>
+          <div class="flex flex-col gap-2">
+            @for (line of issue.lines; track line.itemId) {
+              @if (pending(issue, line.itemId) > 0) {
+                <div class="rounded-md border p-2">
+                  <div class="flex items-center gap-2">
+                    <div class="min-w-0 flex-1">
+                      <p class="truncate text-sm">{{ itemLabel(line.itemId) }}</p>
+                      <p class="text-muted-foreground text-xs">
+                        Solicitada: {{ line.requiredQuantity }} · Despachada: {{ line.dispatchedQuantity }} · Pendiente: {{ pending(issue, line.itemId) }} {{ line.unitOfMeasure }}
+                      </p>
+                    </div>
+                    <div class="w-24 shrink-0">
+                      <label class="text-muted-foreground text-[11px]">Cantidad de salida</label>
+                      <input
+                        hlmInput
+                        type="number"
+                        min="0"
+                        [max]="pending(issue, line.itemId)"
+                        class="w-full text-end"
+                        [ngModel]="quantityFor(issue.id, line.itemId)"
+                        (ngModelChange)="setQuantity(issue.id, line.itemId, $event)"
+                      />
+                    </div>
+                  </div>
+                  @if (availableLots(line.itemId).length) {
+                    <div class="mt-2 flex flex-col gap-1">
+                      <label class="text-muted-foreground text-[11px]">Lote de salida — stock disponible {{ availableStock(line.itemId) }} {{ line.unitOfMeasure }}</label>
+                      <hlm-select
+                        class="block w-full"
+                        size="sm"
+                        [value]="lotFor(issue.id, line.itemId)"
+                        (valueChange)="setLot(issue.id, line.itemId, $event ?? '')"
+                        [itemToString]="lotToString(line.itemId)"
+                      >
+                        <hlm-select-trigger size="sm" class="w-full">
+                          <hlm-select-value placeholder="Selecciona un lote" />
+                        </hlm-select-trigger>
+                        <hlm-select-content *hlmSelectPortal>
+                          @for (lot of availableLots(line.itemId); track lot.id) {
+                            <hlm-select-item [value]="lot.id">{{ lot.lot }} · disp. {{ lot.quantity }} {{ line.unitOfMeasure }}</hlm-select-item>
+                          }
+                        </hlm-select-content>
+                      </hlm-select>
+                    </div>
+                  } @else {
+                    <p class="text-destructive mt-2 text-[11px]">Sin stock disponible en ningún lote.</p>
+                  }
+                </div>
+              }
+            }
+          </div>
+        </div>
+      }
+    } @else if (!includeOther()) {
+      <div hlmCard class="text-muted-foreground p-8 text-center text-sm">Selecciona al menos una HT pendiente o marca "Incluir artículos sin HT" para armar el despacho.</div>
+    }
+
+    @if (includeOther()) {
+      <div hlmCard class="flex flex-col gap-4 p-4">
+        <h3 class="text-sm font-semibold">Artículos sin HT</h3>
+
+        <div class="flex flex-col gap-2">
+          <div class="flex items-end gap-2">
+            <div class="flex flex-1 flex-col gap-1.5">
+              <label hlmLabel>Artículo</label>
+              <hlm-combobox [value]="newItemId()" (valueChange)="onNewItemChange($event ?? '')" [itemToString]="itemPickerToString">
+                <hlm-combobox-input placeholder="Buscar artículo..." />
+                <hlm-combobox-content *hlmComboboxPortal>
+                  <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+                  <div hlmComboboxList>
+                    @for (option of availableItemOptions(); track option.value) {
+                      <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
+                    }
+                  </div>
+                </hlm-combobox-content>
+              </hlm-combobox>
+            </div>
+            <div class="flex w-24 flex-col gap-1.5">
+              <label hlmLabel for="new-line-qty">Cantidad</label>
+              <input hlmInput id="new-line-qty" type="number" min="0" [ngModel]="newQuantity()" (ngModelChange)="newQuantity.set($event)" />
+            </div>
+            <button hlmBtn variant="outline" [disabled]="!canAddOtherLine()" (click)="addOtherLine()">Agregar</button>
+          </div>
+          @if (newItemId()) {
+            <div class="flex flex-col gap-1.5">
+              <label hlmLabel>Lote de salida</label>
+              @if (newItemLots().length) {
+                <hlm-combobox [(value)]="newLotId" [itemToString]="lotPickerToString">
+                  <hlm-combobox-input placeholder="Selecciona un lote..." />
+                  <hlm-combobox-content *hlmComboboxPortal>
+                    <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+                    <div hlmComboboxList>
+                      @for (lot of newItemLots(); track lot.id) {
+                        <hlm-combobox-item [value]="lot.id">{{ lot.lot }} · disp. {{ lot.quantity }}</hlm-combobox-item>
+                      }
+                    </div>
+                  </hlm-combobox-content>
+                </hlm-combobox>
+              } @else {
+                <p class="text-destructive text-xs">Sin stock disponible en ningún lote para este artículo.</p>
+              }
+            </div>
+          }
+        </div>
+
+        @if (otherLines().length) {
+          <table class="w-full text-sm">
+            <thead class="text-muted-foreground border-b text-xs">
+              <tr>
+                <th class="px-3 py-1.5 text-start font-medium first:ps-0 last:pe-0">Artículo</th>
+                <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Cantidad</th>
+                <th class="px-3 py-1.5 text-start font-medium first:ps-0 last:pe-0">Lote</th>
+                <th class="px-3 py-1.5 first:ps-0 last:pe-0"></th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              @for (line of otherLines(); track line.itemId) {
+                <tr>
+                  <td class="px-3 py-2 first:ps-0 last:pe-0">{{ itemLabel(line.itemId) }}</td>
+                  <td class="px-3 py-2 text-end first:ps-0 last:pe-0">{{ line.quantity }} {{ line.unitOfMeasure }}</td>
+                  <td class="px-3 py-2 first:ps-0 last:pe-0">{{ lotLabel(line.lotId) }}</td>
+                  <td class="px-3 py-2 text-end first:ps-0 last:pe-0">
+                    <button hlmBtn variant="ghost" size="sm" (click)="removeOtherLine(line.itemId)">Quitar</button>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        } @else {
+          <p class="text-muted-foreground text-sm">Sin artículos agregados.</p>
+        }
+      </div>
+    }
+  </div>
+</div>
+
+<div class="mt-4 flex gap-2">
+  <button hlmBtn variant="outline" (click)="cancel()">Cancelar</button>
+  <button hlmBtn [disabled]="!canSubmit()" (click)="submit()">Confirmar despacho</button>
+</div>

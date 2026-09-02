@@ -1,13 +1,17 @@
-/** The two areas piloting this prototype — each sees a different slice of Compras. */
-export type UserRole = 'warehouse' | 'purchasing';
+/** The areas piloting this prototype — each sees a different slice of the ERP. */
+export type UserRole = 'warehouse' | 'purchasing' | 'sales' | 'billing';
 
 export const USER_ROLE_LABEL: Record<UserRole, string> = {
   warehouse: 'Almacén',
   purchasing: 'Logística',
+  sales: 'Ventas',
+  billing: 'Cobranzas y Facturación',
 };
 
 /** Mock credential record — plain-text password is fine here, this login never talks to a real backend. */
 export interface AppUser {
+  /** Stable id so the row can live in Supabase like every other entity. */
+  id: string;
   email: string;
   password: string;
   name: string;

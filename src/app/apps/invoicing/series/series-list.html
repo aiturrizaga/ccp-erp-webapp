@@ -1,0 +1,81 @@
+<app-entity-header title="Series y correlativos" [crumbs]="[{ label: 'Facturación' }, { label: 'Series y correlativos' }]">
+  <div actions>
+    <button hlmBtn size="sm" (click)="showForm.set(!showForm())"><ng-icon name="tablerPlus" class="mr-1.5" /> Nueva serie</button>
+  </div>
+</app-entity-header>
+
+<p class="text-muted-foreground mb-4 max-w-2xl text-sm">Correlativos por emisor SUNAT. El sistema toma el siguiente número desde aquí al emitir un comprobante o guía. Se manejan dos series de guía: una electrónica para SUNAT y otra de uso interno.</p>
+
+@if (showForm()) {
+  <div hlmCard class="mb-4 flex flex-col gap-3 p-4">
+    <div class="grid grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-medium">RUC emisor</label>
+        <input hlmInput type="text" [ngModel]="draft().emisorRuc" (ngModelChange)="setDraft({ emisorRuc: $event })" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-medium">Razón social emisor</label>
+        <input hlmInput type="text" [ngModel]="draft().emisorName" (ngModelChange)="setDraft({ emisorName: $event })" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-medium">Tipo de documento</label>
+        <hlm-select class="block w-full" [value]="draft().docKind" (valueChange)="setDraft({ docKind: $any($event) })" [itemToString]="kindToString">
+          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (o of kindOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-medium">Ambiente</label>
+        <hlm-select class="block w-full" [value]="draft().environment" (valueChange)="setDraft({ environment: $any($event) })" [itemToString]="envToString">
+          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (o of envOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-medium">Serie</label>
+        <input hlmInput type="text" placeholder="Ej. F001 / T001 / G900" [ngModel]="draft().series" (ngModelChange)="setDraft({ series: $event })" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label class="text-xs font-medium">Último correlativo</label>
+        <input hlmInput type="number" min="0" [ngModel]="draft().lastCorrelativo" (ngModelChange)="setDraft({ lastCorrelativo: +$event })" />
+      </div>
+    </div>
+    <div class="flex gap-2">
+      <button hlmBtn size="sm" (click)="save()">Guardar</button>
+      <button hlmBtn size="sm" variant="ghost" (click)="showForm.set(false)">Cancelar</button>
+    </div>
+  </div>
+}
+
+<div hlmCard class="p-4">
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="text-muted-foreground border-b text-xs">
+        <tr>
+          <th class="py-2 text-start font-medium">Emisor</th>
+          <th class="py-2 text-start font-medium">Documento</th>
+          <th class="py-2 text-start font-medium">Serie</th>
+          <th class="py-2 text-end font-medium">Último correlativo</th>
+          <th class="py-2 text-start font-medium">Ambiente</th>
+          <th class="py-2 text-start font-medium">Estado</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        @for (s of series(); track s.id) {
+          <tr>
+            <td class="py-2"><span class="font-mono text-xs">{{ s.emisorRuc }}</span><br /><span class="text-muted-foreground text-xs">{{ s.emisorName }}</span></td>
+            <td class="py-2">{{ kindLabel(s.docKind) }}</td>
+            <td class="py-2 font-mono">{{ s.series }}</td>
+            <td class="py-2 text-end tabular-nums">{{ s.lastCorrelativo }}</td>
+            <td class="py-2"><app-status-badge [label]="envLabel(s.environment)" [tone]="s.environment === 'sunat' ? 'info' : 'neutral'" /></td>
+            <td class="py-2"><app-status-badge [label]="s.active ? 'Activa' : 'Inactiva'" [tone]="s.active ? 'success' : 'neutral'" /></td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

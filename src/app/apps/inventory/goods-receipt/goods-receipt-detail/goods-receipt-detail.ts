@@ -78,10 +78,15 @@ export class GoodsReceiptDetail {
   protected readonly receipt = computed(() => this.warehouseOpsState.goodsReceipts().find((r) => r.id === this.id()));
   protected readonly purchaseOrder = computed(() => this.purchasingState.purchaseOrders().find((po) => po.id === this.receipt()?.purchaseOrderId));
 
-  // --- Traceability: HT → Solicitud → Cotización → OC → esta Recepción ---
+  // --- Traceability: HT → Sugerencia(s) → RC → Cotización → OC → esta Nota de ingreso ---
   protected readonly quotation = computed(() => this.purchasingState.quotations().find((q) => q.id === this.purchaseOrder()?.quotationId));
-  protected readonly requisition = computed(() => this.purchasingState.requisitions().find((r) => r.id === this.quotation()?.requisitionId));
-  protected readonly workSheetId = computed(() => WORK_SHEETS.find((ws) => ws.number === this.requisition()?.workSheetRef)?.id);
+  protected readonly requirement = computed(() => this.purchasingState.requirements().find((r) => r.id === this.quotation()?.requirementId));
+  /** First HT grouped into the RC, shown as the quick traceability link — the RC itself lists every grouped HT/sugerencia. */
+  protected readonly workSheetRef = computed(() => {
+    const suggestionIds = this.requirement()?.suggestionIds ?? [];
+    return this.purchasingState.suggestions().find((s) => suggestionIds.includes(s.id) && s.workSheetRef)?.workSheetRef;
+  });
+  protected readonly workSheetId = computed(() => WORK_SHEETS.find((ws) => ws.number === this.workSheetRef())?.id);
 
   /** Almacén can edit the schedule and count what arrived only while the receipt is still pending confirmation. */
   protected readonly editable = computed(() => this.auth.isWarehouse() && this.receipt()?.status === 'scheduled');
@@ -109,7 +114,7 @@ export class GoodsReceiptDetail {
     if (!po || !this.canScheduleFollowUp()) return;
     const receipt = this.warehouseOpsState.scheduleFollowUpReceipt(po, this.followUpDate(), this.followUpTime());
     if (receipt) {
-      toast.success(`Recepción del saldo programada — ${receipt.number}`);
+      toast.success(`Nota de ingreso del saldo programada — ${receipt.number}`);
       this.router.navigate(['/apps/inventory/goods-receipt', receipt.id]);
     }
   }
@@ -217,11 +222,11 @@ export class GoodsReceiptDetail {
 
     const status = this.receipt()?.status;
     if (status === 'with_discrepancies') {
-      toast.warning('Recepción confirmada con diferencias', { description: 'Hay artículos observados, rechazados o en reclamo — revisa el detalle.' });
+      toast.warning('Nota de ingreso confirmada con diferencias', { description: 'Hay artículos observados, rechazados o en reclamo — revisa el detalle.' });
     } else if (status === 'partial') {
-      toast.warning('Recepción confirmada — entrega parcial', { description: 'El proveedor no trajo todo lo pedido. Puedes programar el saldo desde aquí.' });
+      toast.warning('Nota de ingreso confirmada — entrega parcial', { description: 'El proveedor no trajo todo lo pedido. Puedes programar el saldo desde aquí.' });
     } else {
-      toast.success('Recepción confirmada');
+      toast.success('Nota de ingreso confirmada');
     }
   }
 }

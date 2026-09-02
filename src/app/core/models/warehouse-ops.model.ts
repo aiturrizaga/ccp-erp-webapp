@@ -104,7 +104,7 @@ export interface StockIssueDispatch {
   time: string;
   dispatchedBy: string;
   receivedBy: string;
-  lines: { itemId: string; quantity: number }[];
+  lines: { itemId: string; quantity: number; lotId?: string }[];
 }
 
 /**

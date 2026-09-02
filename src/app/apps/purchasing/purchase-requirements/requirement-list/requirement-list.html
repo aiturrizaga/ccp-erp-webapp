@@ -7,9 +7,8 @@
   [(groupBy)]="groupBy"
   [hasFilters]="true"
   [filterCount]="filterCount()"
-  [hasSecondaryActions]="true"
-  actionLabel="Nuevo requerimiento"
-  (action)="createRequisition()"
+  actionLabel="Nuevo Requerimiento de Compra"
+  (action)="createRequirement()"
 >
   <div filters class="flex flex-col gap-3">
     <div>
@@ -34,30 +33,12 @@
         }
       </div>
     </div>
-    <div>
-      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Origen</p>
-      <div class="flex flex-col gap-1.5">
-        @for (opt of originOptions; track opt.value) {
-          <label class="flex cursor-pointer items-center gap-2 text-sm">
-            <hlm-checkbox [checked]="originFilter().has(opt.value)" (checkedChange)="toggleOriginFilter(opt.value)" />
-            {{ opt.label }}
-          </label>
-        }
-      </div>
-    </div>
     @if (filterCount() > 0) {
       <button hlmBtn variant="ghost" size="sm" class="justify-start gap-1.5" (click)="clearFilters()">
         <ng-icon name="tablerFilter" />
         Limpiar filtros
       </button>
     }
-  </div>
-
-  <div secondaryActions class="flex flex-col gap-0.5">
-    <button hlmBtn variant="ghost" size="sm" class="justify-start gap-2">
-      <ng-icon name="tablerDownload" />
-      Exportar a Excel
-    </button>
   </div>
 </app-list-toolbar>
 
@@ -90,27 +71,19 @@
       [rows]="paginatedRows()"
       [rowClickable]="true"
       (rowClick)="openDetail($event)"
-      emptyMessage="No se encontraron requerimientos."
+      emptyMessage="No se encontraron Requerimientos de Compra."
       [cellTemplate]="cellTpl"
     />
   } @else {
-    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron requerimientos." />
+    <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron Requerimientos de Compra." />
   }
   <app-list-pagination [total]="filteredRows().length" [(page)]="page" [(pageSize)]="pageSize" />
 }
 
 <ng-template #cellTpl let-row let-key="key">
   @switch (key) {
-    @case ('workSheetRef') {
-      @if (row.workSheetRef; as ref) {
-        @if (workSheetId(ref); as wsId) {
-          <a [routerLink]="['/apps/production/work-sheets', wsId]" class="text-primary hover:underline" (click)="$event.stopPropagation()">{{ ref }}</a>
-        } @else {
-          {{ ref }}
-        }
-      } @else {
-        <span class="text-muted-foreground">—</span>
-      }
+    @case ('suggestionCount') {
+      {{ suggestionCount(row) }}
     }
     @case ('priority') {
       {{ priorityLabel(row.priority) }}
@@ -130,6 +103,6 @@
     <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
   </div>
   <p class="text-muted-foreground mt-1 text-xs">{{ row.requestedBy }} · {{ row.area }}</p>
-  <p class="text-muted-foreground mt-2 text-xs">Prioridad {{ priorityLabel(row.priority) }}</p>
+  <p class="text-muted-foreground mt-2 text-xs">{{ suggestionCount(row) }} HT/sugerencia(s) agrupadas</p>
   <p class="text-muted-foreground mt-2 text-xs">Requerido para {{ row.neededBy }}</p>
 </ng-template>

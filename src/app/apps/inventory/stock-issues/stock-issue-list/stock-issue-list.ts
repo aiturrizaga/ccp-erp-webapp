@@ -58,8 +58,12 @@ export class StockIssueList {
   protected readonly statusOptions = STATUS_OPTIONS;
   protected readonly originOptions = ORIGIN_OPTIONS;
 
+  /** Notas de salida seleccionadas para despachar en bloque — solo pueden entrar filas pendientes/parciales. */
+  protected readonly selectedIds = signal<Set<string>>(new Set());
+
   protected readonly columns: DataTableColumn[] = [
-    { key: 'number', header: 'Salida', width: '150px' },
+    { key: 'select', header: '', width: '40px' },
+    { key: 'number', header: 'Nota de salida', width: '150px' },
     { key: 'origin', header: 'Origen', width: '150px' },
     { key: 'workSheetId', header: 'H. Trabajo', width: '130px' },
     { key: 'plant', header: 'Planta' },
@@ -145,5 +149,31 @@ export class StockIssueList {
 
   protected createIssue(): void {
     this.router.navigate(['/apps/inventory/stock-issues/new']);
+  }
+
+  protected readonly selectedCount = computed(() => this.selectedIds().size);
+
+  protected isSelectable(row: StockIssue): boolean {
+    return row.status === 'pending' || row.status === 'partial';
+  }
+
+  protected isSelected(row: StockIssue): boolean {
+    return this.selectedIds().has(row.id);
+  }
+
+  protected toggleSelected(row: StockIssue, checked: boolean): void {
+    if (!this.isSelectable(row)) return;
+    this.selectedIds.update((set) => {
+      const next = new Set(set);
+      if (checked) next.add(row.id);
+      else next.delete(row.id);
+      return next;
+    });
+  }
+
+  /** Lleva la selección actual a la pantalla de despacho en bloque. */
+  protected dispatchInBulk(): void {
+    if (this.selectedCount() === 0) return;
+    this.router.navigate(['/apps/inventory/stock-issues/dispatch'], { queryParams: { issueIds: Array.from(this.selectedIds()).join(',') } });
   }
 }

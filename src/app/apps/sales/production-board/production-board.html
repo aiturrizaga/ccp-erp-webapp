@@ -1,0 +1,50 @@
+<app-entity-header title="Cómo va producción" [crumbs]="[{ label: 'Ventas' }, { label: 'Producción' }]" />
+
+<div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+  <app-stat-card label="HT vencidas" [value]="overdue().toString()" hint="Fecha de entrega ya pasó" [trend]="overdue() ? 'down' : 'flat'" />
+  <app-stat-card label="Por vencer (≤ 5 días)" [value]="soon().toString()" hint="Entrega comprometida próxima" />
+  <app-stat-card label="En fabricación" [value]="inProgress().toString()" hint="HT con avance parcial" />
+</div>
+
+<div hlmCard class="p-4">
+  <h3 class="mb-3 text-sm font-semibold">Hojas de trabajo por pedido</h3>
+  <div class="overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead class="text-muted-foreground border-b text-xs">
+        <tr>
+          <th class="py-2 text-start font-medium">Pedido</th>
+          <th class="py-2 text-start font-medium">HT</th>
+          <th class="py-2 text-start font-medium">Cliente</th>
+          <th class="py-2 text-start font-medium">Estado</th>
+          <th class="py-2 text-start font-medium">Avance</th>
+          <th class="py-2 text-start font-medium">Entrega</th>
+          <th class="py-2 text-start font-medium">Alerta</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        @for (r of rows(); track r.order.id) {
+          <tr>
+            <td class="py-2"><a class="text-primary hover:underline" [routerLink]="['/apps/sales/orders', r.order.id]">{{ r.order.number }}</a></td>
+            <td class="py-2 font-mono text-xs">{{ r.order.workSheetId }}</td>
+            <td class="py-2">{{ r.order.customerName }}</td>
+            <td class="py-2"><app-status-badge [label]="statusLabel(r.order.status)" [tone]="statusTone(r.order.status)" /></td>
+            <td class="py-2">
+              <div class="flex items-center gap-2">
+                <div class="bg-muted h-1.5 w-24 overflow-hidden rounded-full">
+                  <div class="bg-primary h-full rounded-full" [style.width.%]="r.progress"></div>
+                </div>
+                <span class="text-muted-foreground text-xs tabular-nums">{{ r.progress }}%</span>
+              </div>
+            </td>
+            <td class="py-2 tabular-nums">{{ r.order.committedDeliveryDate }}
+              <span class="text-muted-foreground text-xs">({{ r.days >= 0 ? 'en ' + r.days + ' d' : (-r.days) + ' d atraso' }})</span>
+            </td>
+            <td class="py-2"><app-status-badge [label]="alertLabel(r.alert)" [tone]="alertTone(r.alert)" /></td>
+          </tr>
+        } @empty {
+          <tr><td colspan="7" class="text-muted-foreground py-4 text-center">No hay HT con fecha de entrega comprometida.</td></tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

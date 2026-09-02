@@ -18,6 +18,7 @@ export const routes: Routes = [
       { path: 'apps/sales', loadChildren: () => import('./apps/sales/sales.routes').then((m) => m.SALES_ROUTES) },
       { path: 'apps/finance', loadChildren: () => import('./apps/finance/finance.routes').then((m) => m.FINANCE_ROUTES) },
       { path: 'apps/invoicing', loadChildren: () => import('./apps/invoicing/invoicing.routes').then((m) => m.INVOICING_ROUTES) },
+      { path: 'apps/collections', loadChildren: () => import('./apps/collections/collections.routes').then((m) => m.COLLECTIONS_ROUTES) },
     ],
   },
 ];

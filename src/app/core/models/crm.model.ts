@@ -74,6 +74,17 @@ export interface Opportunity {
   activities: HistoryEvent[];
 }
 
+export type CustomerDocType = 'RUC' | 'DNI';
+
+/** How CCP sells to this customer. `credit` clients pass straight through while under their limit;
+ *  `cash` clients must upload the PO + a 50% advance voucher for Cobranzas to validate first. */
+export type CustomerPaymentMode = 'credit' | 'cash';
+
+export const CUSTOMER_PAYMENT_MODE_LABEL: Record<CustomerPaymentMode, string> = {
+  credit: 'Línea de crédito',
+  cash: 'Contado',
+};
+
 export interface Customer {
   id: string;
   legalName: string;
@@ -82,7 +93,32 @@ export interface Customer {
   paymentTerms: string;
   currency: Currency;
   commercialTerms: string;
+  // --- added for the Sales app's customer master (all optional so CRM keeps working) ---
+  docType?: CustomerDocType;
+  /** Nombre comercial, when it differs from the razón social. */
+  tradeName?: string;
+  /** Agente de retención de IGV — pulled from the SUNAT/RUC lookup. */
+  isRetentionAgent?: boolean;
+  /** Domicilio fiscal from RUC; `address` stays the delivery/reference address. */
+  fiscalAddress?: string;
+  paymentMode?: CustomerPaymentMode;
+  creditLimit?: number;
+  creditUsed?: number;
+  /** ISO date of the last successful SUNAT/RENIEC data sync. */
+  lastSyncedAt?: string;
 }
+
+export type ContactType = 'representante_legal' | 'comercial' | 'sistemas' | 'facturacion' | 'cobranzas' | 'logistica' | 'otro';
+
+export const CONTACT_TYPE_LABEL: Record<ContactType, string> = {
+  representante_legal: 'Representante legal',
+  comercial: 'Comercial',
+  sistemas: 'Sistemas',
+  facturacion: 'Facturación',
+  cobranzas: 'Cobranzas',
+  logistica: 'Logística',
+  otro: 'Otro',
+};
 
 export interface Contact {
   id: string;
@@ -91,4 +127,9 @@ export interface Contact {
   position: string;
   email: string;
   phone: string;
+  // --- added for the Sales app ---
+  type?: ContactType;
+  firstName?: string;
+  lastName?: string;
+  mobile?: string;
 }

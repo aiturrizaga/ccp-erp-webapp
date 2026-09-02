@@ -1,0 +1,190 @@
+<app-entity-header
+  title="Nuevo Requerimiento de Compra"
+  [crumbs]="[{ label: 'Requerimiento de Compra', link: '/apps/purchasing/requirements' }, { label: 'Nuevo' }]"
+/>
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1fr_1.4fr]">
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Datos generales del bloque</h3>
+
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Prioridad</label>
+        <hlm-select class="block w-full" [value]="priority()" (valueChange)="priority.set($event ?? 'medium')" [itemToString]="priorityToString">
+          <hlm-select-trigger size="sm" class="w-full">
+            <hlm-select-value placeholder="Selecciona" />
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (option of priorityOptions; track option.value) {
+              <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="area">Área</label>
+        <input hlmInput id="area" [ngModel]="area()" (ngModelChange)="area.set($event)" />
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Planta</label>
+        <hlm-select class="block w-full" [value]="plant()" (valueChange)="plant.set($event ?? '')" [itemToString]="plantToString">
+          <hlm-select-trigger size="sm" class="w-full">
+            <hlm-select-value placeholder="Selecciona" />
+          </hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (option of plantOptions; track option.value) {
+              <hlm-select-item [value]="option.value">{{ option.label }}</hlm-select-item>
+            }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="needed-by">Fecha requerida</label>
+        <input hlmInput id="needed-by" type="date" [ngModel]="neededBy()" (ngModelChange)="neededBy.set($event)" />
+      </div>
+
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="note">Observación</label>
+        <textarea hlmTextarea id="note" class="w-full" placeholder="Opcional, para Logística" [ngModel]="note()" (ngModelChange)="note.set($event)"></textarea>
+      </div>
+    </div>
+
+    <div hlmCard class="p-4">
+      <div class="mb-1 flex items-center justify-between gap-2">
+        <h3 class="text-sm font-semibold">Artículos del bloque ({{ selectedCount() }} sugerencia(s))</h3>
+        <hlm-dialog>
+          <button hlmDialogTrigger hlmBtn size="sm" variant="outline" (click)="openAddLineDraft()">Agregar artículo</button>
+          <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-sm">
+            <hlm-dialog-header>
+              <h3 hlmDialogTitle>Agregar artículo</h3>
+              <p hlmDialogDescription>Agrega un material o suministro directamente al bloque, sin pasar por ninguna Hoja de Trabajo ni sugerencia.</p>
+            </hlm-dialog-header>
+            <div class="flex flex-col gap-3">
+              <div class="flex flex-col gap-1.5">
+                <label hlmLabel>Artículo</label>
+                <hlm-combobox [(value)]="newItemId" [itemToString]="itemPickerToString">
+                  <hlm-combobox-input placeholder="Buscar artículo..." />
+                  <hlm-combobox-content *hlmComboboxPortal>
+                    <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+                    <div hlmComboboxList>
+                      @for (option of availableItemOptions(); track option.value) {
+                        <hlm-combobox-item [value]="option.value">{{ option.label }}</hlm-combobox-item>
+                      }
+                    </div>
+                  </hlm-combobox-content>
+                </hlm-combobox>
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label hlmLabel for="new-line-quantity">Cantidad</label>
+                <input hlmInput id="new-line-quantity" type="number" min="0" [ngModel]="newQuantity()" (ngModelChange)="newQuantity.set($event)" />
+              </div>
+            </div>
+            <hlm-dialog-footer>
+              <button hlmBtn variant="outline" hlmDialogClose>Cancelar</button>
+              <button hlmBtn [disabled]="!canAddLine()" hlmDialogClose (click)="confirmAddLine()">Agregar</button>
+            </hlm-dialog-footer>
+          </hlm-dialog-content>
+        </hlm-dialog>
+      </div>
+      <p class="text-muted-foreground mb-3 text-xs">Un artículo puede venir pedido por varias HT/sugerencias a la vez — ajusta la cantidad o tacha el que no quieras pedir antes de crear el bloque.</p>
+      @if (itemGroups().length) {
+        <div class="flex flex-col gap-3">
+          @for (group of itemGroups(); track group.itemId) {
+            <div class="rounded-lg border p-3">
+              <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <p class="text-sm font-medium">{{ itemLabel(group.itemId) }}</p>
+                <div class="text-muted-foreground flex items-center gap-3 text-xs">
+                  <span>Total a pedir: <span class="text-foreground font-medium">{{ group.total }} {{ group.unitOfMeasure }}</span></span>
+                  <span [class.text-destructive]="availableStock(group.itemId) < group.total">Stock disponible: {{ availableStock(group.itemId) }}</span>
+                </div>
+              </div>
+              <table class="w-full text-sm">
+                <thead class="text-muted-foreground border-b text-xs">
+                  <tr>
+                    <th class="px-3 py-1.5 text-start font-medium first:ps-0 last:pe-0">Pedido por</th>
+                    <th class="px-3 py-1.5 text-end font-medium first:ps-0 last:pe-0">Cantidad</th>
+                    <th class="px-3 py-1.5 first:ps-0 last:pe-0"></th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y">
+                  @for (row of group.rows; track row.index) {
+                    <tr [class.opacity-60]="row.line.notNeeded">
+                      <td class="px-3 py-2 first:ps-0 last:pe-0">
+                        @if (row.line.suggestionId; as suggestionId) {
+                          {{ suggestionNumber(suggestionId) }}
+                        } @else {
+                          <span class="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-700 dark:bg-sky-950 dark:text-sky-400">Agregado por Almacén</span>
+                        }
+                      </td>
+                      <td class="px-3 py-2 text-end first:ps-0 last:pe-0">
+                        @if (row.line.notNeeded) {
+                          <span class="line-through">{{ row.line.quantity }} {{ row.line.unitOfMeasure }}</span>
+                        } @else {
+                          <div class="flex items-center justify-end gap-1.5">
+                            <div class="w-24 shrink-0">
+                              <input
+                                hlmInput
+                                type="number"
+                                min="0"
+                                class="w-full text-end"
+                                [ngModel]="row.line.quantity"
+                                (ngModelChange)="setLineQuantity(row.index, $event)"
+                              />
+                            </div>
+                            <span class="text-muted-foreground text-xs">{{ row.line.unitOfMeasure }}</span>
+                          </div>
+                        }
+                      </td>
+                      <td class="px-3 py-2 text-end first:ps-0 last:pe-0">
+                        <label class="text-muted-foreground inline-flex cursor-pointer items-center gap-1.5 text-xs">
+                          <hlm-checkbox [checked]="!!row.line.notNeeded" (checkedChange)="setLineNotNeeded(row.index, $event)" />
+                          No pedir
+                        </label>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          }
+        </div>
+      } @else {
+        <p class="text-muted-foreground text-sm">Selecciona al menos una sugerencia o agrega un artículo directamente para ver los artículos del bloque.</p>
+      }
+    </div>
+  </div>
+
+  <div hlmCard class="flex flex-col gap-3 p-4">
+    <h3 class="text-sm font-semibold">Sugerencias disponibles</h3>
+    <p class="text-muted-foreground -mt-2 text-xs">Marca las HT y/o solicitudes manuales que quieres agrupar en este Requerimiento de Compra.</p>
+    @if (availableSuggestions().length) {
+      <div class="flex max-h-[560px] flex-col gap-1.5 overflow-y-auto">
+        @for (suggestion of availableSuggestions(); track suggestion.id) {
+          <label class="hover:bg-muted/50 flex cursor-pointer items-start gap-3 rounded-md border p-2.5 text-sm">
+            <hlm-checkbox [checked]="isSelected(suggestion)" (checkedChange)="toggleSelected(suggestion, $event)" />
+            <span class="min-w-0 flex-1">
+              <span class="flex items-center justify-between gap-2">
+                <span class="font-medium">{{ suggestion.number }}</span>
+                @if (suggestion.workSheetRef) {
+                  <span class="text-muted-foreground text-xs">{{ suggestion.workSheetRef }}</span>
+                }
+              </span>
+              <span class="text-muted-foreground block text-xs">{{ suggestion.requestedBy }} · {{ suggestion.area }}</span>
+              <span class="text-muted-foreground block text-xs">{{ suggestion.lines.length }} artículo(s) · requerido {{ suggestion.neededBy }}</span>
+            </span>
+          </label>
+        }
+      </div>
+    } @else {
+      <p class="text-muted-foreground text-sm">No hay sugerencias disponibles para agrupar en este momento.</p>
+    }
+  </div>
+</div>
+
+<div class="mt-4 flex gap-2">
+  <button hlmBtn variant="outline" (click)="cancel()">Cancelar</button>
+  <button hlmBtn [disabled]="!canSubmit()" (click)="submit()">Crear Requerimiento de Compra</button>
+</div>

@@ -7,7 +7,7 @@ import { HlmAlertDialogImports } from '@ui/alert-dialog';
 import { toast } from '@shared/toast';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
-import { PURCHASE_REQUISITIONS, ITEMS } from '@core/mock-data';
+import { ITEMS } from '@core/mock-data';
 import { Quotation } from '@core/models';
 import { PurchasingState } from '../../purchasing-state';
 import { WarehouseOpsState } from '../../../inventory/warehouse-ops-state';
@@ -40,12 +40,12 @@ export class QuotationComparison {
   private readonly purchasingState = inject(PurchasingState);
   private readonly warehouseOpsState = inject(WarehouseOpsState);
 
-  readonly requisitionId = input.required<string>();
+  readonly requirementId = input.required<string>();
 
-  protected readonly requisition = computed(() => PURCHASE_REQUISITIONS.find((r) => r.id === this.requisitionId()));
+  protected readonly requirement = computed(() => this.purchasingState.requirements().find((r) => r.id === this.requirementId()));
 
   protected readonly quotationSummaries = computed<QuotationSummary[]>(() => {
-    const quotations = this.purchasingState.quotations().filter((q) => q.requisitionId === this.requisitionId());
+    const quotations = this.purchasingState.quotations().filter((q) => q.requirementId === this.requirementId());
     return quotations.map((quotation) => this.summarize(quotation));
   });
 

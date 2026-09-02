@@ -1,0 +1,86 @@
+<div class="flex flex-col gap-6">
+  <div>
+    <h1 class="text-xl font-semibold tracking-tight">Dashboard</h1>
+    <p class="text-muted-foreground text-sm">Vista general de Cobranzas — control de crédito, cobranza al contado y saldos por cobrar.</p>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <app-stat-card label="Saldo por cobrar (ventas)" [value]="'S/ ' + (receivableTotal() | number: '1.2-2')" hint="facturas de venta con saldo" />
+    <app-stat-card label="Facturas de venta vencidas" [value]="overdueReceivables().length + ''" hint="requieren gestión de cobro" [trend]="overdueReceivables().length ? 'down' : 'flat'" />
+    <app-stat-card label="Clientes con crédito excedido" [value]="creditExceeded().length + ''" hint="sobre su línea acordada" />
+    <app-stat-card label="Adelantos por validar" [value]="advancesToValidate().length + ''" hint="ventas al contado" />
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+    <div class="rounded-lg border">
+      <div class="flex items-center justify-between border-b px-4 py-3">
+        <h2 class="text-sm font-semibold">Clientes con crédito excedido</h2>
+        <a routerLink="/apps/collections/agreements" class="text-primary text-xs hover:underline">Ver convenios</a>
+      </div>
+      <ul class="divide-y">
+        @for (row of creditExceeded(); track row.customer.id) {
+          <li class="flex items-center justify-between px-4 py-2.5 text-sm">
+            <div class="min-w-0">
+              <p class="font-medium">{{ row.customer.legalName }}</p>
+              <p class="text-muted-foreground truncate text-xs">
+                Usado {{ row.customer.currency }} {{ (row.customer.creditUsed ?? 0) | number: '1.0-0' }} / límite {{ (row.customer.creditLimit ?? 0) | number: '1.0-0' }}
+              </p>
+            </div>
+            <div class="flex items-center gap-2 whitespace-nowrap">
+              <span class="text-destructive font-medium">+ {{ row.customer.currency }} {{ row.over | number: '1.2-2' }}</span>
+              <app-status-badge label="Excedido" tone="danger" />
+            </div>
+          </li>
+        } @empty {
+          <li class="text-muted-foreground px-4 py-6 text-center text-sm">Ningún cliente ha excedido su línea de crédito.</li>
+        }
+      </ul>
+    </div>
+
+    <div class="rounded-lg border">
+      <div class="flex items-center justify-between border-b px-4 py-3">
+        <h2 class="text-sm font-semibold">Adelantos por validar (contado)</h2>
+        <span class="text-muted-foreground text-xs">OC + voucher 50%</span>
+      </div>
+      <ul class="divide-y">
+        @for (row of advancesToValidate(); track row.order.id) {
+          <li class="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToOrder(row.order.id)">
+            <div class="min-w-0">
+              <p class="font-medium">{{ row.order.number }}</p>
+              <p class="text-muted-foreground truncate text-xs">{{ row.order.customerName }}</p>
+            </div>
+            <div class="flex items-center gap-2 whitespace-nowrap">
+              <span class="font-medium">S/ {{ (row.order.total * row.gate.advancePct / 100) | number: '1.2-2' }}</span>
+              <app-status-badge [label]="row.gate.status === 'pending_docs' ? 'Faltan docs' : 'Por validar'" [tone]="row.gate.status === 'pending_docs' ? 'warning' : 'info'" />
+            </div>
+          </li>
+        } @empty {
+          <li class="text-muted-foreground px-4 py-6 text-center text-sm">Nada pendiente de validar.</li>
+        }
+      </ul>
+    </div>
+  </div>
+
+  <div class="rounded-lg border">
+    <div class="flex items-center justify-between border-b px-4 py-3">
+      <h2 class="text-sm font-semibold">Facturas de venta por cobrar</h2>
+      <a routerLink="/apps/invoicing/invoices" class="text-primary text-xs hover:underline">Ver comprobantes</a>
+    </div>
+    <ul class="divide-y">
+      @for (i of salesReceivables(); track i.id) {
+        <li class="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToInvoice(i.id)">
+          <div class="min-w-0">
+            <p class="font-medium">{{ i.number }}</p>
+            <p class="text-muted-foreground truncate text-xs">{{ i.customerName }} · vence {{ i.dueDate }}</p>
+          </div>
+          <div class="flex items-center gap-2 whitespace-nowrap">
+            <span class="font-medium">S/ {{ i.outstandingBalance | number: '1.2-2' }}</span>
+            @if (i.status === 'overdue') { <app-status-badge label="Vencida" tone="danger" /> }
+          </div>
+        </li>
+      } @empty {
+        <li class="text-muted-foreground px-4 py-6 text-center text-sm">Sin saldos de venta por cobrar.</li>
+      }
+    </ul>
+  </div>
+</div>

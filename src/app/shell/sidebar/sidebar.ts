@@ -17,6 +17,7 @@ import { CRM_NAV } from '@apps/crm/crm-nav';
 import { SALES_NAV } from '@apps/sales/sales-nav';
 import { FINANCE_NAV } from '@apps/finance/finance-nav';
 import { INVOICING_NAV } from '@apps/invoicing/invoicing-nav';
+import { COLLECTIONS_NAV } from '@apps/collections/collections-nav';
 
 const NAV_BY_APP: Record<string, NavItem[]> = {
   purchasing: PURCHASING_NAV,
@@ -27,6 +28,7 @@ const NAV_BY_APP: Record<string, NavItem[]> = {
   sales: SALES_NAV,
   finance: FINANCE_NAV,
   invoicing: INVOICING_NAV,
+  collections: COLLECTIONS_NAV,
 };
 
 /** Contextual sidebar, built on spartan/ui's hlm-sidebar (inset variant, collapsible to icons). */
