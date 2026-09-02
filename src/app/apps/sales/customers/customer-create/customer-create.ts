@@ -129,7 +129,7 @@ export class CustomerCreate {
         this.isRetentionAgent.set(!!data.isRetentionAgent);
         this.lookupResult.set(
           data.source === 'apiperu'
-            ? `Datos traídos de ${this.docType() === 'RUC' ? 'SUNAT' : 'RENIEC'} vía API PERU.`
+            ? `Datos traídos de ${this.docType() === 'RUC' ? 'SUNAT' : 'RENIEC'} vía API PERU${data.fromCache ? ' (caché local)' : ''}.`
             : 'Sin conexión con API PERU — se usaron datos locales de demostración.',
         );
       } else {

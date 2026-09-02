@@ -233,13 +233,22 @@ create table if not exists document_deliveries (
   updated_at timestamptz not null default now()
 );
 
+-- Cache / replay log for RUC-DNI lookups against API PERU (SUNAT/RENIEC).
+create table if not exists doc_lookups (
+  id text primary key,
+  doc_key text,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
 do $$
 declare
   t text;
 begin
   for t in select unnest(array[
     'users', 'sales_products', 'customers', 'customer_contacts', 'sales_quotations', 'sales_orders',
-    'sales_claims', 'invoices', 'doc_series', 'dispatch_guides', 'credit_agreements', 'document_deliveries'
+    'sales_claims', 'invoices', 'doc_series', 'dispatch_guides', 'credit_agreements', 'document_deliveries',
+    'doc_lookups'
   ])
   loop
     execute format('alter table %I enable row level security', t);
