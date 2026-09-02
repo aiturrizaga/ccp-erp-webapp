@@ -138,12 +138,93 @@
         </div>
       </div>
     }
+
+    @if (showAdvances()) {
+      <div hlmCard class="relative z-0 overflow-visible! flex flex-col gap-3 p-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold">Anticipos recibidos</h3>
+          <button hlmBtn size="sm" variant="outline" (click)="addAdvance()"><ng-icon name="tablerPlus" class="mr-1.5" /> Anticipo</button>
+        </div>
+        <p class="text-muted-foreground text-xs">
+          SUNAT: la factura/boleta por el total de la operación consigna el valor total y <b>deduce</b> los anticipos ya facturados,
+          referenciando serie y número de cada comprobante de anticipo. El neto a pagar = importe total − anticipos aplicados
+          (Catálogo 53, código <span class="font-mono">04</span> — anticipos gravados con IGV).
+        </p>
+        @if (advances().length === 0) {
+          <p class="text-muted-foreground rounded-md border border-dashed px-3 py-4 text-center text-xs">Sin anticipos aplicados.</p>
+        }
+        @for (a of advances(); track $index) {
+          <div class="flex flex-col gap-2 rounded-md border p-2.5">
+            <div class="grid grid-cols-2 gap-2">
+              <div class="flex flex-col gap-0.5">
+                <label class="text-muted-foreground text-[11px]">Comprobante de anticipo</label>
+                <hlm-select class="block w-full" [value]="a.sourceInvoiceId" (valueChange)="onAdvanceInvoicePick($index, $event ?? '')" [itemToString]="advanceInvoiceToString">
+                  <hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Elegir / manual" /></hlm-select-trigger>
+                  <hlm-select-content *hlmSelectPortal>
+                    <hlm-select-item value="">Comprobante externo (manual)</hlm-select-item>
+                    @for (i of eligibleAdvances(); track i.id) { <hlm-select-item [value]="i.id">{{ i.number }} — {{ i.currency }} {{ i.total | number: '1.2-2' }}</hlm-select-item> }
+                  </hlm-select-content>
+                </hlm-select>
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <label class="text-muted-foreground text-[11px]">Serie-número</label>
+                <input hlmInput type="text" placeholder="F001-00000123" [ngModel]="a.reference" (ngModelChange)="setAdvance($index, { reference: $event })" />
+              </div>
+            </div>
+            <div class="grid grid-cols-[1fr_130px_140px_auto] items-end gap-2">
+              <div class="flex flex-col gap-0.5">
+                <label class="text-muted-foreground text-[11px]">Tipo</label>
+                <hlm-select class="block w-full" [value]="a.docType" (valueChange)="setAdvance($index, { docType: $any($event) })">
+                  <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+                  <hlm-select-content *hlmSelectPortal>
+                    <hlm-select-item value="factura">Factura</hlm-select-item>
+                    <hlm-select-item value="boleta">Boleta</hlm-select-item>
+                  </hlm-select-content>
+                </hlm-select>
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <label class="text-muted-foreground text-[11px]">Fecha</label>
+                <input hlmInput type="date" [ngModel]="a.issuedAt" (ngModelChange)="setAdvance($index, { issuedAt: $event })" />
+              </div>
+              <div class="flex flex-col gap-0.5">
+                <label class="text-muted-foreground text-[11px]">Monto (c/IGV)</label>
+                <input hlmInput type="number" min="0" step="0.01" [ngModel]="a.amount" (ngModelChange)="setAdvance($index, { amount: +$event })" />
+              </div>
+              <button hlmBtn size="sm" variant="ghost" (click)="removeAdvance($index)"><ng-icon name="tablerX" /></button>
+            </div>
+          </div>
+        }
+        @if (advances().length > 0) {
+          <div class="flex flex-col gap-1 border-t pt-2 text-xs">
+            <div class="flex justify-between"><span class="text-muted-foreground">Base anticipos</span><span class="tabular-nums">{{ currency() }} {{ advancesBase() | number: '1.2-2' }}</span></div>
+            <div class="flex justify-between"><span class="text-muted-foreground">IGV anticipos</span><span class="tabular-nums">{{ currency() }} {{ advancesIgv() | number: '1.2-2' }}</span></div>
+            <div class="flex justify-between font-medium" [class.text-destructive]="!advancesValid()">
+              <span>Total anticipos</span>
+              <span class="tabular-nums">
+                {{ currency() }} {{ advancesTotal() | number: '1.2-2' }}
+                @if (!advancesValid()) { · no puede superar el importe total }
+              </span>
+            </div>
+          </div>
+        }
+      </div>
+    }
   </div>
 
   <div class="flex flex-col gap-4">
     @if (!isNote()) {
       <div hlmCard class="flex flex-col gap-3 p-4">
         <h3 class="text-sm font-semibold">Condiciones</h3>
+        <label class="flex cursor-pointer items-start gap-2 text-sm">
+          <input type="checkbox" class="mt-0.5" [checked]="isAdvanceInvoice()" (change)="isAdvanceInvoice.set(!isAdvanceInvoice())" />
+          <span>
+            Emitir como comprobante <b>por anticipo</b>
+            <span class="text-muted-foreground block text-xs">
+              Pago adelantado: se factura el anticipo con IGV. La factura final por el total deberá referenciar este
+              comprobante y deducir su importe (Catálogo 53 SUNAT, código 04).
+            </span>
+          </span>
+        </label>
         <div class="flex flex-col gap-1.5">
           <label hlmLabel>Condición de pago</label>
           <hlm-select class="block w-full" [value]="paymentCondition()" (valueChange)="paymentCondition.set($any($event))" [itemToString]="condToString">
@@ -205,6 +286,10 @@
       <div class="flex justify-between"><span class="text-muted-foreground">Descuentos</span><span class="tabular-nums">- {{ discount() | number: '1.2-2' }}</span></div>
       <div class="flex justify-between"><span class="text-muted-foreground">IGV 18%</span><span class="tabular-nums">{{ igv() | number: '1.2-2' }}</span></div>
       <div class="mt-1 flex justify-between border-t pt-1 font-semibold"><span>Importe total</span><span class="tabular-nums">{{ currency() }} {{ total() | number: '1.2-2' }}</span></div>
+      @if (advancesTotal() > 0) {
+        <div class="flex justify-between text-muted-foreground"><span>Anticipos (Cat. 53 – 04)</span><span class="tabular-nums">- {{ advancesTotal() | number: '1.2-2' }}</span></div>
+        <div class="flex justify-between border-t pt-1 font-semibold"><span>Neto a pagar</span><span class="tabular-nums">{{ currency() }} {{ netPayable() | number: '1.2-2' }}</span></div>
+      }
     </div>
 
     <div class="flex gap-2">
@@ -215,6 +300,8 @@
             <h3 hlmPopoverTitle>¿Emitir {{ docKindLower() }}?</h3>
             <p hlmPopoverDescription>
               Se emitirá {{ docKindLower() }} a {{ customerName().trim() || 'el cliente' }} por {{ currency() }} {{ total() | number: '1.2-2' }}.
+              @if (advancesTotal() > 0) { Neto a pagar tras anticipos: {{ currency() }} {{ netPayable() | number: '1.2-2' }}. }
+              @if (isAdvanceInvoice()) { Se registra como comprobante por anticipo. }
               Esta acción registra el comprobante y avanza el correlativo de la serie.
             </p>
           </hlm-popover-header>

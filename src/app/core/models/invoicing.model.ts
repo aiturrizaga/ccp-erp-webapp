@@ -63,10 +63,28 @@ export const PAYMENT_CONDITION_LABEL: Record<PaymentCondition, string> = {
   credito: 'Crédito',
 };
 
-/** An anticipo already invoiced that is being applied against this comprobante. */
+/**
+ * An anticipo already invoiced that is being applied against this comprobante.
+ * SUNAT: la factura/boleta por el total de la operación consigna el valor total y **deduce** los
+ * anticipos previamente facturados, referenciando tipo, serie y número de cada comprobante de
+ * anticipo. La deducción va en el Catálogo 53 con código `04` (anticipos gravados con IGV) o
+ * `05` (no gravados). El neto a pagar = importe total − anticipos aplicados.
+ */
 export interface AppliedAdvance {
+  /** Serie-número del comprobante de anticipo, p. ej. `F001-00000123`. */
   invoiceNumber: string;
+  /** Tipo de comprobante que sustentó el anticipo. */
+  docType?: 'factura' | 'boleta';
+  /** Fecha de emisión del comprobante de anticipo. */
+  issuedAt?: string;
+  /** Monto del anticipo incluido IGV. */
   amount: number;
+  /** Base imponible del anticipo (amount / 1.18). */
+  base?: number;
+  /** IGV del anticipo. */
+  igv?: number;
+  /** Catálogo 53 SUNAT: 04 = anticipo gravado con IGV, 05 = no gravado. */
+  reasonCode?: '04' | '05';
 }
 
 /**
@@ -163,7 +181,10 @@ export interface SalesInvoice extends InvoiceBase {
   purchaseOrderRef?: string;
   glosa?: string;
   paymentCondition?: PaymentCondition;
+  /** Anticipos previamente facturados que se deducen de este comprobante. */
   advances?: AppliedAdvance[];
+  /** Este comprobante se emitió por un anticipo (pago adelantado) — deberá referenciarse y deducirse en la factura final. */
+  isAdvanceInvoice?: boolean;
   earlyPaymentDiscountPct?: number;
   installments?: InvoiceInstallment[];
   sunatTotals?: SunatTotals;

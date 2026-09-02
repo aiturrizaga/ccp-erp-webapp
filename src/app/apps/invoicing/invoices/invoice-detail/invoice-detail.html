@@ -101,9 +101,19 @@
               <td class="py-1.5 text-end">{{ p.currency }} {{ p.taxAmount | number: '1.2-2' }}</td>
             </tr>
             <tr>
-              <td colspan="3" class="py-1.5 text-end text-sm font-semibold">Total</td>
+              <td colspan="3" class="py-1.5 text-end text-sm font-semibold">{{ advancesTotal() > 0 ? 'Importe total' : 'Total' }}</td>
               <td class="py-1.5 text-end text-sm font-semibold">{{ p.currency }} {{ p.total | number: '1.2-2' }}</td>
             </tr>
+            @if (advancesTotal() > 0) {
+              <tr>
+                <td colspan="3" class="text-muted-foreground py-1.5 text-end text-xs">Anticipos (Cat. 53 – 04)</td>
+                <td class="py-1.5 text-end">- {{ p.currency }} {{ advancesTotal() | number: '1.2-2' }}</td>
+              </tr>
+              <tr>
+                <td colspan="3" class="py-1.5 text-end text-sm font-semibold">Neto a pagar</td>
+                <td class="py-1.5 text-end text-sm font-semibold">{{ p.currency }} {{ p.total - advancesTotal() | number: '1.2-2' }}</td>
+              </tr>
+            }
             <tr>
               <td colspan="3" class="text-muted-foreground py-1.5 text-end text-xs">Pagado</td>
               <td class="py-1.5 text-end">{{ p.currency }} {{ p.paidAmount | number: '1.2-2' }}</td>
@@ -115,6 +125,45 @@
           </tfoot>
         </table>
       </div>
+
+      @if (advances().length) {
+        <div hlmCard class="p-4">
+          <h3 class="mb-1 text-sm font-semibold">Anticipos aplicados</h3>
+          <p class="text-muted-foreground mb-3 text-xs">
+            Anticipos previamente facturados deducidos de este comprobante (Catálogo 53 SUNAT, código 04 — gravados con IGV).
+          </p>
+          <table class="w-full text-sm">
+            <thead class="text-muted-foreground border-b text-xs">
+              <tr>
+                <th class="py-1.5 text-start font-medium">Comprobante</th>
+                <th class="py-1.5 text-start font-medium">Tipo</th>
+                <th class="py-1.5 text-start font-medium">Fecha</th>
+                <th class="py-1.5 text-end font-medium">Base</th>
+                <th class="py-1.5 text-end font-medium">IGV</th>
+                <th class="py-1.5 text-end font-medium">Monto</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              @for (a of advances(); track $index) {
+                <tr>
+                  <td class="py-2 font-mono text-xs">{{ a.invoiceNumber }}</td>
+                  <td class="py-2 capitalize">{{ a.docType ?? '—' }}</td>
+                  <td class="py-2 tabular-nums">{{ a.issuedAt ?? '—' }}</td>
+                  <td class="py-2 text-end tabular-nums">{{ a.base != null ? (a.base | number: '1.2-2') : '—' }}</td>
+                  <td class="py-2 text-end tabular-nums">{{ a.igv != null ? (a.igv | number: '1.2-2') : '—' }}</td>
+                  <td class="py-2 text-end font-medium tabular-nums">{{ p.currency }} {{ a.amount | number: '1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="border-t">
+                <td colspan="5" class="py-1.5 text-end text-xs font-semibold">Total anticipos</td>
+                <td class="py-1.5 text-end text-sm font-semibold">{{ p.currency }} {{ advancesTotal() | number: '1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      }
 
       @if (p.documentType === 'sales' && p.installments?.length) {
         <div hlmCard class="p-4">

@@ -77,6 +77,13 @@ export class InvoiceDetail {
   });
   protected readonly hasPendingPayment = computed(() => this.payments().some((p) => p.status === 'pending_validation'));
 
+  protected readonly salesInvoice = computed(() => {
+    const inv = this.invoice();
+    return inv && inv.documentType === 'sales' ? (inv as SalesInvoice) : null;
+  });
+  protected readonly advances = computed(() => this.salesInvoice()?.advances ?? []);
+  protected readonly advancesTotal = computed(() => this.advances().reduce((s, a) => s + (a.amount || 0), 0));
+
   protected supplierName(supplierId: string): string {
     return SUPPLIERS.find((s) => s.id === supplierId)?.legalName ?? supplierId;
   }

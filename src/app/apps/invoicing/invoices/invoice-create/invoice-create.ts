@@ -40,6 +40,17 @@ interface DraftInstallment {
   amount: number;
 }
 
+interface DraftAdvance {
+  /** Id del comprobante de anticipo en el sistema, o '' si es externo/manual. */
+  sourceInvoiceId: string;
+  /** Serie-número del comprobante de anticipo. */
+  reference: string;
+  docType: 'factura' | 'boleta';
+  issuedAt: string;
+  /** Monto del anticipo incluido IGV. */
+  amount: number;
+}
+
 const NEW_LINE: DraftLine = { description: '', salesProductId: '', quantity: 1, unitPrice: 0 };
 const ISSUE_DATE = '2026-09-01';
 
@@ -79,6 +90,10 @@ export class InvoiceCreate {
   // Voucher de pago
   protected readonly voucher = signal<PaymentVoucher | null>(null);
 
+  // Anticipos (SUNAT)
+  protected readonly isAdvanceInvoice = signal(false);
+  protected readonly advances = signal<DraftAdvance[]>([]);
+
   protected readonly customers = salesCustomers;
   protected readonly products = salesProducts;
   protected readonly orders = computed(() => salesOrders().filter((o) => o.status !== 'cancelled'));
@@ -94,7 +109,22 @@ export class InvoiceCreate {
   protected readonly igv = computed(() => this.taxable() * 0.18);
   protected readonly total = computed(() => this.taxable() + this.igv());
 
-  /** Monto neto pendiente de pago = total (no anticipos in this flow). */
+  // --- Anticipos --------------------------------------------------------------
+  /** Comprobantes de anticipo ya emitidos para este cliente, disponibles para deducir. */
+  protected readonly eligibleAdvances = computed(() =>
+    this.salesInvoices().filter((i) => i.isAdvanceInvoice && (!this.customerId() || i.customerId === this.customerId())),
+  );
+  protected readonly showAdvances = computed(() => !this.isNote() && !this.isAdvanceInvoice() && !this.showInstallments());
+  protected readonly advancesTotal = computed(() => this.advances().reduce((s, a) => s + (a.amount || 0), 0));
+  protected readonly advancesBase = computed(() => Math.round((this.advancesTotal() / 1.18) * 100) / 100);
+  protected readonly advancesIgv = computed(() => Math.round((this.advancesTotal() - this.advancesBase()) * 100) / 100);
+  /** Neto a pagar = importe total − anticipos aplicados (SUNAT). */
+  protected readonly netPayable = computed(() => Math.max(0, Math.round((this.total() - this.advancesTotal()) * 100) / 100));
+  protected readonly advancesValid = computed(
+    () => this.advancesTotal() <= this.total() + 0.01 && this.advances().every((a) => a.reference.trim().length > 0 && a.amount > 0),
+  );
+
+  /** Monto neto pendiente de pago para el cuadro de cuotas = total (a las cuotas no se les aplican anticipos). */
   protected readonly creditAmount = computed(() => this.total());
   protected readonly installmentsSum = computed(() => this.installments().reduce((s, c) => s + (c.amount || 0), 0));
   protected readonly installmentsValid = computed(() => Math.abs(this.installmentsSum() - this.creditAmount()) < 0.01 && this.installments().every((c) => !!c.dueDate && c.amount > 0));
@@ -103,6 +133,7 @@ export class InvoiceCreate {
     if (this.customerName().trim().length === 0 || this.subtotal() <= 0) return false;
     if (this.isNote() && (!this.correctsInvoiceId() || this.noteReason().trim().length === 0)) return false;
     if (this.showInstallments() && !this.installmentsValid()) return false;
+    if (this.showAdvances() && this.advances().length > 0 && !this.advancesValid()) return false;
     return true;
   });
 
@@ -119,6 +150,17 @@ export class InvoiceCreate {
       }
       if (!this.showInstallments() && this.installments().length) {
         this.installments.set([]);
+      }
+    });
+    // Anticipos only apply to a final factura/boleta at contado or crédito sin cuotas.
+    effect(() => {
+      if (!this.showAdvances() && this.advances().length) this.advances.set([]);
+    });
+    // A comprobante por anticipo is always a cash document and can't itself deduct anticipos.
+    effect(() => {
+      if (this.isAdvanceInvoice()) {
+        this.paymentCondition.set('contado');
+        this.withInstallments.set(false);
       }
     });
   }
@@ -223,6 +265,33 @@ export class InvoiceCreate {
     this.voucher.set(null);
   }
 
+  // --- Anticipos -----------------------------------------------------------
+
+  protected advanceInvoiceToString = (v: string) => {
+    const i = this.salesInvoices().find((x) => x.id === v);
+    return i ? `${i.number} — ${i.currency} ${i.total.toFixed(2)}` : 'Comprobante externo (manual)';
+  };
+
+  protected addAdvance(): void {
+    this.advances.update((rows) => [...rows, { sourceInvoiceId: '', reference: '', docType: 'factura', issuedAt: ISSUE_DATE, amount: 0 }]);
+  }
+  protected removeAdvance(i: number): void {
+    this.advances.update((rows) => rows.filter((_, idx) => idx !== i));
+  }
+  protected setAdvance(i: number, patch: Partial<DraftAdvance>): void {
+    this.advances.update((rows) => rows.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
+  }
+  /** Picking a system advance invoice fills the row from it; "manual" clears the link. */
+  protected onAdvanceInvoicePick(i: number, id: string): void {
+    const src = this.salesInvoices().find((x) => x.id === id);
+    this.setAdvance(
+      i,
+      src
+        ? { sourceInvoiceId: id, reference: src.number, docType: src.docKind === 'boleta' ? 'boleta' : 'factura', issuedAt: src.issuedAt, amount: src.total }
+        : { sourceInvoiceId: '' },
+    );
+  }
+
   // --- Emitir -----------------------------------------------------------------
 
   protected submit(): void {
@@ -235,6 +304,15 @@ export class InvoiceCreate {
 
     const src = this.isNote() ? this.salesInvoices().find((i) => i.id === this.correctsInvoiceId()) : undefined;
     const glosa = this.isNote() ? `${this.noteReason().trim()}${src ? ` (ref. ${src.number})` : ''}` : this.glosa().trim() || undefined;
+
+    const advances =
+      this.showAdvances() && this.advances().length > 0
+        ? this.advances().map((a) => {
+            const base = Math.round((a.amount / 1.18) * 100) / 100;
+            return { invoiceNumber: a.reference.trim(), docType: a.docType, issuedAt: a.issuedAt, amount: a.amount, base, igv: Math.round((a.amount - base) * 100) / 100, reasonCode: '04' as const };
+          })
+        : undefined;
+    const outstanding = this.isNote() ? 0 : advances ? this.netPayable() : this.total();
 
     const invoice = this.state.createFreeInvoice({
       status: 'issued',
@@ -252,20 +330,25 @@ export class InvoiceCreate {
       taxAmount: this.igv(),
       total: this.total(),
       paidAmount: 0,
-      outstandingBalance: this.isNote() ? 0 : this.total(),
+      outstandingBalance: outstanding,
       docKind: this.docKind(),
       glosa,
       correctsInvoiceId: this.correctsInvoiceId() || undefined,
       paymentCondition: this.isNote() ? undefined : this.paymentCondition(),
       earlyPaymentDiscountPct: this.earlyPaymentDiscountPct() || undefined,
       installments,
+      advances,
+      isAdvanceInvoice: this.isAdvanceInvoice() || undefined,
       paymentVoucher: this.voucher() ?? undefined,
       sunatTotals: {
         gravado: this.taxable(), inafecto: 0, exonerado: 0, exportacion: 0,
-        descuentos: this.discount(), gratuitos: 0, igv: this.igv(), isc: 0, anticipos: 0, importeTotal: this.total(),
+        descuentos: this.discount(), gratuitos: 0, igv: this.igv(), isc: 0,
+        anticipos: advances ? this.advancesTotal() : 0, importeTotal: this.total(),
       },
     });
-    toast.success(`${COMPROBANTE_KIND_LABEL[this.docKind()]} ${invoice.number} emitida`);
+    toast.success(`${COMPROBANTE_KIND_LABEL[this.docKind()]} ${invoice.number} emitida`, {
+      description: advances ? `Neto a pagar tras anticipos: ${this.currency()} ${this.netPayable().toFixed(2)}` : this.isAdvanceInvoice() ? 'Comprobante por anticipo' : undefined,
+    });
     this.router.navigate(['/apps/invoicing/invoices', invoice.id]);
   }
 
