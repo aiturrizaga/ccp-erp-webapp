@@ -1,4 +1,5 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { PercentPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HlmButtonImports } from '@ui/button';
@@ -32,7 +33,7 @@ const UOM_OPTIONS = ['UND', 'MT', 'KG', 'M2', 'M3'].map((value) => ({ value, lab
 
 @Component({
   selector: 'app-product-create',
-  imports: [FormsModule, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, ...HlmPopoverImports, EntityHeader],
+  imports: [FormsModule, PercentPipe, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, ...HlmPopoverImports, EntityHeader],
   templateUrl: './product-create.html',
 })
 export class ProductCreate {
@@ -65,6 +66,10 @@ export class ProductCreate {
   protected readonly preview = computed(() => formatSalesProductName({ name: this.name(), dimension: this.dimension(), spec: this.spec() }));
   protected readonly dimensionSegments = computed(() => parseDimension(this.dimension(), this.category() as SalesCategory));
   protected readonly canSubmit = computed(() => this.name().trim().length > 0 && this.costMin() > 0 && this.costMax() >= this.costMin());
+
+  /** Porcentaje de ganancia (margen sobre el costo) para el precio sugerido mínimo y máximo. */
+  protected readonly profitMin = computed(() => (this.productionUnitCost() > 0 ? (this.costMin() - this.productionUnitCost()) / this.productionUnitCost() : 0));
+  protected readonly profitMax = computed(() => (this.productionUnitCost() > 0 ? (this.costMax() - this.productionUnitCost()) / this.productionUnitCost() : 0));
 
   protected categoryToString = (v: string): string => SALES_CATEGORY_LABEL[v as SalesCategory] ?? v;
   protected statusToString = (v: string): string => SALES_PRODUCT_STATUS_LABEL[v as SalesProductStatus] ?? v;

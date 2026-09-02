@@ -90,22 +90,29 @@
     </div>
 
     <div hlmCard class="flex flex-col gap-4 p-4">
-      <h3 class="text-sm font-semibold">Costo y banda viable <span class="text-muted-foreground font-normal">— sin IGV</span></h3>
+      <h3 class="text-sm font-semibold">Costo y Precio sugerido de venta <span class="text-muted-foreground font-normal">— sin IGV</span></h3>
       <div class="grid grid-cols-3 gap-3">
         <div class="flex flex-col gap-1.5">
-          <label hlmLabel for="pcost">Costo de producción</label>
+          <label hlmLabel for="pcost">Costo</label>
           <input hlmInput id="pcost" type="number" min="0" step="0.01" [ngModel]="productionUnitCost()" (ngModelChange)="productionUnitCost.set(+$event)" />
+          <p class="text-muted-foreground text-[11px]">Referencial, de Producción</p>
         </div>
         <div class="flex flex-col gap-1.5">
-          <label hlmLabel for="cmin">Costo viable mínimo</label>
+          <label hlmLabel for="cmin">Precio sugerido mínimo</label>
           <input hlmInput id="cmin" type="number" min="0" step="0.01" [ngModel]="costMin()" (ngModelChange)="costMin.set(+$event)" />
+          <p class="text-[11px]" [class.text-destructive]="profitMin() <= 0" [class.text-muted-foreground]="profitMin() > 0">
+            Ganancia: {{ profitMin() | percent: '1.0-1' }}
+          </p>
         </div>
         <div class="flex flex-col gap-1.5">
-          <label hlmLabel for="cmax">Costo viable máximo</label>
+          <label hlmLabel for="cmax">Precio sugerido máximo</label>
           <input hlmInput id="cmax" type="number" min="0" step="0.01" [ngModel]="costMax()" (ngModelChange)="costMax.set(+$event)" />
+          <p class="text-[11px]" [class.text-destructive]="profitMax() <= 0" [class.text-muted-foreground]="profitMax() > 0">
+            Ganancia: {{ profitMax() | percent: '1.0-1' }}
+          </p>
         </div>
       </div>
-      <p class="text-muted-foreground text-xs">El costo de producción es referencial (proviene del módulo de Producción). Mínimo y máximo definen el rango de negociación.</p>
+      <p class="text-muted-foreground text-xs">El % de ganancia se calcula sobre el costo. El mínimo y el máximo definen el rango de negociación de la venta.</p>
     </div>
   </div>
 
