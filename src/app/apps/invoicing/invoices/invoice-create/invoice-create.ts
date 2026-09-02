@@ -124,6 +124,17 @@ export class InvoiceCreate {
     () => this.advancesTotal() <= this.total() + 0.01 && this.advances().every((a) => a.reference.trim().length > 0 && a.amount > 0),
   );
 
+  /**
+   * Número de cuotas saneado: entero entre 2 y 36. Un valor vacío / NaN / < 2 en el input
+   * (p. ej. al borrar el campo) se trata como 2 — evita que el effect de reparto entre en
+   * un bucle infinito comparando `installments().length` con un objetivo imposible.
+   */
+  protected readonly effectiveInstallmentCount = computed(() => {
+    const n = Math.floor(Number(this.installmentCount()));
+    if (!Number.isFinite(n) || n < 2) return 2;
+    return Math.min(n, 36);
+  });
+
   /** Monto neto pendiente de pago para el cuadro de cuotas = total (a las cuotas no se les aplican anticipos). */
   protected readonly creditAmount = computed(() => this.total());
   protected readonly installmentsSum = computed(() => this.installments().reduce((s, c) => s + (c.amount || 0), 0));
@@ -143,9 +154,10 @@ export class InvoiceCreate {
       this.correctsInvoiceId.set('');
       this.noteReason.set('');
     });
-    // Rebuild the cuota rows when the toggle turns on or the count changes.
+    // Rebuild the cuota rows when the toggle turns on or the count changes. Compare against the
+    // *saneado* count so the effect converges (a raw < 2 / NaN count would loop forever).
     effect(() => {
-      if (this.showInstallments() && this.installments().length !== this.installmentCount()) {
+      if (this.showInstallments() && this.installments().length !== this.effectiveInstallmentCount()) {
         this.distributeInstallments();
       }
       if (!this.showInstallments() && this.installments().length) {
@@ -238,7 +250,7 @@ export class InvoiceCreate {
   // --- Cuotas ---------------------------------------------------------------
 
   protected distributeInstallments(): void {
-    const n = Math.max(2, this.installmentCount());
+    const n = this.effectiveInstallmentCount();
     const base = Math.floor((this.creditAmount() / n) * 100) / 100;
     this.installments.set(
       Array.from({ length: n }, (_, i) => ({
