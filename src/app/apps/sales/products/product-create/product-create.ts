@@ -8,6 +8,7 @@ import { HlmLabelImports } from '@ui/label';
 import { HlmSelectImports } from '@ui/select';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { toast } from '@shared/toast';
+import { HlmPopoverImports } from '@ui/popover';
 import { createSalesProduct, salesProducts, updateSalesProduct } from '../../sales-state';
 import {
   CCP_BRAND,
@@ -31,7 +32,7 @@ const UOM_OPTIONS = ['UND', 'MT', 'KG', 'M2', 'M3'].map((value) => ({ value, lab
 
 @Component({
   selector: 'app-product-create',
-  imports: [FormsModule, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, EntityHeader],
+  imports: [FormsModule, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, ...HlmPopoverImports, EntityHeader],
   templateUrl: './product-create.html',
 })
 export class ProductCreate {
@@ -92,8 +93,11 @@ export class ProductCreate {
     });
   }
 
+  protected readonly submitPopover = signal<'open' | 'closed'>('closed');
+
   protected submit(): void {
     if (!this.canSubmit()) return;
+    this.submitPopover.set('closed');
     const payload = {
       legacyCode: this.legacyCode().trim() || `SP-${Date.now().toString().slice(-6)}`,
       name: this.name().trim().toUpperCase(),

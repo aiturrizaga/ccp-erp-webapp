@@ -9,6 +9,7 @@ import {
   SalesOrder,
   SalesProduct,
   SalesQuotation,
+  evaluateSalesOrder,
 } from '@core/models';
 import {
   CONTACTS,
@@ -219,6 +220,49 @@ export function createSalesOrderFromQuotation(quotation: {
     paymentGate: cashSale
       ? { status: 'pending_docs', advancePct: 50 }
       : { status: 'not_required', advancePct: 0 },
+  };
+  saveOrder(order);
+  return order;
+}
+
+/** Ventas crea un pedido directamente (sin cotización previa). Corre la evaluación comercial y arma la HT. */
+export function createSalesOrder(input: {
+  customerId: string;
+  customerName: string;
+  currency: SalesOrder['currency'];
+  committedDeliveryDate: string;
+  deliveryAddress: string;
+  glosa?: string;
+  notes?: string;
+  lines: SalesOrder['lines'];
+}): SalesOrder {
+  const seq = nextOrderSeq++;
+  const customer = salesCustomers().find((c) => c.id === input.customerId);
+  const cashSale = customer?.paymentMode === 'cash';
+  const total = input.lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+
+  const rule = salesDecisionRules().find((r) => r.active);
+  const viableMin: Record<string, number> = {};
+  for (const p of salesProducts()) viableMin[p.id] = p.costBand.min;
+  const evalResult = rule ? evaluateSalesOrder({ total, lines: input.lines }, rule, viableMin) : undefined;
+
+  const order: SalesOrder = {
+    id: `SO-${String(seq).padStart(3, '0')}`,
+    number: nextNumber('sales_order', salesOrders()),
+    customerId: input.customerId,
+    customerName: input.customerName,
+    status: 'confirmed',
+    currency: input.currency,
+    confirmedAt: TODAY,
+    committedDeliveryDate: input.committedDeliveryDate,
+    deliveryAddress: input.deliveryAddress || customer?.address || 'Por confirmar con el cliente',
+    lines: input.lines,
+    total,
+    glosa: input.glosa,
+    notes: input.notes,
+    workSheetId: `HT-2026-${String(1000 + seq).slice(1)}`,
+    paymentGate: cashSale ? { status: 'pending_docs', advancePct: 50 } : { status: 'not_required', advancePct: 0 },
+    priceReview: evalResult ? { outcome: evalResult.outcome, reasons: evalResult.reasons } : undefined,
   };
   saveOrder(order);
   return order;

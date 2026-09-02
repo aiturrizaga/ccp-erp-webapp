@@ -39,6 +39,9 @@ export class CollectionsDashboard {
       .map((o) => ({ order: o, gate: o.paymentGate! })),
   );
 
+  /** Pagos reportados sobre facturas, a la espera de validar el voucher. */
+  protected readonly paymentsToValidate = computed(() => this.state.pendingPayments());
+
   protected goToInvoice(id: string): void {
     this.router.navigate(['/apps/invoicing/invoices', id]);
   }

@@ -5,10 +5,33 @@
   </div>
 
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <app-stat-card label="Pagos por validar" [value]="paymentsToValidate().length + ''" hint="voucher reportado, sin validar" [trend]="paymentsToValidate().length ? 'down' : 'flat'" />
     <app-stat-card label="Saldo por cobrar (ventas)" [value]="'S/ ' + (receivableTotal() | number: '1.2-2')" hint="facturas de venta con saldo" />
     <app-stat-card label="Facturas de venta vencidas" [value]="overdueReceivables().length + ''" hint="requieren gestión de cobro" [trend]="overdueReceivables().length ? 'down' : 'flat'" />
     <app-stat-card label="Clientes con crédito excedido" [value]="creditExceeded().length + ''" hint="sobre su línea acordada" />
-    <app-stat-card label="Adelantos por validar" [value]="advancesToValidate().length + ''" hint="ventas al contado" />
+  </div>
+
+  <div class="rounded-lg border">
+    <div class="flex items-center justify-between border-b px-4 py-3">
+      <h2 class="text-sm font-semibold">Pagos en validación</h2>
+      <a routerLink="/apps/collections/payments" class="text-primary text-xs hover:underline">Ir a validar</a>
+    </div>
+    <ul class="divide-y">
+      @for (r of paymentsToValidate(); track r.payment.id) {
+        <li class="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToInvoice(r.invoiceId)">
+          <div class="min-w-0">
+            <p class="font-medium">{{ r.invoiceNumber }}</p>
+            <p class="text-muted-foreground truncate text-xs">{{ r.customerName }} · reportó {{ r.payment.registeredBy }} · {{ r.payment.date }}</p>
+          </div>
+          <div class="flex items-center gap-2 whitespace-nowrap">
+            <span class="font-medium tabular-nums">{{ r.currency }} {{ r.payment.amount | number: '1.2-2' }}</span>
+            <app-status-badge label="En validación" tone="warning" />
+          </div>
+        </li>
+      } @empty {
+        <li class="text-muted-foreground px-4 py-6 text-center text-sm">No hay pagos pendientes de validación.</li>
+      }
+    </ul>
   </div>
 
   <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">

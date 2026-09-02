@@ -1,17 +1,19 @@
-import { Component, computed, inject, input } from '@angular/core';
+import { Component, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { DecimalPipe } from '@angular/common';
 import { HlmButtonImports } from '@ui/button';
 import { HlmCardImports } from '@ui/card';
+import { HlmPopoverImports } from '@ui/popover';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
+import { toast } from '@shared/toast';
 import { SalesOrderStatus, SALES_ORDER_STATUS_LABEL, SALES_ORDER_STATUS_TONE, SalesInvoice, Tone } from '@core/models';
 import { salesOrders } from '../../sales-state';
 import { InvoicingState } from '../../../invoicing/invoicing-state';
 
 @Component({
   selector: 'app-order-detail',
-  imports: [RouterLink, DecimalPipe, ...HlmButtonImports, ...HlmCardImports, EntityHeader, EmptyState],
+  imports: [RouterLink, DecimalPipe, ...HlmButtonImports, ...HlmCardImports, ...HlmPopoverImports, EntityHeader, EmptyState],
   templateUrl: './order-detail.html',
 })
 export class OrderDetail {
@@ -37,15 +39,21 @@ export class OrderDetail {
     return SALES_ORDER_STATUS_TONE[status];
   }
 
+  protected readonly dispatchPopover = signal<'open' | 'closed'>('closed');
+  protected readonly invoicePopover = signal<'open' | 'closed'>('closed');
+
   protected registerDispatch(): void {
     const order = this.order();
     if (!order) return;
+    this.dispatchPopover.set('closed');
     salesOrders.update((orders) => orders.map((o) => (o.id === order.id ? { ...o, status: 'dispatched' } : o)));
+    toast.success(`${order.number} despachado`);
   }
 
   protected issueInvoice(): void {
     const order = this.order();
     if (!order) return;
+    this.invoicePopover.set('closed');
 
     const taxRate = 0.18;
     const subtotal = order.total;
@@ -78,6 +86,7 @@ export class OrderDetail {
 
     this.invoicingState.addInvoice(invoice);
     salesOrders.update((orders) => orders.map((o) => (o.id === order.id ? { ...o, status: 'invoiced' } : o)));
+    toast.success(`Factura ${invoice.number} emitida`, { description: order.customerName });
     this.router.navigate(['/apps/invoicing/invoices', invoice.id]);
   }
 }

@@ -1,6 +1,20 @@
 <app-entity-header title="Expediente digital del cliente" [crumbs]="[{ label: 'Cobranzas' }, { label: 'Expediente' }]">
   <div actions>
-    <button hlmBtn size="sm" (click)="sendExpediente()"><ng-icon name="tablerUpload" class="mr-1.5" /> Enviar expediente completo</button>
+    <hlm-popover align="end" [state]="sendPopover()" (stateChanged)="sendPopover.set($event)">
+      <button hlmPopoverTrigger hlmBtn size="sm"><ng-icon name="tablerUpload" class="mr-1.5" /> Enviar expediente completo</button>
+      <hlm-popover-content *hlmPopoverPortal class="w-80">
+        <hlm-popover-header>
+          <h3 hlmPopoverTitle>¿Enviar el expediente completo?</h3>
+          <p hlmPopoverDescription>
+            Se enviarán {{ docCount() }} documentos del expediente de {{ customer()?.legalName }} por correo a {{ sendTo() }}.
+          </p>
+        </hlm-popover-header>
+        <div class="mt-3 flex justify-end gap-2">
+          <button hlmBtn variant="outline" size="sm" (click)="sendPopover.set('closed')">Cancelar</button>
+          <button hlmBtn size="sm" (click)="sendExpediente()">Enviar</button>
+        </div>
+      </hlm-popover-content>
+    </hlm-popover>
   </div>
 </app-entity-header>
 

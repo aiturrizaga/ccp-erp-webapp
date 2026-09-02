@@ -2,7 +2,7 @@ import { Currency, Tone } from './shared.model';
 // Finanzas already defines InvoiceStatus/PaymentMethod (and their labels/tones) as a deliberate
 // forward-compatible mirror of Facturación's model — see the comment on finance.model.ts. Reuse
 // those exports instead of redeclaring them here to avoid a barrel export collision.
-import { InvoiceStatus } from './finance.model';
+import { InvoiceStatus, PaymentMethod } from './finance.model';
 
 export type { InvoiceStatus, PaymentMethod } from './finance.model';
 export { INVOICE_STATUS_LABEL, INVOICE_STATUS_TONE, PAYMENT_METHOD_LABEL } from './finance.model';
@@ -69,11 +69,68 @@ export interface AppliedAdvance {
   amount: number;
 }
 
+/**
+ * A credit installment as SUNAT requires it (RS 000193-2020/SUNAT y modificatorias): comprobantes
+ * al crédito informan el monto neto pendiente de pago y una o más cuotas, cada una con su
+ * identificador `Cuota001`, `Cuota002`… (correlativo de 3 dígitos), su monto y su fecha de pago.
+ * La suma de las cuotas debe ser igual al monto neto pendiente de pago.
+ */
 export interface InvoiceInstallment {
   number: number;
+  /** SUNAT identifier — `Cuota` + 3-digit sequential (Cuota001, Cuota002, …). */
+  identifier: string;
   dueDate: string;
   amount: number;
   paid: boolean;
+}
+
+export function cuotaIdentifier(n: number): string {
+  return `Cuota${String(n).padStart(3, '0')}`;
+}
+
+/** A payment voucher (voucher de pago / adelanto) attached to a comprobante. */
+export interface PaymentVoucher {
+  name: string;
+  /** MIME type, e.g. `image/jpeg`, `application/pdf`. */
+  mimeType: string;
+  /** URL to render/download — a `/vouchers/...` asset path or a `data:` URI. */
+  url: string;
+  uploadedAt: string;
+  amount?: number;
+  bank?: string;
+  operationNumber?: string;
+}
+
+export type PaymentRecordStatus = 'pending_validation' | 'validated' | 'rejected';
+
+export const PAYMENT_RECORD_STATUS_LABEL: Record<PaymentRecordStatus, string> = {
+  pending_validation: 'En validación',
+  validated: 'Validado',
+  rejected: 'Rechazado',
+};
+
+export const PAYMENT_RECORD_STATUS_TONE: Record<PaymentRecordStatus, Tone> = {
+  pending_validation: 'warning',
+  validated: 'success',
+  rejected: 'danger',
+};
+
+/**
+ * A payment reported against a comprobante. It is NOT applied to the balance until Cobranzas
+ * validates the voucher — the invoice sits in status `in_validation` meanwhile.
+ */
+export interface InvoicePaymentRecord {
+  id: string;
+  amount: number;
+  date: string;
+  method: PaymentMethod;
+  voucher?: PaymentVoucher;
+  status: PaymentRecordStatus;
+  registeredBy: string;
+  registeredAt: string;
+  validatedBy?: string;
+  validatedAt?: string;
+  comment?: string;
 }
 
 /** SUNAT's comprobante totals block (matches the printed layout in invoice_ccp_old). */
@@ -118,6 +175,10 @@ export interface SalesInvoice extends InvoiceBase {
   correctsInvoiceId?: string;
   sunatStatus?: 'pending' | 'accepted' | 'rejected' | 'internal';
   sentToCustomerAt?: string;
+  /** Voucher de pago / adelanto adjuntado al comprobante (el del último pago validado). */
+  paymentVoucher?: PaymentVoucher;
+  /** Pagos reportados contra el comprobante (en validación / validados / rechazados). */
+  payments?: InvoicePaymentRecord[];
 }
 
 export type Invoice = PurchaseInvoice | SalesInvoice;

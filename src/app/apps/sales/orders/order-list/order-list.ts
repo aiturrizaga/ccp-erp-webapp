@@ -131,6 +131,10 @@ export class OrderList {
     return SALES_ORDER_STATUS_TONE[status];
   }
 
+  protected onNew(): void {
+    this.router.navigate(['/apps/sales/orders/new']);
+  }
+
   protected openDetail(order: SalesOrder): void {
     this.router.navigate(['/apps/sales/orders', order.id]);
   }

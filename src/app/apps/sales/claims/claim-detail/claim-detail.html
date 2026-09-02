@@ -53,18 +53,82 @@
         </dl>
 
         @if (c.status === 'open' || c.status === 'in_review') {
-          <button hlmBtn size="sm" class="mt-3 w-full" (click)="sendToGerencia()">Elevar a Gerencia (Producción evaluó)</button>
+          <hlm-popover align="end" [state]="openPopover() === 'gerencia' ? 'open' : 'closed'" (stateChanged)="openPopover.set($event === 'open' ? 'gerencia' : null)">
+            <button hlmPopoverTrigger hlmBtn size="sm" class="mt-3 w-full">Elevar a Gerencia (Producción evaluó)</button>
+            <hlm-popover-content *hlmPopoverPortal class="w-80">
+              <hlm-popover-header>
+                <h3 hlmPopoverTitle>¿Elevar el reclamo a Gerencia?</h3>
+                <p hlmPopoverDescription>Producción evaluó las evidencias. El reclamo pasará a "Pendiente de Gerencia" para el visto bueno de la resolución.</p>
+              </hlm-popover-header>
+              <div class="mt-3 flex justify-end gap-2">
+                <button hlmBtn variant="outline" size="sm" (click)="openPopover.set(null)">Cancelar</button>
+                <button hlmBtn size="sm" (click)="sendToGerencia()">Elevar</button>
+              </div>
+            </hlm-popover-content>
+          </hlm-popover>
         }
         @if (c.status === 'pending_gerencia') {
           <div class="mt-3 flex flex-col gap-2">
             <p class="text-muted-foreground text-xs">Visto bueno de Gerencia:</p>
-            <button hlmBtn size="sm" (click)="resolve('reposicion')">Aprobar reposición de material</button>
+
+            <hlm-popover align="end" [state]="openPopover() === 'reposicion' ? 'open' : 'closed'" (stateChanged)="openPopover.set($event === 'open' ? 'reposicion' : null)">
+              <button hlmPopoverTrigger hlmBtn size="sm">Aprobar reposición de material</button>
+              <hlm-popover-content *hlmPopoverPortal class="w-80">
+                <hlm-popover-header>
+                  <h3 hlmPopoverTitle>¿Aprobar la reposición?</h3>
+                  <p hlmPopoverDescription>Se generará una HT de reposición sin costo para el cliente y el reclamo quedará resuelto.</p>
+                </hlm-popover-header>
+                <div class="mt-3 flex justify-end gap-2">
+                  <button hlmBtn variant="outline" size="sm" (click)="openPopover.set(null)">Cancelar</button>
+                  <button hlmBtn size="sm" (click)="resolve('reposicion')">Aprobar reposición</button>
+                </div>
+              </hlm-popover-content>
+            </hlm-popover>
+
             <div class="flex gap-2">
               <input hlmInput type="number" min="0" placeholder="Monto" [ngModel]="refund()" (ngModelChange)="refund.set(+$event)" />
-              <button hlmBtn size="sm" variant="outline" (click)="resolve('devolucion_parcial')">Devolución parcial</button>
+              <hlm-popover align="end" [state]="openPopover() === 'devolucion' ? 'open' : 'closed'" (stateChanged)="openPopover.set($event === 'open' ? 'devolucion' : null)">
+                <button hlmPopoverTrigger hlmBtn size="sm" variant="outline">Devolución parcial</button>
+                <hlm-popover-content *hlmPopoverPortal class="w-80">
+                  <hlm-popover-header>
+                    <h3 hlmPopoverTitle>¿Registrar devolución parcial?</h3>
+                    <p hlmPopoverDescription>Se registrará una devolución de S/ {{ refund() | number: '1.2-2' }} al cliente y el reclamo quedará resuelto.</p>
+                  </hlm-popover-header>
+                  <div class="mt-3 flex justify-end gap-2">
+                    <button hlmBtn variant="outline" size="sm" (click)="openPopover.set(null)">Cancelar</button>
+                    <button hlmBtn size="sm" [disabled]="refund() <= 0" (click)="resolve('devolucion_parcial')">Registrar devolución</button>
+                  </div>
+                </hlm-popover-content>
+              </hlm-popover>
             </div>
-            <button hlmBtn size="sm" variant="outline" (click)="resolve('acuerdo')">Registrar acuerdo con el cliente</button>
-            <button hlmBtn size="sm" variant="ghost" (click)="reject()">Rechazar reclamo</button>
+
+            <hlm-popover align="end" [state]="openPopover() === 'acuerdo' ? 'open' : 'closed'" (stateChanged)="openPopover.set($event === 'open' ? 'acuerdo' : null)">
+              <button hlmPopoverTrigger hlmBtn size="sm" variant="outline">Registrar acuerdo con el cliente</button>
+              <hlm-popover-content *hlmPopoverPortal class="w-80">
+                <hlm-popover-header>
+                  <h3 hlmPopoverTitle>¿Registrar el acuerdo?</h3>
+                  <p hlmPopoverDescription>El reclamo quedará resuelto como "Acuerdo con el cliente".</p>
+                </hlm-popover-header>
+                <div class="mt-3 flex justify-end gap-2">
+                  <button hlmBtn variant="outline" size="sm" (click)="openPopover.set(null)">Cancelar</button>
+                  <button hlmBtn size="sm" (click)="resolve('acuerdo')">Registrar acuerdo</button>
+                </div>
+              </hlm-popover-content>
+            </hlm-popover>
+
+            <hlm-popover align="end" [state]="openPopover() === 'rechazo' ? 'open' : 'closed'" (stateChanged)="openPopover.set($event === 'open' ? 'rechazo' : null)">
+              <button hlmPopoverTrigger hlmBtn size="sm" variant="ghost" class="text-destructive">Rechazar reclamo</button>
+              <hlm-popover-content *hlmPopoverPortal class="w-80">
+                <hlm-popover-header>
+                  <h3 hlmPopoverTitle>¿Rechazar el reclamo?</h3>
+                  <p hlmPopoverDescription>No procederá reposición ni devolución. Esta decisión queda registrada en la trazabilidad.</p>
+                </hlm-popover-header>
+                <div class="mt-3 flex justify-end gap-2">
+                  <button hlmBtn variant="outline" size="sm" (click)="openPopover.set(null)">Cancelar</button>
+                  <button hlmBtn variant="destructive" size="sm" (click)="reject()">Rechazar</button>
+                </div>
+              </hlm-popover-content>
+            </hlm-popover>
           </div>
         }
       </div>

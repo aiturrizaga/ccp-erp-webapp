@@ -151,6 +151,10 @@ export class InvoiceList {
     return INVOICE_STATUS_TONE[status];
   }
 
+  protected onNew(): void {
+    this.router.navigate(['/apps/invoicing/invoices/new']);
+  }
+
   protected openDetail(invoice: Invoice): void {
     this.router.navigate(['/apps/invoicing/invoices', invoice.id]);
   }

@@ -1,8 +1,9 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@ui/button';
 import { HlmCardImports } from '@ui/card';
+import { HlmPopoverImports } from '@ui/popover';
 import { NgIcon } from '@ng-icons/core';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
@@ -13,7 +14,7 @@ import { SalesOrder } from '@core/models';
 
 @Component({
   selector: 'app-dispatch-board',
-  imports: [DecimalPipe, RouterLink, NgIcon, ...HlmButtonImports, ...HlmCardImports, EntityHeader, StatusBadge],
+  imports: [DecimalPipe, RouterLink, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmPopoverImports, EntityHeader, StatusBadge],
   templateUrl: './dispatch-board.html',
 })
 export class DispatchBoard {
@@ -48,12 +49,18 @@ export class DispatchBoard {
     return this.blockers(o).length === 0;
   }
 
+  /** Order id whose "marcar listo" / "entregar" popover is open. */
+  protected readonly readyPopover = signal<string | null>(null);
+  protected readonly deliverPopover = signal<string | null>(null);
+
   protected markReady(o: SalesOrder): void {
+    this.readyPopover.set(null);
     saveOrder({ ...o, readyForDispatch: true, readyForDispatchAt: '2026-09-01' });
     toast.success(`${o.number} marcado listo para salida`);
   }
 
   protected markDelivered(o: SalesOrder): void {
+    this.deliverPopover.set(null);
     saveOrder({ ...o, dispatchedAt: '2026-09-01', status: o.status === 'invoiced' ? 'invoiced' : 'dispatched' });
     toast.success(`${o.number} entregado al cliente`);
   }

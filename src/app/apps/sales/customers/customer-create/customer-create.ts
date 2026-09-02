@@ -9,6 +9,7 @@ import { HlmSelectImports } from '@ui/select';
 import { NgIcon } from '@ng-icons/core';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { toast } from '@shared/toast';
+import { HlmPopoverImports } from '@ui/popover';
 import { addContact, createCustomer } from '../../sales-state';
 import { DocLookupService } from '../doc-lookup.service';
 import {
@@ -31,7 +32,7 @@ interface DraftContact {
 
 @Component({
   selector: 'app-customer-create',
-  imports: [FormsModule, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, EntityHeader],
+  imports: [FormsModule, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, ...HlmPopoverImports, EntityHeader],
   templateUrl: './customer-create.html',
 })
 export class CustomerCreate {
@@ -140,8 +141,11 @@ export class CustomerCreate {
     this.contacts.update((rows) => rows.map((r, i) => (i === index ? { ...r, ...patch } : r)));
   }
 
+  protected readonly submitPopover = signal<'open' | 'closed'>('closed');
+
   protected submit(): void {
     if (!this.canSubmit()) return;
+    this.submitPopover.set('closed');
     const customer = createCustomer({
       legalName: this.legalName().trim().toUpperCase(),
       taxId: this.docNumber().trim(),

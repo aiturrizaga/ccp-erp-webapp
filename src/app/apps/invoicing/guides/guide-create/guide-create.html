@@ -55,7 +55,22 @@
   }
 
   <div class="flex gap-2">
-    <button hlmBtn size="sm" [disabled]="!canSubmit()" (click)="submit()">Emitir guía</button>
+    <hlm-popover [state]="submitPopover()" (stateChanged)="submitPopover.set($event)">
+      <button hlmPopoverTrigger hlmBtn size="sm" [disabled]="!canSubmit()">Emitir guía</button>
+      <hlm-popover-content *hlmPopoverPortal class="w-80">
+        <hlm-popover-header>
+          <h3 hlmPopoverTitle>¿Emitir la guía de remisión?</h3>
+          <p hlmPopoverDescription>
+            Se emitirá la guía {{ kind() === 'sunat' ? 'electrónica (SUNAT)' : 'de uso interno' }} para
+            {{ selectedOrder()?.number }} — {{ selectedOrder()?.customerName }}{{ alsoInvoice() ? ', y se generará la factura asociada' : '' }}.
+          </p>
+        </hlm-popover-header>
+        <div class="mt-3 flex justify-end gap-2">
+          <button hlmBtn variant="outline" size="sm" (click)="submitPopover.set('closed')">Cancelar</button>
+          <button hlmBtn size="sm" (click)="submit()">Emitir guía</button>
+        </div>
+      </hlm-popover-content>
+    </hlm-popover>
     <button hlmBtn size="sm" variant="ghost" (click)="cancel()">Cancelar</button>
   </div>
 </div>

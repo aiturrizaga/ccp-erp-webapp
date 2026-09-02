@@ -6,7 +6,9 @@ import {
   DocSeries,
   DocumentDelivery,
   Invoice,
+  InvoicePaymentRecord,
   PaymentMethod,
+  PaymentVoucher,
   SalesInvoice,
   SeriesDocKind,
 } from '@core/models';
@@ -16,6 +18,19 @@ export interface InvoicePayment {
   amount: number;
   date: string;
   method: PaymentMethod;
+  voucher?: PaymentVoucher;
+  registeredBy?: string;
+}
+
+/** An invoice's pending payment surfaced for Cobranzas' validation queue. */
+export interface PendingPayment {
+  invoiceId: string;
+  invoiceNumber: string;
+  customerName: string;
+  currency: string;
+  invoiceTotal: number;
+  outstandingBalance: number;
+  payment: InvoicePaymentRecord;
 }
 
 /**
@@ -59,18 +74,95 @@ export class InvoicingState {
     this.invoicesStore.upsert(invoice, (i) => ({ status: i.status, document_type: i.documentType }));
   }
 
+  /**
+   * A payment reported against an invoice is NOT applied to the balance yet — it goes into
+   * `payments[]` as `pending_validation` and the invoice moves to `in_validation`. Cobranzas then
+   * validates (or rejects) the voucher.
+   */
   registerPayment(invoiceId: string, payment: InvoicePayment): void {
     this.invoices.update((invoices) =>
       invoices.map((invoice) => {
-        if (invoice.id !== invoiceId) return invoice;
-        const paidAmount = Math.min(invoice.total, invoice.paidAmount + payment.amount);
-        const outstandingBalance = Math.max(0, invoice.total - paidAmount);
-        const status = outstandingBalance === 0 ? 'paid' : 'partial';
-        const next = { ...invoice, paidAmount, outstandingBalance, status } as Invoice;
+        if (invoice.id !== invoiceId || invoice.documentType !== 'sales') return invoice;
+        const record: InvoicePaymentRecord = {
+          id: `PAY-${Date.now().toString().slice(-8)}`,
+          amount: payment.amount,
+          date: payment.date,
+          method: payment.method,
+          voucher: payment.voucher,
+          status: 'pending_validation',
+          registeredBy: payment.registeredBy ?? 'Facturación',
+          registeredAt: '2026-09-01',
+        };
+        const next: Invoice = { ...invoice, status: 'in_validation', payments: [...(invoice.payments ?? []), record] };
         this.invoicesStore.upsert(next, (i) => ({ status: i.status, document_type: i.documentType }));
         return next;
       }),
     );
+  }
+
+  /** Cobranzas validates a reported payment — now it is applied to the invoice balance. */
+  validatePayment(invoiceId: string, paymentId: string, by = 'Cobranzas'): void {
+    this.invoices.update((invoices) =>
+      invoices.map((invoice) => {
+        if (invoice.id !== invoiceId || invoice.documentType !== 'sales' || !invoice.payments) return invoice;
+        const payments = invoice.payments.map((p) =>
+          p.id === paymentId ? { ...p, status: 'validated' as const, validatedBy: by, validatedAt: '2026-09-01' } : p,
+        );
+        const rec = payments.find((p) => p.id === paymentId);
+        const paidAmount = Math.min(invoice.total, invoice.paidAmount + (rec?.amount ?? 0));
+        const outstandingBalance = Math.max(0, invoice.total - paidAmount);
+        const stillPending = payments.some((p) => p.status === 'pending_validation');
+        const status = stillPending ? 'in_validation' : outstandingBalance === 0 ? 'paid' : 'partial';
+        const next: Invoice = {
+          ...invoice,
+          payments,
+          paidAmount,
+          outstandingBalance,
+          status,
+          paymentVoucher: rec?.voucher ?? invoice.paymentVoucher,
+        };
+        this.invoicesStore.upsert(next, (i) => ({ status: i.status, document_type: i.documentType }));
+        return next;
+      }),
+    );
+  }
+
+  /** Cobranzas rejects a reported payment (voucher no coincide, monto errado, etc.). */
+  rejectPayment(invoiceId: string, paymentId: string, comment: string, by = 'Cobranzas'): void {
+    this.invoices.update((invoices) =>
+      invoices.map((invoice) => {
+        if (invoice.id !== invoiceId || invoice.documentType !== 'sales' || !invoice.payments) return invoice;
+        const payments = invoice.payments.map((p) =>
+          p.id === paymentId ? { ...p, status: 'rejected' as const, validatedBy: by, validatedAt: '2026-09-01', comment } : p,
+        );
+        const stillPending = payments.some((p) => p.status === 'pending_validation');
+        const status = stillPending ? 'in_validation' : invoice.paidAmount > 0 ? 'partial' : 'issued';
+        const next: Invoice = { ...invoice, payments, status };
+        this.invoicesStore.upsert(next, (i) => ({ status: i.status, document_type: i.documentType }));
+        return next;
+      }),
+    );
+  }
+
+  /** Flat list of payments awaiting Cobranzas' validation. */
+  pendingPayments(): PendingPayment[] {
+    const out: PendingPayment[] = [];
+    for (const inv of this.invoices()) {
+      if (inv.documentType !== 'sales' || !inv.payments) continue;
+      for (const p of inv.payments) {
+        if (p.status !== 'pending_validation') continue;
+        out.push({
+          invoiceId: inv.id,
+          invoiceNumber: inv.number,
+          customerName: inv.customerName,
+          currency: inv.currency,
+          invoiceTotal: inv.total,
+          outstandingBalance: inv.outstandingBalance,
+          payment: p,
+        });
+      }
+    }
+    return out;
   }
 
   /** Advances the correlativo for a doc kind/environment and returns the formatted `SERIE-00000123`. */

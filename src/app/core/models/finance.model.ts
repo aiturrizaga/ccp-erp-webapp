@@ -1,11 +1,12 @@
 import { Tone } from './shared.model';
 
 /** Status union shared by Facturación's `Invoice` and consumed by Finanzas' AP/AR views. */
-export type InvoiceStatus = 'draft' | 'issued' | 'paid' | 'partial' | 'overdue' | 'voided';
+export type InvoiceStatus = 'draft' | 'issued' | 'in_validation' | 'paid' | 'partial' | 'overdue' | 'voided';
 
 export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
   draft: 'Borrador',
   issued: 'Emitida',
+  in_validation: 'En validación de pago',
   paid: 'Pagada',
   partial: 'Pago parcial',
   overdue: 'Vencida',
@@ -15,6 +16,7 @@ export const INVOICE_STATUS_LABEL: Record<InvoiceStatus, string> = {
 export const INVOICE_STATUS_TONE: Record<InvoiceStatus, Tone> = {
   draft: 'neutral',
   issued: 'info',
+  in_validation: 'warning',
   paid: 'success',
   partial: 'warning',
   overdue: 'danger',

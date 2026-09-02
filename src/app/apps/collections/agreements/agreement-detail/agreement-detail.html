@@ -30,7 +30,22 @@
             @if (ap.status === 'approved') {
               <app-status-badge label="Aprobado" tone="success" />
             } @else if (ap.area !== 'Ventas') {
-              <button hlmBtn size="sm" variant="outline" (click)="approve($any(ap.area))"><ng-icon name="tablerCheck" class="mr-1.5" /> Aprobar</button>
+              <hlm-popover align="end" [state]="approvePopover() === ap.area ? 'open' : 'closed'" (stateChanged)="approvePopover.set($event === 'open' ? ap.area : null)">
+                <button hlmPopoverTrigger hlmBtn size="sm" variant="outline"><ng-icon name="tablerCheck" class="mr-1.5" /> Aprobar</button>
+                <hlm-popover-content *hlmPopoverPortal class="w-80">
+                  <hlm-popover-header>
+                    <h3 hlmPopoverTitle>¿Aprobar como {{ ap.area }}?</h3>
+                    <p hlmPopoverDescription>
+                      Se registrará la aprobación de {{ ap.area }} para el convenio {{ a.number }} ({{ a.customerName }}),
+                      límite {{ a.currency }} {{ a.limit | number: '1.2-2' }}.
+                    </p>
+                  </hlm-popover-header>
+                  <div class="mt-3 flex justify-end gap-2">
+                    <button hlmBtn variant="outline" size="sm" (click)="approvePopover.set(null)">Cancelar</button>
+                    <button hlmBtn size="sm" (click)="approve($any(ap.area))">Aprobar</button>
+                  </div>
+                </hlm-popover-content>
+              </hlm-popover>
             } @else {
               <app-status-badge label="Pendiente" tone="warning" />
             }

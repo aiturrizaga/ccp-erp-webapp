@@ -8,10 +8,34 @@
   >
     <div actions class="flex gap-2">
       @if (canRegisterDispatch()) {
-        <button hlmBtn size="sm" variant="outline" (click)="registerDispatch()">Registrar despacho</button>
+        <hlm-popover align="end" [state]="dispatchPopover()" (stateChanged)="dispatchPopover.set($event)">
+          <button hlmPopoverTrigger hlmBtn size="sm" variant="outline">Registrar despacho</button>
+          <hlm-popover-content *hlmPopoverPortal class="w-80">
+            <hlm-popover-header>
+              <h3 hlmPopoverTitle>¿Registrar el despacho de {{ o.number }}?</h3>
+              <p hlmPopoverDescription>El pedido pasará a "Despachada". Confirma que la mercadería salió del almacén.</p>
+            </hlm-popover-header>
+            <div class="mt-3 flex justify-end gap-2">
+              <button hlmBtn variant="outline" size="sm" (click)="dispatchPopover.set('closed')">Cancelar</button>
+              <button hlmBtn size="sm" (click)="registerDispatch()">Registrar despacho</button>
+            </div>
+          </hlm-popover-content>
+        </hlm-popover>
       }
       @if (canIssueInvoice()) {
-        <button hlmBtn size="sm" (click)="issueInvoice()">Emitir factura</button>
+        <hlm-popover align="end" [state]="invoicePopover()" (stateChanged)="invoicePopover.set($event)">
+          <button hlmPopoverTrigger hlmBtn size="sm">Emitir factura</button>
+          <hlm-popover-content *hlmPopoverPortal class="w-80">
+            <hlm-popover-header>
+              <h3 hlmPopoverTitle>¿Emitir la factura de {{ o.number }}?</h3>
+              <p hlmPopoverDescription>Se emitirá la factura para {{ o.customerName }} y el pedido pasará a "Facturada".</p>
+            </hlm-popover-header>
+            <div class="mt-3 flex justify-end gap-2">
+              <button hlmBtn variant="outline" size="sm" (click)="invoicePopover.set('closed')">Cancelar</button>
+              <button hlmBtn size="sm" (click)="issueInvoice()">Emitir factura</button>
+            </div>
+          </hlm-popover-content>
+        </hlm-popover>
       }
     </div>
   </app-entity-header>

@@ -10,12 +10,13 @@ import { HlmSelectImports } from '@ui/select';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { toast } from '@shared/toast';
 import { AuthState } from '@shell/auth-state';
+import { HlmPopoverImports } from '@ui/popover';
 import { createClaim, salesOrders } from '../../sales-state';
 import { CLAIM_DEFECT_TYPE_LABEL, ClaimDefectType } from '@core/models';
 
 @Component({
   selector: 'app-claim-create',
-  imports: [FormsModule, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, EntityHeader],
+  imports: [FormsModule, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, ...HlmPopoverImports, EntityHeader],
   templateUrl: './claim-create.html',
 })
 export class ClaimCreate {
@@ -46,9 +47,12 @@ export class ClaimCreate {
     this.evidenceNames.update((n) => n.filter((_, idx) => idx !== i));
   }
 
+  protected readonly submitPopover = signal<'open' | 'closed'>('closed');
+
   protected submit(): void {
     const order = this.orders().find((o) => o.id === this.orderId());
     if (!order || !this.canSubmit()) return;
+    this.submitPopover.set('closed');
     const claim = createClaim({
       order,
       defectType: this.defectType(),

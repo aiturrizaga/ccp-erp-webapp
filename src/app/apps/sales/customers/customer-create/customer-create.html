@@ -133,7 +133,19 @@
     </div>
 
     <div class="flex gap-2">
-      <button hlmBtn size="sm" [disabled]="!canSubmit()" (click)="submit()">Registrar cliente</button>
+      <hlm-popover [state]="submitPopover()" (stateChanged)="submitPopover.set($event)">
+        <button hlmPopoverTrigger hlmBtn size="sm" [disabled]="!canSubmit()">Registrar cliente</button>
+        <hlm-popover-content *hlmPopoverPortal class="w-80">
+          <hlm-popover-header>
+            <h3 hlmPopoverTitle>¿Registrar el cliente?</h3>
+            <p hlmPopoverDescription>Se registrará "{{ legalName() }}" ({{ docType() }} {{ docNumber() }}) en el maestro de clientes.</p>
+          </hlm-popover-header>
+          <div class="mt-3 flex justify-end gap-2">
+            <button hlmBtn variant="outline" size="sm" (click)="submitPopover.set('closed')">Cancelar</button>
+            <button hlmBtn size="sm" (click)="submit()">Registrar</button>
+          </div>
+        </hlm-popover-content>
+      </hlm-popover>
       <button hlmBtn size="sm" variant="ghost" (click)="cancel()">Cancelar</button>
     </div>
   </div>

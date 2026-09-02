@@ -8,13 +8,14 @@ import { HlmLabelImports } from '@ui/label';
 import { HlmSelectImports } from '@ui/select';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { toast } from '@shared/toast';
+import { HlmPopoverImports } from '@ui/popover';
 import { salesCustomers, salesOrders } from '@apps/sales/sales-state';
 import { InvoicingState } from '../../invoicing-state';
 import { GUIDE_GLOSA_LABEL, GuideGlosa, GuideKind } from '@core/models';
 
 @Component({
   selector: 'app-guide-create',
-  imports: [FormsModule, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, EntityHeader],
+  imports: [FormsModule, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, ...HlmPopoverImports, EntityHeader],
   templateUrl: './guide-create.html',
 })
 export class GuideCreate {
@@ -39,9 +40,14 @@ export class GuideCreate {
   protected glosaToString = (v: string) => GUIDE_GLOSA_LABEL[v as GuideGlosa] ?? v;
   protected kindToString = (v: string) => (v === 'sunat' ? 'SUNAT (electrónica)' : 'Uso interno');
 
+  protected readonly submitPopover = signal<'open' | 'closed'>('closed');
+  protected readonly alsoInvoice = computed(() => this.generatesInvoice() && this.glosa() !== 'guia_custodia');
+
   protected submit(): void {
     const order = this.selectedOrder();
     if (!order) return;
+    this.submitPopover.set('closed');
+
     const customer = salesCustomers().find((c) => c.id === order.customerId);
     const guide = this.state.createGuide({
       kind: this.kind(),

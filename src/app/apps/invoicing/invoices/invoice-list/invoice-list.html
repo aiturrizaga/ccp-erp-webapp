@@ -7,6 +7,8 @@
   [(groupBy)]="groupBy"
   [hasFilters]="true"
   [filterCount]="filterCount()"
+  actionLabel="Nuevo comprobante"
+  (action)="onNew()"
 >
   <div filters class="flex flex-col gap-3">
     <div>

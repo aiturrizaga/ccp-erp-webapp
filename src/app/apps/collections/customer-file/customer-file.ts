@@ -4,6 +4,7 @@ import { RouterLink } from '@angular/router';
 import { HlmButtonImports } from '@ui/button';
 import { HlmCardImports } from '@ui/card';
 import { HlmSelectImports } from '@ui/select';
+import { HlmPopoverImports } from '@ui/popover';
 import { NgIcon } from '@ng-icons/core';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
@@ -13,7 +14,7 @@ import { InvoicingState } from '@apps/invoicing/invoicing-state';
 
 @Component({
   selector: 'app-customer-file',
-  imports: [DecimalPipe, RouterLink, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmSelectImports, EntityHeader, StatusBadge],
+  imports: [DecimalPipe, RouterLink, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmSelectImports, ...HlmPopoverImports, EntityHeader, StatusBadge],
   templateUrl: './customer-file.html',
 })
 export class CustomerFile {
@@ -42,11 +43,21 @@ export class CustomerFile {
 
   protected customerToString = (v: string) => salesCustomers().find((c) => c.id === v)?.legalName ?? v;
 
+  protected readonly sendPopover = signal<'open' | 'closed'>('closed');
+
+  /** Email the expediente would go to (billing/collections contact, else first contact). */
+  protected readonly sendTo = computed(() => {
+    const c = this.customer();
+    if (!c) return '';
+    const billing = salesContacts().find((x) => x.customerId === c.id && (x.type === 'facturacion' || x.type === 'cobranzas'));
+    return billing?.email || salesContacts().find((x) => x.customerId === c.id)?.email || 'cliente@correo.pe';
+  });
+
   protected sendExpediente(): void {
     const c = this.customer();
     if (!c) return;
-    const billingContact = salesContacts().find((x) => x.customerId === c.id && (x.type === 'facturacion' || x.type === 'cobranzas'));
-    const to = billingContact?.email || salesContacts().find((x) => x.customerId === c.id)?.email || 'cliente@correo.pe';
+    this.sendPopover.set('closed');
+    const to = this.sendTo();
     const docs = [
       ...this.quotations().map((q) => q.number),
       ...this.orders().map((o) => o.number),

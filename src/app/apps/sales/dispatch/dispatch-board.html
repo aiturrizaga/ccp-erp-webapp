@@ -11,7 +11,19 @@
             <a class="text-primary text-sm font-medium hover:underline" [routerLink]="['/apps/sales/orders', o.id]">{{ o.number }}</a>
             <p class="text-muted-foreground text-xs">{{ o.customerName }} · {{ o.currency }} {{ o.total | number: '1.2-2' }}</p>
           </div>
-          <button hlmBtn size="sm" variant="outline" (click)="markReady(o)">Marcar listo</button>
+          <hlm-popover align="end" [state]="readyPopover() === o.id ? 'open' : 'closed'" (stateChanged)="readyPopover.set($event === 'open' ? o.id : null)">
+            <button hlmPopoverTrigger hlmBtn size="sm" variant="outline">Marcar listo</button>
+            <hlm-popover-content *hlmPopoverPortal class="w-80">
+              <hlm-popover-header>
+                <h3 hlmPopoverTitle>¿Marcar {{ o.number }} listo para salida?</h3>
+                <p hlmPopoverDescription>Ventas confirma que el pedido de {{ o.customerName }} está listo para salir del almacén.</p>
+              </hlm-popover-header>
+              <div class="mt-3 flex justify-end gap-2">
+                <button hlmBtn variant="outline" size="sm" (click)="readyPopover.set(null)">Cancelar</button>
+                <button hlmBtn size="sm" (click)="markReady(o)">Marcar listo</button>
+              </div>
+            </hlm-popover-content>
+          </hlm-popover>
         </div>
       } @empty {
         <p class="text-muted-foreground py-2 text-sm">Nada pendiente de confirmar.</p>
@@ -31,7 +43,19 @@
               <p class="text-muted-foreground text-xs">{{ r.order.customerName }} · {{ r.order.currency }} {{ r.order.total | number: '1.2-2' }}</p>
             </div>
             @if (r.canDeliver) {
-              <button hlmBtn size="sm" (click)="markDelivered(r.order)"><ng-icon name="tablerTruckDelivery" class="mr-1.5" /> Entregar</button>
+              <hlm-popover align="end" [state]="deliverPopover() === r.order.id ? 'open' : 'closed'" (stateChanged)="deliverPopover.set($event === 'open' ? r.order.id : null)">
+                <button hlmPopoverTrigger hlmBtn size="sm"><ng-icon name="tablerTruckDelivery" class="mr-1.5" /> Entregar</button>
+                <hlm-popover-content *hlmPopoverPortal class="w-80">
+                  <hlm-popover-header>
+                    <h3 hlmPopoverTitle>¿Confirmar entrega de {{ r.order.number }}?</h3>
+                    <p hlmPopoverDescription>Se registrará la entrega a {{ r.order.customerName }}. Esta acción cierra el despacho del pedido.</p>
+                  </hlm-popover-header>
+                  <div class="mt-3 flex justify-end gap-2">
+                    <button hlmBtn variant="outline" size="sm" (click)="deliverPopover.set(null)">Cancelar</button>
+                    <button hlmBtn size="sm" (click)="markDelivered(r.order)">Entregar</button>
+                  </div>
+                </hlm-popover-content>
+              </hlm-popover>
             } @else {
               <app-status-badge label="No entregar" tone="danger" />
             }

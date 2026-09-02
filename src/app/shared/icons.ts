@@ -68,6 +68,12 @@ import {
   tablerUserPlus,
   tablerUsers,
   tablerX,
+  tablerPencil,
+  tablerEye,
+  tablerZoomIn,
+  tablerExternalLink,
+  tablerFileInvoice,
+  tablerCalendarDollar,
 } from '@ng-icons/tabler-icons';
 
 /** Curated set of Tabler icons registered once at the app root — every component can then use <ng-icon name="..."> without its own providers. Emoji are reserved for the App Launcher's app icons only. */
@@ -141,4 +147,10 @@ export const APP_ICONS = {
   tablerUserPlus,
   tablerUsers,
   tablerX,
+  tablerPencil,
+  tablerEye,
+  tablerZoomIn,
+  tablerExternalLink,
+  tablerFileInvoice,
+  tablerCalendarDollar,
 };
