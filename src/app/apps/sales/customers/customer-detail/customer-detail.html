@@ -91,10 +91,10 @@
       <div hlmCard class="p-4 text-sm">
         <h3 class="mb-3 text-sm font-semibold">Condiciones comerciales</h3>
         <dl class="grid grid-cols-[130px_1fr] gap-y-2">
-          <dt class="text-muted-foreground">Modalidad</dt><dd>{{ modeLabel(c.paymentMode) }}</dd>
+          <dt class="text-muted-foreground">Modalidad</dt><dd>{{ modesLabel() }}</dd>
           <dt class="text-muted-foreground">Moneda</dt><dd>{{ c.currency }}</dd>
           <dt class="text-muted-foreground">Condición de pago</dt><dd>{{ c.paymentTerms }}</dd>
-          @if (c.paymentMode === 'credit') {
+          @if ((c.paymentModes ?? []).includes('credit') || c.paymentMode === 'credit') {
             <dt class="text-muted-foreground">Crédito</dt>
             <dd class="tabular-nums" [class.text-destructive]="creditOver()" [class.font-medium]="creditOver()">
               {{ c.currency }} {{ (c.creditUsed ?? 0) | number: '1.2-2' }} / {{ (c.creditLimit ?? 0) | number: '1.2-2' }}

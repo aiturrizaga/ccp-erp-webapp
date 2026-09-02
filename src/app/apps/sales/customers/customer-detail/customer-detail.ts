@@ -42,6 +42,11 @@ export class CustomerDetail {
   });
 
   protected modeLabel = (m?: keyof typeof CUSTOMER_PAYMENT_MODE_LABEL) => (m ? CUSTOMER_PAYMENT_MODE_LABEL[m] : '—');
+  protected modesLabel = (): string => {
+    const c = this.customer();
+    const modes = c?.paymentModes ?? (c?.paymentMode ? [c.paymentMode] : []);
+    return modes.length ? modes.map((m) => CUSTOMER_PAYMENT_MODE_LABEL[m]).join(' · ') : '—';
+  };
   protected contactTypeLabel = (t?: ContactType) => (t ? CONTACT_TYPE_LABEL[t] : '—');
   protected contactTypeToString = (v: string) => CONTACT_TYPE_LABEL[v as ContactType] ?? v;
 

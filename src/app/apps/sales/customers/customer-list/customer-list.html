@@ -39,10 +39,16 @@
 <ng-template #cellTpl let-row let-key="key">
   @switch (key) {
     @case ('paymentMode') {
-      <app-status-badge [label]="modeLabel(row.paymentMode)" [tone]="row.paymentMode === 'credit' ? 'info' : 'neutral'" />
+      <span class="flex flex-wrap gap-1">
+        @for (m of customerModes(row); track m) {
+          <app-status-badge [label]="modeLabel(m)" [tone]="m === 'credit' ? 'info' : 'neutral'" />
+        } @empty {
+          <span class="text-muted-foreground">—</span>
+        }
+      </span>
     }
     @case ('credit') {
-      @if (row.paymentMode === 'credit') {
+      @if (customerModes(row).includes('credit')) {
         <span class="tabular-nums" [class.text-destructive]="creditOver(row)" [class.font-medium]="creditOver(row)">
           {{ row.currency }} {{ (row.creditUsed ?? 0) | number: '1.0-0' }} / {{ (row.creditLimit ?? 0) | number: '1.0-0' }}
         </span>

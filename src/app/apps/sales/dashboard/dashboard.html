@@ -4,6 +4,56 @@
     <p class="text-muted-foreground text-sm">Vista general de Ventas — cotizaciones, pedidos, producción y cobranza al contado.</p>
   </div>
 
+  <div hlmCard class="p-3">
+    <div class="flex flex-wrap items-end gap-3">
+      <div class="flex min-w-32 flex-col gap-1">
+        <label class="text-muted-foreground text-[11px] font-medium uppercase">Mes</label>
+        <hlm-select class="block w-40" [value]="month()" (valueChange)="month.set($event ?? 'all')" [itemToString]="monthToString">
+          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Todos" /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            <hlm-select-item value="all">Todos</hlm-select-item>
+            @for (m of monthOptions; track m.value) { <hlm-select-item [value]="m.value">{{ m.label }}</hlm-select-item> }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-muted-foreground text-[11px] font-medium uppercase">Desde</label>
+        <input hlmInput type="date" class="w-40" [ngModel]="dateFrom()" (ngModelChange)="dateFrom.set($event)" />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label class="text-muted-foreground text-[11px] font-medium uppercase">Hasta</label>
+        <input hlmInput type="date" class="w-40" [ngModel]="dateTo()" (ngModelChange)="dateTo.set($event)" />
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-muted-foreground text-[11px] font-medium uppercase">Cliente</label>
+        <hlm-select class="block w-64" [value]="customerName_()" (valueChange)="customerName_.set($event ?? 'all')" [itemToString]="customerToString">
+          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Todos" /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            <hlm-select-item value="all">Todos</hlm-select-item>
+            @for (c of customerOptions(); track c.value) { <hlm-select-item [value]="c.value">{{ c.label }}</hlm-select-item> }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+
+      <div class="flex flex-col gap-1">
+        <label class="text-muted-foreground text-[11px] font-medium uppercase">Orden de pedido</label>
+        <hlm-select class="block w-64" [value]="orderNumber()" (valueChange)="orderNumber.set($event ?? 'all')" [itemToString]="orderToString">
+          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Todas" /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            <hlm-select-item value="all">Todas</hlm-select-item>
+            @for (o of orderOptions(); track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+
+      @if (activeFilters() > 0) {
+        <button hlmBtn size="sm" variant="ghost" (click)="clearFilters()">Limpiar ({{ activeFilters() }})</button>
+      }
+    </div>
+  </div>
+
   <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
     <app-stat-card label="Cotizaciones por responder" [value]="pendingQuotations().length + ''" hint="enviadas" />
     <app-stat-card label="Ventas confirmadas" [value]="confirmedOrders() + ''" hint="pedidos confirmados" />

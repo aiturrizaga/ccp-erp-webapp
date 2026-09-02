@@ -69,8 +69,9 @@ export class OrderCreate {
 
   protected readonly customerToString = (v: string) => salesCustomers().find((c) => c.id === v)?.legalName ?? v;
   protected readonly modeLabel = computed(() => {
-    const m = this.customer()?.paymentMode;
-    return m ? CUSTOMER_PAYMENT_MODE_LABEL[m] : '—';
+    const c = this.customer();
+    const modes = c?.paymentModes ?? (c?.paymentMode ? [c.paymentMode] : []);
+    return modes.length ? modes.map((m) => CUSTOMER_PAYMENT_MODE_LABEL[m]).join(' · ') : '—';
   });
 
   protected onCustomerChange(id: string): void {

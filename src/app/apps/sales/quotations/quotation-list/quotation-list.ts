@@ -1,8 +1,10 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NgIcon } from '@ng-icons/core';
 import { HlmButtonImports } from '@ui/button';
+import { HlmInputImports } from '@ui/input';
 import { HlmCheckboxImports } from '@ui/checkbox';
 import { DataTable, DataTableColumn } from '@shared/components/data-table/data-table';
 import { DataGrid } from '@shared/components/data-grid/data-grid';
@@ -33,7 +35,7 @@ const GROUP_BY_OPTIONS: SelectFilterOption[] = [
 
 @Component({
   selector: 'app-quotation-list',
-  imports: [NgIcon, ...HlmButtonImports, ...HlmCheckboxImports, DataTable, DataGrid, DataKanban, ListToolbar, ListPagination, StatusBadge, DecimalPipe],
+  imports: [FormsModule, NgIcon, ...HlmButtonImports, ...HlmInputImports, ...HlmCheckboxImports, DataTable, DataGrid, DataKanban, ListToolbar, ListPagination, StatusBadge, DecimalPipe],
   templateUrl: './quotation-list.html',
 })
 export class QuotationList {
@@ -47,6 +49,8 @@ export class QuotationList {
 
   protected readonly statusFilter = signal<Set<SalesQuotationStatus>>(new Set());
   protected readonly currencyFilter = signal<Set<Currency>>(new Set());
+  protected readonly dateFrom = signal('');
+  protected readonly dateTo = signal('');
 
   protected readonly views: ListViewOption[] = [LIST_VIEW_OPTIONS.list, LIST_VIEW_OPTIONS.grid, LIST_VIEW_OPTIONS.kanban];
   protected readonly groupByOptions = GROUP_BY_OPTIONS;
@@ -65,19 +69,40 @@ export class QuotationList {
     { key: 'status', header: 'Estado', width: '140px' },
   ];
 
-  protected readonly filteredRows = computed(() => {
+  /** Rows matching every filter EXCEPT status — used to count how many fall in each status. */
+  protected readonly baseRows = computed(() => {
     const term = this.search().trim().toLowerCase();
-    const statuses = this.statusFilter();
     const currencies = this.currencyFilter();
-    return salesQuotations().filter((q) => {
-      const matchesSearch = !term || q.number.toLowerCase().includes(term) || q.customerName.toLowerCase().includes(term);
-      const matchesStatus = statuses.size === 0 || statuses.has(q.status);
-      const matchesCurrency = currencies.size === 0 || currencies.has(q.currency);
-      return matchesSearch && matchesStatus && matchesCurrency;
-    }).reverse();
+    const from = this.dateFrom();
+    const to = this.dateTo();
+    return salesQuotations()
+      .filter((q) => {
+        const matchesSearch = !term || q.number.toLowerCase().includes(term) || q.customerName.toLowerCase().includes(term);
+        const matchesCurrency = currencies.size === 0 || currencies.has(q.currency);
+        const matchesFrom = !from || q.issuedAt >= from;
+        const matchesTo = !to || q.issuedAt <= to;
+        return matchesSearch && matchesCurrency && matchesFrom && matchesTo;
+      })
+      .reverse();
   });
 
-  protected readonly filterCount = computed(() => this.statusFilter().size + this.currencyFilter().size);
+  protected readonly filteredRows = computed(() => {
+    const statuses = this.statusFilter();
+    return this.baseRows().filter((q) => statuses.size === 0 || statuses.has(q.status));
+  });
+
+  /** Counts per status (over baseRows) + the "Todos" total, for the badge row. */
+  protected readonly statusCounts = computed(() => {
+    const counts: Record<string, number> = { all: this.baseRows().length };
+    for (const s of STATUS_OPTIONS) counts[s.value] = 0;
+    for (const q of this.baseRows()) counts[q.status] = (counts[q.status] ?? 0) + 1;
+    return counts;
+  });
+  protected count = (status: string): number => this.statusCounts()[status] ?? 0;
+
+  protected readonly filterCount = computed(
+    () => this.statusFilter().size + this.currencyFilter().size + (this.dateFrom() ? 1 : 0) + (this.dateTo() ? 1 : 0),
+  );
 
   protected readonly groupedSections = computed<{ label: string; rows: SalesQuotation[] }[] | null>(() => {
     const field = this.groupBy();
@@ -106,9 +131,28 @@ export class QuotationList {
     this.page.set(1);
   }
 
+  /** "Todos" clears the status filter; a specific status toggles it. */
+  protected selectStatusBadge(value: string): void {
+    if (value === 'all') this.statusFilter.set(new Set());
+    else this.toggleStatusFilter(value as SalesQuotationStatus);
+    this.page.set(1);
+  }
+
+  protected dotClass(tone: Tone): string {
+    return {
+      neutral: 'bg-muted-foreground',
+      info: 'bg-blue-500',
+      success: 'bg-emerald-500',
+      warning: 'bg-amber-500',
+      danger: 'bg-red-500',
+    }[tone];
+  }
+
   protected clearFilters(): void {
     this.statusFilter.set(new Set());
     this.currencyFilter.set(new Set());
+    this.dateFrom.set('');
+    this.dateTo.set('');
   }
 
   private toggled<T>(set: Set<T>, value: T): Set<T> {

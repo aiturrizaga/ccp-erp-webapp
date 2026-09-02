@@ -40,12 +40,17 @@ export class CustomerList {
 
   protected readonly rows = computed(() => {
     const term = this.search().trim().toLowerCase();
-    const modes = this.modeFilter();
+    const filter = this.modeFilter();
     return salesCustomers().filter((c) => {
       const matchesSearch = !term || c.legalName.toLowerCase().includes(term) || c.taxId.includes(term);
-      return matchesSearch && (modes.size === 0 || (c.paymentMode && modes.has(c.paymentMode)));
+      const modes = this.customerModes(c);
+      return matchesSearch && (filter.size === 0 || modes.some((m) => filter.has(m)));
     });
   });
+
+  protected customerModes(c: Customer): CustomerPaymentMode[] {
+    return c.paymentModes ?? (c.paymentMode ? [c.paymentMode] : []);
+  }
 
   protected readonly paginatedRows = computed(() => {
     const start = (this.page() - 1) * this.pageSize();

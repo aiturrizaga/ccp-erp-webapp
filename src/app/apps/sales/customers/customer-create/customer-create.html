@@ -103,13 +103,15 @@
     <div hlmCard class="flex flex-col gap-4 p-4">
       <h3 class="text-sm font-semibold">Condiciones comerciales</h3>
       <div class="flex flex-col gap-1.5">
-        <label hlmLabel>Modalidad de venta</label>
-        <hlm-select class="block w-full" [value]="paymentMode()" (valueChange)="paymentMode.set($any($event))" [itemToString]="modeToString">
-          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
-          <hlm-select-content *hlmSelectPortal>
-            @for (o of modeOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
-          </hlm-select-content>
-        </hlm-select>
+        <label hlmLabel>Modalidad de venta <span class="text-muted-foreground font-normal">— una o más</span></label>
+        <div class="flex flex-col gap-1.5">
+          @for (o of modeOptions; track o.value) {
+            <label class="flex cursor-pointer items-center gap-2 text-sm">
+              <input type="checkbox" [checked]="hasMode(o.value)" (change)="toggleMode(o.value)" />
+              {{ o.label }}
+            </label>
+          }
+        </div>
       </div>
       <div class="flex flex-col gap-1.5">
         <label hlmLabel>Moneda</label>
@@ -121,14 +123,18 @@
         </hlm-select>
         <p class="text-muted-foreground text-xs">La moneda del cliente fija la moneda de sus pedidos.</p>
       </div>
-      @if (paymentMode() === 'credit') {
+      @if (hasMode('credit')) {
         <div class="flex flex-col gap-1.5">
           <label hlmLabel for="cl">Límite de crédito</label>
           <input hlmInput id="cl" type="number" min="0" [ngModel]="creditLimit()" (ngModelChange)="creditLimit.set(+$event)" />
           <p class="text-muted-foreground text-xs">El convenio de crédito se formaliza luego en Cobranzas.</p>
         </div>
-      } @else {
+      }
+      @if (hasMode('cash')) {
         <p class="text-muted-foreground rounded-md border bg-muted/40 px-3 py-2 text-xs">Venta al contado: cada pedido pedirá la OC del cliente y el voucher del adelanto del 50% para que Cobranzas valide.</p>
+      }
+      @if (paymentModes().size === 0) {
+        <p class="text-destructive text-xs">Selecciona al menos una modalidad.</p>
       }
     </div>
 

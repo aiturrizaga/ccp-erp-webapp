@@ -33,6 +33,14 @@
         }
       </div>
     </div>
+    <div>
+      <p class="text-muted-foreground mb-1.5 text-xs font-medium">Rango de fechas (emisión)</p>
+      <div class="flex items-center gap-2">
+        <input hlmInput type="date" class="w-36" [ngModel]="dateFrom()" (ngModelChange)="dateFrom.set($event)" />
+        <span class="text-muted-foreground text-xs">a</span>
+        <input hlmInput type="date" class="w-36" [ngModel]="dateTo()" (ngModelChange)="dateTo.set($event)" />
+      </div>
+    </div>
     @if (filterCount() > 0) {
       <button hlmBtn variant="ghost" size="sm" class="justify-start gap-1.5" (click)="clearFilters()">
         <ng-icon name="tablerFilter" />
@@ -48,6 +56,33 @@
     </button>
   </div>
 </app-list-toolbar>
+
+@if (view() !== 'kanban') {
+  <div class="mb-4 flex flex-wrap items-center gap-2">
+    <button
+      type="button"
+      class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors"
+      [class]="statusFilter().size === 0 ? 'border-primary bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'"
+      (click)="selectStatusBadge('all')"
+    >
+      Todos
+      <span class="tabular-nums font-semibold">{{ count('all') }}</span>
+    </button>
+
+    @for (s of statusOptions; track s.value) {
+      <button
+        type="button"
+        class="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors"
+        [class]="statusFilter().has(s.value) ? 'border-primary bg-primary/10 text-foreground' : 'text-muted-foreground hover:bg-muted'"
+        (click)="selectStatusBadge(s.value)"
+      >
+        <span class="size-2 rounded-full" [class]="dotClass(statusTone(s.value))"></span>
+        {{ s.label }}
+        <span class="tabular-nums font-semibold">{{ count(s.value) }}</span>
+      </button>
+    }
+  </div>
+}
 
 @if (view() === 'kanban') {
   <app-data-kanban

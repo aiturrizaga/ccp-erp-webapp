@@ -77,7 +77,8 @@ export interface Opportunity {
 export type CustomerDocType = 'RUC' | 'DNI';
 
 /** How CCP sells to this customer. `credit` clients pass straight through while under their limit;
- *  `cash` clients must upload the PO + a 50% advance voucher for Cobranzas to validate first. */
+ *  `cash` clients must upload the PO + a 50% advance voucher for Cobranzas to validate first.
+ *  A customer can be enabled for one or both (see `Customer.paymentModes`). */
 export type CustomerPaymentMode = 'credit' | 'cash';
 
 export const CUSTOMER_PAYMENT_MODE_LABEL: Record<CustomerPaymentMode, string> = {
@@ -101,6 +102,10 @@ export interface Customer {
   isRetentionAgent?: boolean;
   /** Domicilio fiscal from RUC; `address` stays the delivery/reference address. */
   fiscalAddress?: string;
+  /** Modalidades de venta habilitadas para el cliente (una o ambas). */
+  paymentModes?: CustomerPaymentMode[];
+  /** Modalidad principal — derivada de `paymentModes` (credit si está habilitado, si no cash). Se
+   *  conserva para el código que decide con un solo valor. */
   paymentMode?: CustomerPaymentMode;
   creditLimit?: number;
   creditUsed?: number;

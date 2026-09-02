@@ -45,7 +45,8 @@ export class CustomerCreate {
   protected readonly tradeName = signal('');
   protected readonly fiscalAddress = signal('');
   protected readonly isRetentionAgent = signal(false);
-  protected readonly paymentMode = signal<CustomerPaymentMode>('credit');
+  /** Una o más modalidades habilitadas para el cliente. */
+  protected readonly paymentModes = signal<Set<CustomerPaymentMode>>(new Set<CustomerPaymentMode>(['credit']));
   protected readonly currency = signal<Currency>('PEN');
   protected readonly creditLimit = signal(0);
 
@@ -69,16 +70,26 @@ export class CustomerCreate {
     { value: 'PEN', label: 'Soles (PEN)' },
     { value: 'USD', label: 'Dólares (USD)' },
   ];
-  protected readonly modeOptions = [
+  protected readonly modeOptions: { value: CustomerPaymentMode; label: string }[] = [
     { value: 'credit', label: CUSTOMER_PAYMENT_MODE_LABEL.credit },
     { value: 'cash', label: CUSTOMER_PAYMENT_MODE_LABEL.cash },
   ];
 
-  protected readonly canSubmit = computed(() => this.docNumber().trim().length >= 8 && this.legalName().trim().length > 0);
+  protected readonly canSubmit = computed(
+    () => this.docNumber().trim().length >= 8 && this.legalName().trim().length > 0 && this.paymentModes().size > 0,
+  );
+
+  protected hasMode = (m: CustomerPaymentMode) => this.paymentModes().has(m);
+  protected toggleMode(m: CustomerPaymentMode): void {
+    this.paymentModes.update((set) => {
+      const next = new Set(set);
+      next.has(m) ? next.delete(m) : next.add(m);
+      return next;
+    });
+  }
 
   protected contactTypeToString = (v: string): string => CONTACT_TYPE_LABEL[v as ContactType] ?? v;
   protected currencyToString = (v: string): string => this.currencyOptions.find((o) => o.value === v)?.label ?? v;
-  protected modeToString = (v: string): string => this.modeOptions.find((o) => o.value === v)?.label ?? v;
 
   /** Called on every keystroke — normalizes to digits, then auto-triggers the lookup when complete. */
   protected onDocNumberChange(raw: string): void {
@@ -146,19 +157,23 @@ export class CustomerCreate {
   protected submit(): void {
     if (!this.canSubmit()) return;
     this.submitPopover.set('closed');
+    const modes = [...this.paymentModes()];
+    const isCredit = modes.includes('credit');
+    const isCash = modes.includes('cash');
     const customer = createCustomer({
       legalName: this.legalName().trim().toUpperCase(),
       taxId: this.docNumber().trim(),
       address: this.fiscalAddress().trim(),
-      paymentTerms: this.paymentMode() === 'cash' ? 'CONTADO' : `CREDITO A ${30} DIAS`,
+      paymentTerms: isCredit && isCash ? 'CONTADO / CREDITO A 30 DIAS' : isCredit ? 'CREDITO A 30 DIAS' : 'CONTADO',
       currency: this.currency(),
       commercialTerms: '',
       docType: this.docType(),
       tradeName: this.tradeName().trim() || undefined,
       isRetentionAgent: this.isRetentionAgent(),
       fiscalAddress: this.fiscalAddress().trim() || undefined,
-      paymentMode: this.paymentMode(),
-      creditLimit: this.paymentMode() === 'credit' ? this.creditLimit() : 0,
+      paymentModes: modes,
+      paymentMode: isCredit ? 'credit' : 'cash',
+      creditLimit: isCredit ? this.creditLimit() : 0,
       creditUsed: 0,
       lastSyncedAt: '2026-09-01',
     });
