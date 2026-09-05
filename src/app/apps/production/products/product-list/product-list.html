@@ -14,12 +14,16 @@
       <div class="flex flex-col gap-1.5">
         @for (opt of statusOptions; track opt.value) {
           <label class="flex cursor-pointer items-center gap-2 text-sm">
-            <hlm-checkbox [checked]="statusFilter().has(opt.value)" (checkedChange)="toggleStatusFilter(opt.value)" />
+            <hlm-checkbox
+              [checked]="statusFilter().has(opt.value)"
+              (checkedChange)="toggleStatusFilter(opt.value)"
+            />
             {{ opt.label }}
           </label>
         }
       </div>
     </div>
+
     @if (filterCount() > 0) {
       <button hlmBtn variant="ghost" size="sm" class="justify-start gap-1.5" (click)="clearFilters()">
         <ng-icon name="tablerFilter" />
@@ -30,29 +34,191 @@
 </app-list-toolbar>
 
 @if (view() === 'list') {
-  <app-data-table [columns]="columns" [rows]="paginatedRows()" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron productos." [cellTemplate]="cellTpl" />
+  <app-data-table
+    [columns]="columns"
+    [rows]="paginatedRows()"
+    [rowClickable]="true"
+    (rowClick)="openDetail($event)"
+    emptyMessage="No se encontraron productos."
+    [cellTemplate]="cellTpl"
+  />
 } @else {
-  <app-data-grid [rows]="paginatedRows()" [cardTemplate]="cardTpl" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron productos." />
+  <app-data-grid
+    [rows]="paginatedRows()"
+    [cardTemplate]="cardTpl"
+    [rowClickable]="true"
+    (rowClick)="openDetail($event)"
+    emptyMessage="No se encontraron productos."
+  />
 }
-<app-list-pagination [total]="filteredRows().length" [(page)]="page" [(pageSize)]="pageSize" />
+
+<app-list-pagination
+  [total]="filteredRows().length"
+  [(page)]="page"
+  [(pageSize)]="pageSize"
+/>
 
 <ng-template #cellTpl let-row let-key="key">
   @switch (key) {
     @case ('status') {
-      <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
+      <app-status-badge
+        [label]="statusLabel(row.status)"
+        [tone]="statusTone(row.status)"
+      />
     }
+
     @case ('actions') {
-      <div class="flex items-center gap-2" (click)="$event.stopPropagation()">
-        <button hlmBtn variant="outline" size="sm" class="gap-1.5" (click)="openRecipe($event, row)">
-          <ng-icon name="tablerFlask" />
-          {{ productBom(row) ? 'Ver receta' : 'Crear receta' }}
-        </button>
-        <button hlmBtn variant="ghost" size="sm" class="gap-1.5" (click)="openRouting($event, row)">
-          <ng-icon name="tablerRoute" />
-          Ruta
-        </button>
+      <div class="flex items-center" (click)="$event.stopPropagation()">
+        <hlm-dialog>
+          <button
+            hlmDialogTrigger
+            hlmBtn
+            variant="outline"
+            size="sm"
+            class="gap-1.5"
+            (click)="prepareRecipeModal($event, row)"
+          >
+            <ng-icon name="tablerFlask" />
+            Ver receta y ruta
+          </button>
+
+          <hlm-dialog-content
+            *brnDialogContent="let ctx"
+            class="w-[95vw] sm:max-w-5xl max-h-[90vh] overflow-hidden"
+          >
+            @if (selectedProduct(); as product) {
+              <hlm-dialog-header>
+                <h3 hlmDialogTitle>Receta y ruta de operaciones</h3>
+                <p hlmDialogDescription>{{ product.code }} · {{ product.name }}</p>
+              </hlm-dialog-header>
+
+              @if (selectedBom(); as bom) {
+                <div class="mt-4 max-h-[72vh] overflow-y-auto pr-2">
+                  <div class="mb-4 grid grid-cols-2 gap-3 rounded-lg border bg-muted/20 p-4 md:grid-cols-4">
+                    <div>
+                      <p class="text-muted-foreground text-xs">Producto</p>
+                      <p class="text-sm font-medium">{{ product.code }}</p>
+                    </div>
+                    <div>
+                      <p class="text-muted-foreground text-xs">Versión receta</p>
+                      <p class="text-sm font-medium">{{ bom.version }}</p>
+                    </div>
+                    <div>
+                      <p class="text-muted-foreground text-xs">Vigente desde</p>
+                      <p class="text-sm font-medium">{{ bom.effectiveFrom }}</p>
+                    </div>
+                    <div>
+                      <p class="text-muted-foreground text-xs">Estado</p>
+                      <p class="text-sm font-medium">{{ bom.status }}</p>
+                    </div>
+                  </div>
+
+                  <div class="mb-5 rounded-lg border">
+                    <div class="border-b bg-muted/30 px-4 py-3">
+                      <h4 class="text-sm font-semibold">Receta / Componentes</h4>
+                      <p class="text-muted-foreground mt-0.5 text-xs">
+                        Materiales requeridos para fabricar este producto.
+                      </p>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-sm">
+                        <thead class="text-muted-foreground border-b text-xs">
+                          <tr>
+                            <th class="px-4 py-2 text-start font-medium">Artículo</th>
+                            <th class="px-4 py-2 text-start font-medium">Tipo</th>
+                            <th class="px-4 py-2 text-end font-medium">Cantidad</th>
+                            <th class="px-4 py-2 text-end font-medium">Merma</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                          @for (component of bom.components; track component.itemId) {
+                            <tr>
+                              <td class="px-4 py-3">{{ itemLabel(component.itemId) }}</td>
+                              <td class="px-4 py-3">
+                                {{ component.isSupply ? 'Suministro' : 'Materia prima' }}
+                              </td>
+                              <td class="px-4 py-3 text-end">
+                                {{ component.quantity }} {{ component.unitOfMeasure }}
+                              </td>
+                              <td class="px-4 py-3 text-end">{{ component.wastePct }}%</td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <div class="rounded-lg border">
+                    <div class="border-b bg-muted/30 px-4 py-3">
+                      <div class="flex items-center gap-2">
+                        <ng-icon name="tablerRoute" />
+                        <h4 class="text-sm font-semibold">Ruta de operaciones</h4>
+                      </div>
+                      <p class="text-muted-foreground mt-0.5 text-xs">
+                        Flujo que debe seguir el producto durante su fabricación.
+                      </p>
+                    </div>
+
+                    <div class="overflow-x-auto">
+                      <table class="w-full text-sm">
+                        <thead class="text-muted-foreground border-b text-xs">
+                          <tr>
+                            <th class="w-16 px-4 py-2 text-start font-medium">#</th>
+                            <th class="px-4 py-2 text-start font-medium">Operación</th>
+                            <th class="px-4 py-2 text-start font-medium">Centro de trabajo</th>
+                            <th class="px-4 py-2 text-end font-medium">Duración</th>
+                            <th class="px-4 py-2 text-start font-medium">Requiere</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                          @for (op of bom.routing; track op.id) {
+                            <tr>
+                              <td class="px-4 py-3 font-semibold">{{ op.sequence }}</td>
+                              <td class="px-4 py-3 font-medium">{{ op.name }}</td>
+                              <td class="px-4 py-3">{{ workCenterLabel(op.workCenterId) }}</td>
+                              <td class="px-4 py-3 text-end">{{ op.standardDurationMin }} min</td>
+                              <td class="px-4 py-3 text-xs">
+                                @if (op.requiresMold) { <span>Molde</span> }
+                                @if (op.requiresStartEnd) { <span> · Inicio/fin</span> }
+                                @if (op.qualityProtocolIds?.length) { <span> · Calidad</span> }
+                                @if (!op.requiresMold && !op.requiresStartEnd && !op.qualityProtocolIds?.length) {
+                                  <span class="text-muted-foreground">—</span>
+                                }
+                              </td>
+                            </tr>
+                          } @empty {
+                            <tr>
+                              <td colspan="5" class="text-muted-foreground px-4 py-8 text-center">
+                                Esta receta todavía no tiene una ruta de operaciones definida.
+                              </td>
+                            </tr>
+                          }
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              } @else {
+                <div class="my-8 flex flex-col items-center justify-center rounded-lg border border-dashed px-6 py-10 text-center">
+                  <ng-icon name="tablerFlask" size="36" class="text-muted-foreground mb-3" />
+                  <h4 class="text-base font-semibold">Este producto no tiene receta</h4>
+                  <p class="text-muted-foreground mt-1 max-w-md text-sm">
+                    Primero debes crear la receta del producto. Dentro de ella podrás
+                    definir sus componentes y la ruta de operaciones de fabricación.
+                  </p>
+                  <button hlmBtn class="mt-5 gap-2" (click)="createRecipe()">
+                    <ng-icon name="tablerPlus" />
+                    Crear receta
+                  </button>
+                </div>
+              }
+            }
+          </hlm-dialog-content>
+        </hlm-dialog>
       </div>
     }
+
     @default {
       {{ row[key] }}
     }
@@ -62,7 +228,13 @@
 <ng-template #cardTpl let-row>
   <div class="flex items-start justify-between gap-2">
     <p class="text-sm font-medium">{{ row.name }}</p>
-    <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
+    <app-status-badge
+      [label]="statusLabel(row.status)"
+      [tone]="statusTone(row.status)"
+    />
   </div>
-  <p class="text-muted-foreground mt-1 text-xs">{{ row.code }} · v{{ row.version }}</p>
+
+  <p class="text-muted-foreground mt-1 text-xs">
+    {{ row.code }} · v{{ row.version }}
+  </p>
 </ng-template>
