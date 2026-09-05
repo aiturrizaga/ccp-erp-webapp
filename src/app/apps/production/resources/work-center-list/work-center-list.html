@@ -1,0 +1,14 @@
+<app-list-toolbar [(search)]="search" searchPlaceholder="Buscar por código o nombre de centro de trabajo..." actionLabel="Nuevo centro de trabajo" (action)="onNew()" />
+
+<app-data-table [columns]="columns" [rows]="rows()" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron centros de trabajo." [cellTemplate]="cellTpl" />
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('capacity') {
+      {{ row.capacityPerDay }} {{ row.unitOfMeasure }}
+    }
+    @default {
+      {{ row[key] }}
+    }
+  }
+</ng-template>

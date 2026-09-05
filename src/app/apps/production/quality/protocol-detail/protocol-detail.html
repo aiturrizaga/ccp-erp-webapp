@@ -1,0 +1,58 @@
+@if (protocol(); as p) {
+  <app-entity-header
+    [title]="p.name"
+    [subtitle]="'v' + p.version + (p.productFamily ? ' · ' + p.productFamily : '')"
+    [statusLabel]="statusLabel()"
+    [statusTone]="statusTone()"
+    [crumbs]="[{ label: 'Protocolos de calidad', link: '/apps/production/quality/protocols' }, { label: p.name }]"
+  >
+    <div actions>
+      <a [routerLink]="['/apps/production/quality/protocols', p.id, 'edit']" hlmBtn variant="outline" size="sm">Editar</a>
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.6fr_1fr]">
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Campos del protocolo</h3>
+      <table class="w-full text-sm">
+        <thead class="text-muted-foreground border-b text-xs">
+          <tr>
+            <th class="py-1.5 text-start font-medium">Campo</th>
+            <th class="py-1.5 text-start font-medium">Tipo</th>
+            <th class="py-1.5 text-start font-medium">Requerido</th>
+            <th class="py-1.5 text-start font-medium">Rango / valor esperado</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          @for (field of p.fields; track field.id) {
+            <tr>
+              <td class="py-2">{{ field.label }}</td>
+              <td class="py-2">{{ field.dataType }}</td>
+              <td class="py-2">{{ field.required ? 'Sí' : 'No' }}</td>
+              <td class="py-2 text-xs">
+                @if (field.minRange != null || field.maxRange != null) {
+                  {{ field.minRange ?? '—' }} – {{ field.maxRange ?? '—' }} {{ field.unit }}
+                } @else if (field.expectedValue) {
+                  {{ field.expectedValue }}
+                } @else {
+                  —
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Se aplica en</h3>
+      <ul class="flex flex-wrap gap-2 text-sm">
+        @for (op of p.appliesToOperations; track op) {
+          <li class="rounded-full border px-2.5 py-1 text-xs">{{ op }}</li>
+        }
+      </ul>
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerShieldCheck" title="Protocolo no encontrado" />
+}

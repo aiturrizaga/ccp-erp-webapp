@@ -27,7 +27,7 @@ import {
 } from '@core/models';
 import { AuthState } from '@shell/auth-state';
 import { PurchasingState } from '../../purchasing-state';
-import { InvoicingState } from '../../../invoicing/invoicing-state';
+import { InvoicingState } from '../../../finance/invoicing-state';
 import { WarehouseOpsState } from '../../../inventory/warehouse-ops-state';
 
 const IGV_RATE = 0.18;
@@ -209,6 +209,6 @@ export class PurchaseOrderDetail {
 
     this.invoicingState.addInvoice(invoice);
     toast.success(`Factura ${invoice.number} registrada`, { description: `${po.currency} ${total.toFixed(2)}` });
-    this.router.navigate(['/apps/invoicing/invoices', invoice.id]);
+    this.router.navigate(['/apps/finance/invoices', invoice.id]);
   }
 }

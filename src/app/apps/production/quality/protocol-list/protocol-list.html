@@ -1,0 +1,20 @@
+<app-list-toolbar [(search)]="search" searchPlaceholder="Buscar por nombre de protocolo..." actionLabel="Nuevo protocolo" (action)="onNew()" />
+
+<app-data-table [columns]="columns" [rows]="rows()" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron protocolos." [cellTemplate]="cellTpl" />
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('appliesTo') {
+      {{ appliesTo(row) }}
+    }
+    @case ('fieldCount') {
+      {{ row.fields.length }}
+    }
+    @case ('status') {
+      <app-status-badge [label]="statusLabel(row)" [tone]="statusTone(row)" />
+    }
+    @default {
+      {{ row[key] }}
+    }
+  }
+</ng-template>

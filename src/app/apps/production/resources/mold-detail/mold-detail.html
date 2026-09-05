@@ -1,0 +1,51 @@
+@if (mold(); as m) {
+  <app-entity-header
+    [title]="m.code"
+    [subtitle]="typeLabel() + ' · ' + m.plant + ' · ' + m.location"
+    [statusLabel]="conditionLabel()"
+    [statusTone]="conditionTone()"
+    [crumbs]="[{ label: 'Moldes', link: '/apps/production/molds' }, { label: m.code }]"
+  >
+    <div actions>
+      <a [routerLink]="['/apps/production/molds', m.id, 'edit']" hlmBtn variant="outline" size="sm">Editar</a>
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.4fr_1fr]">
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Uso acumulado</h3>
+      <div class="mb-2 flex items-center gap-2">
+        <div class="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
+          <div class="h-full rounded-full" [class.bg-primary]="m.estado === 'bueno'" [class.bg-destructive]="m.estado === 'malo'" [style.width.%]="usagePct()"></div>
+        </div>
+        <span class="text-sm font-medium tabular-nums">{{ usagePct() }}%</span>
+      </div>
+      <p class="text-muted-foreground text-xs">{{ m.usageCount }} usos de {{ m.maxUsageCount ?? '—' }} máximos recomendados.</p>
+      @if (m.dimensions || m.acquiredAt) {
+        <dl class="mt-3 grid grid-cols-2 gap-y-1 text-sm">
+          @if (m.dimensions) {
+            <dt class="text-muted-foreground">Dimensiones</dt><dd>{{ m.dimensions }}</dd>
+          }
+          @if (m.acquiredAt) {
+            <dt class="text-muted-foreground">Fecha de alta</dt><dd>{{ m.acquiredAt }}</dd>
+          }
+        </dl>
+      }
+    </div>
+
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Productos compatibles</h3>
+      @if (m.compatibleProductIds.length) {
+        <ul class="divide-y text-sm">
+          @for (productId of m.compatibleProductIds; track productId) {
+            <li class="py-1.5">{{ productLabel(productId) }}</li>
+          }
+        </ul>
+      } @else {
+        <app-empty-state icon="tablerCategory" title="Sin productos asociados" />
+      }
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerStack" title="Molde no encontrado" />
+}

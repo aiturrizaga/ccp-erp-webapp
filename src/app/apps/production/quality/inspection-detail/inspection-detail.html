@@ -1,0 +1,60 @@
+@if (inspection(); as i) {
+  <app-entity-header
+    [title]="i.operationName + ' — ' + i.workSheetId"
+    [subtitle]="protocol()?.name ?? i.protocolId"
+    [statusLabel]="resultLabel()"
+    [statusTone]="resultTone()"
+    [crumbs]="[{ label: 'Inspecciones', link: '/apps/production/quality/inspections' }, { label: i.id }]"
+  >
+    <div actions>
+      <a [routerLink]="['/apps/production/work-sheets', i.workSheetId]" class="text-primary text-sm hover:underline">Ver HT {{ i.workSheetId }}</a>
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.6fr_1fr]">
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Resultados por campo</h3>
+      <table class="w-full text-sm">
+        <thead class="text-muted-foreground border-b text-xs">
+          <tr>
+            <th class="py-1.5 text-start font-medium">Campo</th>
+            <th class="py-1.5 text-start font-medium">Valor</th>
+            <th class="py-1.5 text-start font-medium">Resultado</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          @for (result of i.fieldResults; track result.fieldId) {
+            <tr>
+              <td class="py-2">{{ fieldLabel(result.fieldId) }}</td>
+              <td class="py-2">{{ result.value }}</td>
+              <td class="py-2" [class.text-destructive]="!result.pass">{{ result.pass ? 'Conforme' : 'No conforme' }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+      @if (i.notes) {
+        <p class="text-muted-foreground mt-3 text-xs italic">{{ i.notes }}</p>
+      }
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4 text-sm">
+        <dl class="grid grid-cols-2 gap-y-2">
+          <dt class="text-muted-foreground">Inspeccionado por</dt><dd>{{ i.inspectedBy }}</dd>
+          <dt class="text-muted-foreground">Fecha</dt><dd>{{ i.inspectedAt }}</dd>
+          <dt class="text-muted-foreground">Corrida</dt><dd class="font-mono text-xs">{{ i.runId }}</dd>
+        </dl>
+      </div>
+
+      @if (nonConformity(); as nc) {
+        <div hlmCard class="p-4">
+          <h3 class="mb-2 text-sm font-semibold">No conformidad asociada</h3>
+          <p class="text-sm">{{ nc.reason }}</p>
+          <p class="text-muted-foreground mt-2 text-xs">Disposición: {{ nc.disposition }} · {{ nc.resolved ? 'Resuelta' : 'Abierta' }}</p>
+        </div>
+      }
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerZoomCheck" title="Inspección no encontrada" />
+}

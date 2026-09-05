@@ -1,0 +1,133 @@
+<app-entity-header title="Planificación" subtitle="Gantt y calendario manuales de corridas — sin validación automática de restricciones, solo alertas visuales." [crumbs]="[{ label: 'Producción' }, { label: 'Planificación' }]">
+  <div actions class="flex items-center gap-1 rounded-md border p-0.5">
+    <button hlmBtn size="sm" [variant]="view() === 'gantt' ? 'default' : 'ghost'" (click)="view.set('gantt')">Gantt</button>
+    <button hlmBtn size="sm" [variant]="view() === 'calendar' ? 'default' : 'ghost'" (click)="view.set('calendar')">Calendario</button>
+  </div>
+</app-entity-header>
+
+<ng-template #reassignPopoverContent let-cell>
+  <hlm-popover-header>
+    <h3 hlmPopoverTitle>Reprogramar corrida {{ cell.run.id }}</h3>
+    <p hlmPopoverDescription>{{ cell.workSheetNumber }} · {{ cell.productLabel }}</p>
+  </hlm-popover-header>
+  <div class="flex flex-col gap-2">
+    <div class="grid grid-cols-2 gap-2">
+      <div class="flex flex-col gap-1">
+        <label hlmLabel for="reassign-start">Inicio</label>
+        <input hlmInput id="reassign-start" type="datetime-local" [ngModel]="reassignStart()" (ngModelChange)="reassignStart.set($event)" />
+      </div>
+      <div class="flex flex-col gap-1">
+        <label hlmLabel for="reassign-end">Fin</label>
+        <input hlmInput id="reassign-end" type="datetime-local" [ngModel]="reassignEnd()" (ngModelChange)="reassignEnd.set($event)" />
+      </div>
+    </div>
+    <div class="flex flex-col gap-1">
+      <label hlmLabel for="reassign-machine">Máquina</label>
+      <select id="reassign-machine" class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="reassignMachineId()" (ngModelChange)="reassignMachineId.set($event)">
+        <option value="">Sin asignar</option>
+        @for (m of machines(); track m.id) { <option [value]="m.id">{{ m.name }}</option> }
+      </select>
+    </div>
+    <div class="flex flex-col gap-1">
+      <label hlmLabel for="reassign-mold">Molde</label>
+      <select id="reassign-mold" class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="reassignMoldId()" (ngModelChange)="reassignMoldId.set($event)">
+        <option value="">Sin asignar</option>
+        @for (m of productionState.molds(); track m.id) { <option [value]="m.id">{{ m.code }}</option> }
+      </select>
+    </div>
+    <a [routerLink]="['/apps/production/work-sheets', cell.workSheetId]" class="text-primary text-xs hover:underline">Ver hoja de trabajo {{ cell.workSheetNumber }}</a>
+  </div>
+  <div class="mt-2 flex justify-end gap-2">
+    <button hlmBtn size="sm" (click)="confirmReassign()">Guardar</button>
+  </div>
+</ng-template>
+
+@if (view() === 'gantt') {
+  @if (days().length) {
+    <div hlmCard class="overflow-x-auto p-4">
+      <table class="w-full border-collapse text-xs">
+        <thead>
+          <tr>
+            <th class="text-muted-foreground sticky start-0 z-10 bg-inherit py-1.5 pe-3 text-start font-medium">Máquina</th>
+            @for (day of days(); track day) {
+              <th class="text-muted-foreground min-w-[64px] border-s py-1.5 text-center font-medium">{{ day.slice(5) }}</th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @for (machine of machines(); track machine.id) {
+            <tr class="border-t">
+              <td class="sticky start-0 z-10 bg-inherit py-2 pe-3 font-medium whitespace-nowrap">{{ machine.name }}</td>
+              @for (day of days(); track day) {
+                <td class="min-w-[64px] border-s p-1 align-top">
+                  @for (cell of cellsFor(machine.id, day); track cell.run.id) {
+                    <hlm-popover>
+                      <button
+                        hlmPopoverTrigger
+                        type="button"
+                        class="mb-1 block w-full truncate rounded px-1.5 py-0.5 text-start text-[10px] leading-tight"
+                        [class.bg-primary\/10]="!isDoubleBooked(machine.id, day)"
+                        [class.bg-destructive\/15]="isDoubleBooked(machine.id, day)"
+                        [class.border]="isDoubleBooked(machine.id, day)"
+                        [class.border-destructive]="isDoubleBooked(machine.id, day)"
+                        [title]="cell.workSheetNumber + ' · ' + cell.productLabel"
+                        (click)="openReassign(cell)"
+                      >
+                        {{ cell.workSheetNumber }}
+                      </button>
+                      <hlm-popover-content *hlmPopoverPortal class="w-72">
+                        <ng-container [ngTemplateOutlet]="reassignPopoverContent" [ngTemplateOutletContext]="{ $implicit: cell }" />
+                      </hlm-popover-content>
+                    </hlm-popover>
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+      <p class="text-muted-foreground mt-3 flex items-center gap-1.5 text-xs">
+        <span class="border-destructive bg-destructive/15 inline-block h-3 w-3 rounded border"></span>
+        Máquina con más de una corrida el mismo día — solo alerta visual, no bloquea la asignación.
+      </p>
+    </div>
+  } @else {
+    <app-empty-state icon="tablerCalendar" title="Sin corridas programadas" description="Registra corridas de fabricación desde una Hoja de trabajo para verlas aquí." />
+  }
+} @else {
+  @if (days().length) {
+    <div hlmCard class="overflow-x-auto p-4">
+      <div class="grid grid-cols-4 gap-2 sm:grid-cols-8">
+        @for (day of days(); track day) {
+          <div class="min-h-24 rounded-md border p-1.5" [class.border-destructive]="dayHasDoubleBooking(day)">
+            <p class="text-muted-foreground mb-1 text-[11px] font-medium">{{ day.slice(5) }}</p>
+            <div class="flex flex-col gap-1">
+              @for (cell of cellsForDay(day); track cell.run.id) {
+                <hlm-popover>
+                  <button
+                    hlmPopoverTrigger
+                    type="button"
+                    class="block w-full truncate rounded bg-primary/10 px-1.5 py-0.5 text-start text-[10px] leading-tight"
+                    [title]="cell.workSheetNumber + ' · ' + cell.productLabel"
+                    (click)="openReassign(cell)"
+                  >
+                    {{ cell.workSheetNumber }} · {{ cell.productLabel }}
+                  </button>
+                  <hlm-popover-content *hlmPopoverPortal class="w-72">
+                    <ng-container [ngTemplateOutlet]="reassignPopoverContent" [ngTemplateOutletContext]="{ $implicit: cell }" />
+                  </hlm-popover-content>
+                </hlm-popover>
+              }
+            </div>
+          </div>
+        }
+      </div>
+      <p class="text-muted-foreground mt-3 flex items-center gap-1.5 text-xs">
+        <span class="border-destructive inline-block h-3 w-3 rounded border"></span>
+        Día con alguna máquina reservada más de una vez — solo alerta visual, no bloquea la asignación.
+      </p>
+    </div>
+  } @else {
+    <app-empty-state icon="tablerCalendar" title="Sin corridas programadas" description="Registra corridas de fabricación desde una Hoja de trabajo para verlas aquí." />
+  }
+}

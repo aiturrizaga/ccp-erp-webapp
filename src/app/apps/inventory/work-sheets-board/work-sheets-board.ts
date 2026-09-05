@@ -8,28 +8,26 @@ import { DataKanban, KanbanColumn } from '@shared/components/data-kanban/data-ka
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { ITEMS, PRODUCTS, WORK_SHEETS } from '@core/mock-data';
-import { ProductionOrderStatus, PRODUCTION_ORDER_STATUS_LABEL, ReplenishmentSuggestion, Tone, WorkSheet } from '@core/models';
+import { ReplenishmentSuggestion, Tone, WorkSheet, WorkSheetStatus, WORK_SHEET_STATUS_LABEL, workSheetStatus } from '@core/models';
 import { PurchasingState } from '../../purchasing/purchasing-state';
 import { WarehouseOpsState } from '../warehouse-ops-state';
 
 const TODAY = '2026-08-23';
 const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
-const STATUS_TONE: Record<ProductionOrderStatus, Tone> = {
+const STATUS_TONE: Record<WorkSheetStatus, Tone> = {
   planned: 'neutral',
   released: 'info',
-  preparing: 'info',
   in_progress: 'warning',
-  paused: 'danger',
   completed: 'success',
   cancelled: 'danger',
 };
 
-const STATUS_OPTIONS: { value: ProductionOrderStatus; label: string }[] = (
-  Object.keys(PRODUCTION_ORDER_STATUS_LABEL) as ProductionOrderStatus[]
-).map((value) => ({ value, label: PRODUCTION_ORDER_STATUS_LABEL[value] }));
+const STATUS_OPTIONS: { value: WorkSheetStatus; label: string }[] = (
+  Object.keys(WORK_SHEET_STATUS_LABEL) as WorkSheetStatus[]
+).map((value) => ({ value, label: WORK_SHEET_STATUS_LABEL[value] }));
 
-const ACTIVE_STATUSES = new Set<ProductionOrderStatus>(['planned', 'released', 'preparing', 'in_progress', 'paused']);
+const ACTIVE_STATUSES = new Set<WorkSheetStatus>(['planned', 'released', 'in_progress']);
 
 /** Origin of the missing-quantity pressure a material puts on the plan, in decreasing severity. */
 type CoverageTone = 'danger' | 'warning' | 'success';
@@ -90,16 +88,21 @@ export class WorkSheetsBoard {
 
   protected readonly plantOptions = Array.from(new Set(WORK_SHEETS.map((w) => w.plant))).map((value) => ({ value, label: value }));
   protected readonly statusColumns: KanbanColumn[] = STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label, tone: STATUS_TONE[o.value] }));
-  protected readonly statusKey = (row: BoardCard): string => row.ws.status;
+  protected readonly statusKey = (row: BoardCard): string => workSheetStatus(row.ws);
 
   private coverage(ws: WorkSheet): { pct: number; tone: CoverageTone; gaps: MaterialGap[] } {
-    const ratios = ws.materials.map((m) => (m.required > 0 ? Math.min(1, m.available / m.required) : 1));
+    const materials = ws.lines.flatMap((l) => l.materials);
+    const ratios = materials.map((m) => (m.required > 0 ? Math.min(1, m.available / m.required) : 1));
     const pct = ratios.length ? Math.round(Math.min(...ratios) * 100) : 100;
-    const gaps = ws.materials
+    const gaps = materials
       .filter((m) => m.available < m.required)
       .map((m) => ({ itemId: m.itemId, unitOfMeasure: m.unitOfMeasure, missing: m.required - m.available }));
     const tone: CoverageTone = pct >= 100 ? 'success' : pct >= 50 ? 'warning' : 'danger';
     return { pct, tone, gaps };
+  }
+
+  private productIdOf(ws: WorkSheet): string {
+    return ws.lines[0]?.productId ?? '';
   }
 
   /** All the board's per-HT rows, computed once — cards, filters and both decision panels all read from this. */
@@ -121,7 +124,7 @@ export class WorkSheetsBoard {
 
       return {
         ws,
-        productName: this.productName(ws.productId),
+        productName: this.productName(this.productIdOf(ws)),
         coveragePct: pct,
         coverageTone: tone,
         gaps,
@@ -151,7 +154,7 @@ export class WorkSheetsBoard {
   // --- Panel de decisión: qué HT atender primero con un Requerimiento de Compra ---
   protected readonly needsPurchaseAction = computed(() =>
     this.cards()
-      .filter((c) => c.ws.atRisk && ACTIVE_STATUSES.has(c.ws.status) && !c.requirementNumber)
+      .filter((c) => c.ws.atRisk && ACTIVE_STATUSES.has(workSheetStatus(c.ws)) && !c.requirementNumber)
       .sort((a, b) => a.priorityRank - b.priorityRank),
   );
 
@@ -159,7 +162,7 @@ export class WorkSheetsBoard {
   protected readonly restockCandidates = computed(() => {
     const totals = new Map<string, { itemId: string; unitOfMeasure: string; totalMissing: number; htCount: number }>();
     for (const c of this.cards()) {
-      if (!ACTIVE_STATUSES.has(c.ws.status)) continue;
+      if (!ACTIVE_STATUSES.has(workSheetStatus(c.ws))) continue;
       for (const gap of c.gaps) {
         const entry = totals.get(gap.itemId);
         if (entry) {
@@ -176,10 +179,10 @@ export class WorkSheetsBoard {
   });
 
   // --- KPIs ---
-  protected readonly activeCount = computed(() => this.cards().filter((c) => ACTIVE_STATUSES.has(c.ws.status)).length);
-  protected readonly atRiskCount = computed(() => this.cards().filter((c) => c.ws.atRisk && ACTIVE_STATUSES.has(c.ws.status)).length);
+  protected readonly activeCount = computed(() => this.cards().filter((c) => ACTIVE_STATUSES.has(workSheetStatus(c.ws))).length);
+  protected readonly atRiskCount = computed(() => this.cards().filter((c) => c.ws.atRisk && ACTIVE_STATUSES.has(workSheetStatus(c.ws))).length);
   protected readonly avgCoverage = computed(() => {
-    const active = this.cards().filter((c) => ACTIVE_STATUSES.has(c.ws.status));
+    const active = this.cards().filter((c) => ACTIVE_STATUSES.has(workSheetStatus(c.ws)));
     if (!active.length) return 100;
     return Math.round(active.reduce((sum, c) => sum + c.coveragePct, 0) / active.length);
   });

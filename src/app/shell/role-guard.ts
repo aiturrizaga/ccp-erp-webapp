@@ -7,7 +7,7 @@ import { AuthState } from './auth-state';
 export function roleGuard(allowed: UserRole[]): CanActivateFn {
   return () => {
     const role = inject(AuthState).currentUser()?.role;
-    if (role && allowed.includes(role)) return true;
+    if (role && (role === 'admin' || allowed.includes(role))) return true;
 
     inject(Router).navigate(['/apps/purchasing/replenishment-suggestions']);
     return false;

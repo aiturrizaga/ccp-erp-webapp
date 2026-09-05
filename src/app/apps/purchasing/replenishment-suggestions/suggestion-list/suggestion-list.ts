@@ -14,14 +14,15 @@ import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.mode
 import { WORK_SHEETS } from '@core/mock-data';
 import { PurchasingState } from '../../purchasing-state';
 import {
-  ProductionOrderStatus,
-  PRODUCTION_ORDER_STATUS_LABEL,
   ReplenishmentSuggestion,
   ReplenishmentSuggestionStatus,
   REPLENISHMENT_SUGGESTION_STATUS_LABEL,
   RequisitionPriority,
   REQUISITION_PRIORITY_LABEL,
   Tone,
+  WorkSheetStatus,
+  WORK_SHEET_STATUS_LABEL,
+  workSheetStatus,
 } from '@core/models';
 
 type SuggestionOrigin = ReplenishmentSuggestion['origin'];
@@ -51,9 +52,9 @@ const ORIGIN_OPTIONS: { value: SuggestionOrigin; label: string }[] = (
   Object.keys(ORIGIN_LABEL) as SuggestionOrigin[]
 ).map((value) => ({ value, label: ORIGIN_LABEL[value] }));
 
-const HT_STATUS_OPTIONS: { value: ProductionOrderStatus; label: string }[] = (
-  Object.keys(PRODUCTION_ORDER_STATUS_LABEL) as ProductionOrderStatus[]
-).map((value) => ({ value, label: PRODUCTION_ORDER_STATUS_LABEL[value] }));
+const HT_STATUS_OPTIONS: { value: WorkSheetStatus; label: string }[] = (
+  Object.keys(WORK_SHEET_STATUS_LABEL) as WorkSheetStatus[]
+).map((value) => ({ value, label: WORK_SHEET_STATUS_LABEL[value] }));
 
 const GROUP_BY_OPTIONS: SelectFilterOption[] = [
   { value: 'none', label: 'Sin agrupar' },
@@ -82,7 +83,7 @@ export class SuggestionList {
   protected readonly priorityFilter = signal<Set<RequisitionPriority>>(new Set());
   protected readonly originFilter = signal<Set<SuggestionOrigin>>(new Set());
   /** Filters by the status of the originating Hoja de Trabajo — rows without a linked HT (manual suggestions) never match when this filter is active. */
-  protected readonly htStatusFilter = signal<Set<ProductionOrderStatus>>(new Set());
+  protected readonly htStatusFilter = signal<Set<WorkSheetStatus>>(new Set());
 
   protected readonly views: ListViewOption[] = [LIST_VIEW_OPTIONS.list, LIST_VIEW_OPTIONS.grid, LIST_VIEW_OPTIONS.kanban];
   protected readonly groupByOptions = GROUP_BY_OPTIONS;
@@ -164,7 +165,7 @@ export class SuggestionList {
     this.page.set(1);
   }
 
-  protected toggleHtStatusFilter(value: ProductionOrderStatus): void {
+  protected toggleHtStatusFilter(value: WorkSheetStatus): void {
     this.htStatusFilter.update((set) => this.toggled(set, value));
     this.page.set(1);
   }
@@ -221,12 +222,13 @@ export class SuggestionList {
     return WORK_SHEETS.find((ws) => ws.number === workSheetRef)?.id;
   }
 
-  protected htStatus(workSheetRef: string | undefined): ProductionOrderStatus | undefined {
-    return WORK_SHEETS.find((ws) => ws.number === workSheetRef)?.status;
+  protected htStatus(workSheetRef: string | undefined): WorkSheetStatus | undefined {
+    const ws = WORK_SHEETS.find((w) => w.number === workSheetRef);
+    return ws ? workSheetStatus(ws) : undefined;
   }
 
-  protected htStatusLabel(status: ProductionOrderStatus): string {
-    return PRODUCTION_ORDER_STATUS_LABEL[status];
+  protected htStatusLabel(status: WorkSheetStatus): string {
+    return WORK_SHEET_STATUS_LABEL[status];
   }
 
   protected createSuggestion(): void {

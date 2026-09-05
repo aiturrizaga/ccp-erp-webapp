@@ -165,7 +165,7 @@
             <dt class="text-muted-foreground">Factura(s)</dt>
             <dd>
               @for (inv of invoices(); track inv.id; let last = $last) {
-                <a [routerLink]="['/apps/invoicing/invoices', inv.id]" class="text-primary hover:underline">{{ inv.number }}</a>{{ last ? '' : ', ' }}
+                <a [routerLink]="['/apps/finance/invoices', inv.id]" class="text-primary hover:underline">{{ inv.number }}</a>{{ last ? '' : ', ' }}
               }
             </dd>
           }

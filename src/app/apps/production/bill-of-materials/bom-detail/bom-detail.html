@@ -1,0 +1,108 @@
+@if (bom(); as b) {
+  <app-entity-header
+    [title]="(product()?.name ?? b.productId) + ' — ' + b.version"
+    [subtitle]="'Vigente desde ' + b.effectiveFrom + (b.effectiveTo ? ' hasta ' + b.effectiveTo : '')"
+    [statusLabel]="statusLabel(b.status)"
+    [statusTone]="statusTone(b.status)"
+    [crumbs]="[{ label: 'BOM / Recetas', link: '/apps/production/bill-of-materials' }, { label: b.version }]"
+  >
+    <div actions class="flex items-center gap-3">
+      @if (product(); as p) {
+        <a [routerLink]="['/apps/production/products', p.id]" class="text-primary text-sm hover:underline">Ver ficha de producto</a>
+      }
+      <a [routerLink]="['/apps/production/bill-of-materials/new']" [queryParams]="{ fromBomId: b.id }" hlmBtn variant="outline" size="sm">Nueva versión</a>
+    </div>
+  </app-entity-header>
+
+  @if (!isEditable()) {
+    <p class="text-muted-foreground mb-4 rounded-md border bg-muted/40 px-3 py-2 text-xs">
+      Esta versión es de solo lectura ({{ statusLabel(b.status) }}) — para modificarla, crea una nueva versión a partir de ella.
+    </p>
+  }
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.6fr_1fr]">
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Componentes</h3>
+        <table class="w-full text-sm">
+          <thead class="text-muted-foreground border-b text-xs">
+            <tr>
+              <th class="py-1.5 text-start font-medium">Artículo</th>
+              <th class="py-1.5 text-start font-medium">Tipo</th>
+              <th class="py-1.5 text-end font-medium">Cantidad</th>
+              <th class="py-1.5 text-end font-medium">Merma</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            @for (component of b.components; track component.itemId) {
+              <tr>
+                <td class="py-2">{{ itemLabel(component.itemId) }}</td>
+                <td class="py-2">{{ component.isSupply ? 'Suministro' : 'Materia prima' }}</td>
+                <td class="py-2 text-end">{{ component.quantity }} {{ component.unitOfMeasure }}</td>
+                <td class="py-2 text-end">{{ component.wastePct }}%</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Ruta de operaciones (routing)</h3>
+        <p class="text-muted-foreground mb-3 text-xs">Secuencia configurable por versión de BOM — un run/HT-line la copia (snapshot) al crearse, nunca queda ligada a esta versión en vivo.</p>
+        <table class="w-full text-sm">
+          <thead class="text-muted-foreground border-b text-xs">
+            <tr>
+              <th class="py-1.5 text-start font-medium">#</th>
+              <th class="py-1.5 text-start font-medium">Operación</th>
+              <th class="py-1.5 text-start font-medium">Centro de trabajo</th>
+              <th class="py-1.5 text-end font-medium">Duración std.</th>
+              <th class="py-1.5 text-start font-medium">Requiere</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            @for (op of b.routing; track op.id) {
+              <tr>
+                <td class="py-2">{{ op.sequence }}</td>
+                <td class="py-2 font-medium">{{ op.name }}</td>
+                <td class="py-2">{{ workCenterLabel(op.workCenterId) }}</td>
+                <td class="py-2 text-end">{{ op.standardDurationMin }} min</td>
+                <td class="py-2 text-xs">
+                  @if (op.requiresMold) { Molde }
+                  @if (op.requiresStartEnd) { · Inicio/fin obligatorio }
+                  @if (op.qualityProtocolIds?.length) { · Calidad }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Historial de versiones</h3>
+      @if (versionHistory().length) {
+        <ul class="divide-y text-sm">
+          @for (v of versionHistory(); track v.id) {
+            <li class="py-2">
+              <div class="flex items-center justify-between gap-2">
+                @if (v.id === b.id) {
+                  <span class="font-medium">{{ v.version }} <span class="text-muted-foreground font-normal">(esta versión)</span></span>
+                } @else {
+                  <a [routerLink]="['/apps/production/bill-of-materials', v.id]" class="text-primary font-medium hover:underline">{{ v.version }}</a>
+                }
+                <app-status-badge [label]="statusLabel(v.status)" [tone]="statusTone(v.status)" />
+              </div>
+              <p class="text-muted-foreground text-xs">
+                {{ v.effectiveFrom }} @if (v.effectiveTo) { — {{ v.effectiveTo }} }
+              </p>
+            </li>
+          }
+        </ul>
+      } @else {
+        <app-empty-state icon="tablerFileText" title="Sin historial" />
+      }
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerFlask" title="BOM no encontrada" />
+}

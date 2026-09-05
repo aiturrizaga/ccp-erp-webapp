@@ -1,0 +1,71 @@
+<app-entity-header
+  [title]="isEdit() ? 'Editar máquina' : 'Nueva máquina'"
+  [crumbs]="[{ label: 'Máquinas', link: '/apps/production/machines' }, { label: isEdit() ? 'Editar' : 'Nueva' }]"
+/>
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-[1.2fr_1fr]">
+  <div hlmCard class="flex flex-col gap-4 p-4">
+    <h3 class="text-sm font-semibold">Identificación</h3>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="code">Código</label>
+        <input hlmInput id="code" type="text" [ngModel]="code()" (ngModelChange)="code.set($event)" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="plant">Planta</label>
+        <input hlmInput id="plant" type="text" [ngModel]="plant()" (ngModelChange)="plant.set($event)" />
+      </div>
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label hlmLabel for="name">Nombre</label>
+      <input hlmInput id="name" type="text" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label hlmLabel>Centro de trabajo</label>
+      <hlm-select class="block w-full" [value]="workCenterId()" (valueChange)="workCenterId.set($any($event))" [itemToString]="workCenterToString">
+        <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+        <hlm-select-content *hlmSelectPortal>
+          @for (wc of productionState.workCenters(); track wc.id) { <hlm-select-item [value]="wc.id">{{ wc.name }}</hlm-select-item> }
+        </hlm-select-content>
+      </hlm-select>
+    </div>
+    <div class="flex flex-col gap-1.5">
+      <label hlmLabel>Estado</label>
+      <hlm-select class="block w-full" [value]="status()" (valueChange)="status.set($any($event))" [itemToString]="statusToString">
+        <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+        <hlm-select-content *hlmSelectPortal>
+          @for (o of statusOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+        </hlm-select-content>
+      </hlm-select>
+    </div>
+    <div class="grid grid-cols-2 gap-3">
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="lastmt">Último mantenimiento</label>
+        <input hlmInput id="lastmt" type="date" [ngModel]="lastMaintenanceAt()" (ngModelChange)="lastMaintenanceAt.set($event)" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="nextmt">Próximo mantenimiento</label>
+        <input hlmInput id="nextmt" type="date" [ngModel]="nextMaintenanceAt()" (ngModelChange)="nextMaintenanceAt.set($event)" />
+      </div>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <div class="flex gap-2">
+      <hlm-popover [state]="submitPopover()" (stateChanged)="submitPopover.set($event)">
+        <button hlmPopoverTrigger hlmBtn size="sm" [disabled]="!canSubmit()">{{ isEdit() ? 'Guardar cambios' : 'Crear máquina' }}</button>
+        <hlm-popover-content *hlmPopoverPortal class="w-80">
+          <hlm-popover-header>
+            <h3 hlmPopoverTitle>{{ isEdit() ? '¿Guardar los cambios?' : '¿Crear la máquina?' }}</h3>
+            <p hlmPopoverDescription>"{{ name() }}" ({{ code() }}) {{ isEdit() ? 'se actualizará' : 'se registrará en el maestro de máquinas' }}.</p>
+          </hlm-popover-header>
+          <div class="mt-3 flex justify-end gap-2">
+            <button hlmBtn variant="outline" size="sm" (click)="submitPopover.set('closed')">Cancelar</button>
+            <button hlmBtn size="sm" (click)="submit()">Confirmar</button>
+          </div>
+        </hlm-popover-content>
+      </hlm-popover>
+      <button hlmBtn size="sm" variant="ghost" (click)="cancel()">Cancelar</button>
+    </div>
+  </div>
+</div>

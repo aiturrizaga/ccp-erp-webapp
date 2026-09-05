@@ -1,0 +1,39 @@
+@if (workCenter(); as wc) {
+  <app-entity-header
+    [title]="wc.name"
+    [subtitle]="wc.code + ' · ' + wc.plant"
+    [crumbs]="[{ label: 'Centros de trabajo', link: '/apps/production/work-centers' }, { label: wc.name }]"
+  >
+    <div actions>
+      <a [routerLink]="['/apps/production/work-centers', wc.id, 'edit']" hlmBtn variant="outline" size="sm">Editar</a>
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1fr_1.4fr]">
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Ficha</h3>
+      <dl class="grid grid-cols-2 gap-y-2 text-sm">
+        <dt class="text-muted-foreground">Capacidad / día</dt><dd>{{ wc.capacityPerDay }} {{ wc.unitOfMeasure }}</dd>
+        <dt class="text-muted-foreground">Máquinas asociadas</dt><dd>{{ machines().length }}</dd>
+      </dl>
+    </div>
+
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Máquinas</h3>
+      @if (machines().length) {
+        <ul class="divide-y text-sm">
+          @for (m of machines(); track m.id) {
+            <li class="flex items-center justify-between py-2">
+              <a [routerLink]="['/apps/production/machines', m.id]" class="text-primary hover:underline">{{ m.code }} — {{ m.name }}</a>
+              <app-status-badge [label]="statusLabel(m.status)" [tone]="statusTone(m.status)" />
+            </li>
+          }
+        </ul>
+      } @else {
+        <app-empty-state icon="tablerBuildingFactory2" title="Sin máquinas asociadas" />
+      }
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerBuildingFactory2" title="Centro de trabajo no encontrado" />
+}

@@ -1,0 +1,99 @@
+<app-entity-header
+  [title]="isEdit() ? 'Editar molde' : 'Nuevo molde'"
+  [crumbs]="[{ label: 'Moldes', link: '/apps/production/molds' }, { label: isEdit() ? 'Editar' : 'Nuevo' }]"
+/>
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-[1.4fr_1fr]">
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Identificación</h3>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="code">Código</label>
+          <input hlmInput id="code" type="text" [ngModel]="code()" (ngModelChange)="code.set($event)" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel>Tipo</label>
+          <hlm-select class="block w-full" [value]="tipo()" (valueChange)="tipo.set($any($event))" [itemToString]="typeToString">
+            <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+            <hlm-select-content *hlmSelectPortal>
+              @for (o of typeOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+            </hlm-select-content>
+          </hlm-select>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="plant">Planta</label>
+          <input hlmInput id="plant" type="text" [ngModel]="plant()" (ngModelChange)="plant.set($event)" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="location">Ubicación</label>
+          <input hlmInput id="location" type="text" [ngModel]="location()" (ngModelChange)="location.set($event)" />
+        </div>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Dimensiones (cm) — ancho x alto x profundidad</label>
+        <div class="grid grid-cols-3 gap-2">
+          <input hlmInput type="number" min="0" placeholder="Ancho" [ngModel]="width()" (ngModelChange)="width.set(+$event)" />
+          <input hlmInput type="number" min="0" placeholder="Alto" [ngModel]="height()" (ngModelChange)="height.set(+$event)" />
+          <input hlmInput type="number" min="0" placeholder="Profundidad" [ngModel]="depth()" (ngModelChange)="depth.set(+$event)" />
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="acq">Fecha de alta</label>
+          <input hlmInput id="acq" type="date" [ngModel]="acquiredAt()" (ngModelChange)="acquiredAt.set($event)" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="maxu">Uso máximo recomendado</label>
+          <input hlmInput id="maxu" type="number" min="0" [ngModel]="maxUsageCount()" (ngModelChange)="maxUsageCount.set(+$event)" />
+        </div>
+      </div>
+    </div>
+
+    <div hlmCard class="flex flex-col gap-3 p-4">
+      <h3 class="text-sm font-semibold">Productos compatibles</h3>
+      <div class="flex flex-col gap-1.5">
+        @for (p of productionState.products(); track p.id) {
+          <label class="flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="hasProduct(p.id)" (checkedChange)="toggleProduct(p.id)" />
+            {{ p.code }} — {{ p.name }}
+          </label>
+        }
+      </div>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Estado</h3>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Condición</label>
+        <hlm-select class="block w-full" [value]="estado()" (valueChange)="estado.set($any($event))" [itemToString]="conditionToString">
+          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (o of conditionOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+    </div>
+
+    <div class="flex gap-2">
+      <hlm-popover [state]="submitPopover()" (stateChanged)="submitPopover.set($event)">
+        <button hlmPopoverTrigger hlmBtn size="sm" [disabled]="!canSubmit()">{{ isEdit() ? 'Guardar cambios' : 'Crear molde' }}</button>
+        <hlm-popover-content *hlmPopoverPortal class="w-80">
+          <hlm-popover-header>
+            <h3 hlmPopoverTitle>{{ isEdit() ? '¿Guardar los cambios?' : '¿Crear el molde?' }}</h3>
+            <p hlmPopoverDescription>"{{ code() }}" {{ isEdit() ? 'se actualizará' : 'se registrará en el maestro de moldes' }}.</p>
+          </hlm-popover-header>
+          <div class="mt-3 flex justify-end gap-2">
+            <button hlmBtn variant="outline" size="sm" (click)="submitPopover.set('closed')">Cancelar</button>
+            <button hlmBtn size="sm" (click)="submit()">Confirmar</button>
+          </div>
+        </hlm-popover-content>
+      </hlm-popover>
+      <button hlmBtn size="sm" variant="ghost" (click)="cancel()">Cancelar</button>
+    </div>
+  </div>
+</div>

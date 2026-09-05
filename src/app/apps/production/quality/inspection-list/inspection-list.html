@@ -1,0 +1,17 @@
+<app-list-toolbar [(search)]="search" searchPlaceholder="Buscar por HT u operación..." actionLabel="Registrar inspección" (action)="onNew()" />
+
+<app-data-table [columns]="columns" [rows]="rows()" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron inspecciones." [cellTemplate]="cellTpl" />
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('protocol') {
+      {{ protocolName(row) }}
+    }
+    @case ('overallResult') {
+      <app-status-badge [label]="resultLabel(row)" [tone]="resultTone(row)" />
+    }
+    @default {
+      {{ row[key] }}
+    }
+  }
+</ng-template>

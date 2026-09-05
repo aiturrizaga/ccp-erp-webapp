@@ -9,7 +9,7 @@ import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { toast } from '@shared/toast';
 import { SalesOrderStatus, SALES_ORDER_STATUS_LABEL, SALES_ORDER_STATUS_TONE, SalesInvoice, Tone } from '@core/models';
 import { salesOrders } from '../../sales-state';
-import { InvoicingState } from '../../../invoicing/invoicing-state';
+import { InvoicingState } from '../../../finance/invoicing-state';
 
 @Component({
   selector: 'app-order-detail',
@@ -87,6 +87,6 @@ export class OrderDetail {
     this.invoicingState.addInvoice(invoice);
     salesOrders.update((orders) => orders.map((o) => (o.id === order.id ? { ...o, status: 'invoiced' } : o)));
     toast.success(`Factura ${invoice.number} emitida`, { description: order.customerName });
-    this.router.navigate(['/apps/invoicing/invoices', invoice.id]);
+    this.router.navigate(['/apps/finance/invoices', invoice.id]);
   }
 }

@@ -1,11 +1,12 @@
-/** The areas piloting this prototype — each sees a different slice of the ERP. */
-export type UserRole = 'warehouse' | 'purchasing' | 'sales' | 'billing';
+/** The areas piloting this prototype — each sees a different slice of the ERP. `admin` sees and can do everything, for end-to-end demos. */
+export type UserRole = 'warehouse' | 'purchasing' | 'sales' | 'billing' | 'admin';
 
 export const USER_ROLE_LABEL: Record<UserRole, string> = {
   warehouse: 'Almacén',
   purchasing: 'Logística',
   sales: 'Ventas',
-  billing: 'Cobranzas y Facturación',
+  billing: 'Finanzas',
+  admin: 'Administrador',
 };
 
 /** Mock credential record — plain-text password is fine here, this login never talks to a real backend. */

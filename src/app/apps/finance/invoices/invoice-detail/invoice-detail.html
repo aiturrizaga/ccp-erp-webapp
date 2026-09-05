@@ -1,0 +1,317 @@
+@if (invoice(); as p) {
+  <app-entity-header
+    [title]="p.number"
+    [subtitle]="p.documentType === 'purchase' ? supplierName(p.supplierId) : p.customerName"
+    [statusLabel]="statusLabel(p.status)"
+    [statusTone]="statusTone(p.status)"
+    [crumbs]="[{ label: 'Facturas', link: '/apps/finance/invoices' }, { label: p.number }]"
+  >
+    <div actions class="flex gap-2">
+      @if (hasPendingPayment()) {
+        <span class="text-muted-foreground rounded-md border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs dark:border-amber-900 dark:bg-amber-950">
+          Pago en validación por Cobranzas
+        </span>
+      }
+      @if (canRegisterPayment(p)) {
+        <hlm-dialog>
+          <button hlmDialogTrigger hlmBtn size="sm" (click)="openPaymentDialog(p)">Registrar pago</button>
+          <hlm-dialog-content *brnDialogContent="let ctx" class="sm:max-w-md">
+            <hlm-dialog-header>
+              <h3 hlmDialogTitle>Registrar pago</h3>
+              <p hlmDialogDescription>Factura {{ p.number }} · Saldo pendiente {{ p.currency }} {{ p.outstandingBalance | number: '1.2-2' }}</p>
+            </hlm-dialog-header>
+            <div class="flex flex-col gap-3">
+              <label class="flex flex-col gap-1 text-sm">
+                Monto
+                <input hlmInput type="number" min="0" step="0.01" [ngModel]="paymentAmount()" (ngModelChange)="paymentAmount.set($event)" />
+              </label>
+              <label class="flex flex-col gap-1 text-sm">
+                Fecha
+                <input hlmInput type="date" [ngModel]="paymentDate()" (ngModelChange)="paymentDate.set($event)" />
+              </label>
+              <label class="flex flex-col gap-1 text-sm">
+                Medio de pago
+                <select class="border-input h-9 rounded-md border bg-transparent px-3 text-sm" [ngModel]="paymentMethod()" (ngModelChange)="paymentMethod.set($event)">
+                  @for (opt of paymentMethodOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              </label>
+              <div class="flex flex-col gap-1 text-sm">
+                <span>Voucher de pago <span class="text-destructive">*</span></span>
+                @if (paymentVoucher(); as v) {
+                  <div class="flex items-center gap-2 rounded-md border p-2">
+                    @if (v.mimeType.startsWith('image/')) {
+                      <img [src]="v.url" [alt]="v.name" class="h-14 w-14 rounded object-cover" />
+                    } @else {
+                      <ng-icon name="tablerFileTypePdf" size="20" class="text-muted-foreground" />
+                    }
+                    <span class="text-muted-foreground flex-1 truncate text-xs">{{ v.name }}</span>
+                    <button hlmBtn size="sm" variant="ghost" (click)="paymentVoucher.set(null)"><ng-icon name="tablerX" size="14" /></button>
+                  </div>
+                } @else {
+                  <label class="border-input hover:bg-muted/40 flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 py-3 text-xs">
+                    <ng-icon name="tablerPaperclip" size="15" /> Adjuntar voucher (imagen o PDF)
+                    <input type="file" accept="image/*,application/pdf" class="hidden" (change)="onVoucherFile($event)" />
+                  </label>
+                }
+              </div>
+              <p class="text-muted-foreground text-xs">El pago quedará "En validación de pago" hasta que Cobranzas revise el voucher.</p>
+            </div>
+            <hlm-dialog-footer>
+              <button hlmBtn variant="outline" hlmDialogClose>Cancelar</button>
+              <button hlmBtn hlmDialogClose [disabled]="!canConfirmPayment()" (click)="confirmPayment(p.id)">Reportar pago</button>
+            </hlm-dialog-footer>
+          </hlm-dialog-content>
+        </hlm-dialog>
+      }
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.6fr_1fr]">
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Líneas</h3>
+        <table class="w-full text-sm">
+          <thead class="text-muted-foreground border-b text-xs">
+            <tr>
+              <th class="py-1.5 text-start font-medium">Descripción</th>
+              <th class="py-1.5 text-end font-medium">Cantidad</th>
+              <th class="py-1.5 text-end font-medium">Precio unit.</th>
+              <th class="py-1.5 text-end font-medium">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            @for (line of p.lines; track line.description) {
+              <tr>
+                <td class="py-2">{{ line.description }}</td>
+                <td class="py-2 text-end">{{ line.quantity }}</td>
+                <td class="py-2 text-end">{{ p.currency }} {{ line.unitPrice | number: '1.2-2' }}</td>
+                <td class="py-2 text-end font-medium">{{ p.currency }} {{ line.subtotal | number: '1.2-2' }}</td>
+              </tr>
+            }
+          </tbody>
+          <tfoot class="divide-y">
+            <tr>
+              <td colspan="3" class="text-muted-foreground py-1.5 text-end text-xs">Subtotal</td>
+              <td class="py-1.5 text-end">{{ p.currency }} {{ p.subtotal | number: '1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td colspan="3" class="text-muted-foreground py-1.5 text-end text-xs">IGV (18%)</td>
+              <td class="py-1.5 text-end">{{ p.currency }} {{ p.taxAmount | number: '1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td colspan="3" class="py-1.5 text-end text-sm font-semibold">{{ advancesTotal() > 0 ? 'Importe total' : 'Total' }}</td>
+              <td class="py-1.5 text-end text-sm font-semibold">{{ p.currency }} {{ p.total | number: '1.2-2' }}</td>
+            </tr>
+            @if (advancesTotal() > 0) {
+              <tr>
+                <td colspan="3" class="text-muted-foreground py-1.5 text-end text-xs">Anticipos (Cat. 53 – 04)</td>
+                <td class="py-1.5 text-end">- {{ p.currency }} {{ advancesTotal() | number: '1.2-2' }}</td>
+              </tr>
+              <tr>
+                <td colspan="3" class="py-1.5 text-end text-sm font-semibold">Neto a pagar</td>
+                <td class="py-1.5 text-end text-sm font-semibold">{{ p.currency }} {{ p.total - advancesTotal() | number: '1.2-2' }}</td>
+              </tr>
+            }
+            <tr>
+              <td colspan="3" class="text-muted-foreground py-1.5 text-end text-xs">Pagado</td>
+              <td class="py-1.5 text-end">{{ p.currency }} {{ p.paidAmount | number: '1.2-2' }}</td>
+            </tr>
+            <tr>
+              <td colspan="3" class="text-muted-foreground py-1.5 text-end text-xs">Saldo pendiente</td>
+              <td class="py-1.5 text-end font-medium">{{ p.currency }} {{ p.outstandingBalance | number: '1.2-2' }}</td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+
+      @if (advances().length) {
+        <div hlmCard class="p-4">
+          <h3 class="mb-1 text-sm font-semibold">Anticipos aplicados</h3>
+          <p class="text-muted-foreground mb-3 text-xs">
+            Anticipos previamente facturados deducidos de este comprobante (Catálogo 53 SUNAT, código 04 — gravados con IGV).
+          </p>
+          <table class="w-full text-sm">
+            <thead class="text-muted-foreground border-b text-xs">
+              <tr>
+                <th class="py-1.5 text-start font-medium">Comprobante</th>
+                <th class="py-1.5 text-start font-medium">Tipo</th>
+                <th class="py-1.5 text-start font-medium">Fecha</th>
+                <th class="py-1.5 text-end font-medium">Base</th>
+                <th class="py-1.5 text-end font-medium">IGV</th>
+                <th class="py-1.5 text-end font-medium">Monto</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              @for (a of advances(); track $index) {
+                <tr>
+                  <td class="py-2 font-mono text-xs">{{ a.invoiceNumber }}</td>
+                  <td class="py-2 capitalize">{{ a.docType ?? '—' }}</td>
+                  <td class="py-2 tabular-nums">{{ a.issuedAt ?? '—' }}</td>
+                  <td class="py-2 text-end tabular-nums">{{ a.base != null ? (a.base | number: '1.2-2') : '—' }}</td>
+                  <td class="py-2 text-end tabular-nums">{{ a.igv != null ? (a.igv | number: '1.2-2') : '—' }}</td>
+                  <td class="py-2 text-end font-medium tabular-nums">{{ p.currency }} {{ a.amount | number: '1.2-2' }}</td>
+                </tr>
+              }
+            </tbody>
+            <tfoot>
+              <tr class="border-t">
+                <td colspan="5" class="py-1.5 text-end text-xs font-semibold">Total anticipos</td>
+                <td class="py-1.5 text-end text-sm font-semibold">{{ p.currency }} {{ advancesTotal() | number: '1.2-2' }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      }
+
+      @if (p.documentType === 'sales' && p.installments?.length) {
+        <div hlmCard class="p-4">
+          <h3 class="mb-1 text-sm font-semibold">Cuotas del crédito</h3>
+          <p class="text-muted-foreground mb-3 text-xs">Condición de pago: crédito · monto neto pendiente {{ p.currency }} {{ p.total | number: '1.2-2' }} (SUNAT).</p>
+          <table class="w-full text-sm">
+            <thead class="text-muted-foreground border-b text-xs">
+              <tr>
+                <th class="py-1.5 text-start font-medium">Cuota</th>
+                <th class="py-1.5 text-start font-medium">Fecha de pago</th>
+                <th class="py-1.5 text-end font-medium">Monto</th>
+                <th class="py-1.5 text-end font-medium">Estado</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              @for (c of p.installments; track c.number) {
+                <tr>
+                  <td class="py-2 font-mono text-xs">{{ c.identifier }}</td>
+                  <td class="py-2 tabular-nums">{{ c.dueDate }}</td>
+                  <td class="py-2 text-end tabular-nums">{{ p.currency }} {{ c.amount | number: '1.2-2' }}</td>
+                  <td class="py-2 text-end text-xs">{{ c.paid ? 'Pagada' : 'Pendiente' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Documento relacionado</h3>
+        @if (p.documentType === 'purchase') {
+          <dl class="grid grid-cols-1 gap-3 text-sm">
+            <div>
+              <dt class="text-muted-foreground text-xs">Proveedor</dt>
+              <dd><a [routerLink]="['/apps/purchasing/suppliers', p.supplierId]" class="text-primary hover:underline">{{ supplierName(p.supplierId) }}</a></dd>
+            </div>
+            @if (p.purchaseOrderId) {
+              <div>
+                <dt class="text-muted-foreground text-xs">Orden de compra</dt>
+                <dd><a [routerLink]="['/apps/purchasing/purchase-orders', p.purchaseOrderId]" class="text-primary hover:underline">{{ p.purchaseOrderId }}</a></dd>
+              </div>
+            }
+          </dl>
+        } @else {
+          <dl class="grid grid-cols-1 gap-3 text-sm">
+            <div>
+              <dt class="text-muted-foreground text-xs">Cliente</dt>
+              <!-- TODO: enlazar a /apps/sales cuando el cableado cruzado entre Apps se realice en la segunda oleada -->
+              <dd>{{ p.customerName }}</dd>
+            </div>
+            @if (p.salesOrderId) {
+              <div>
+                <dt class="text-muted-foreground text-xs">Pedido de venta</dt>
+                <dd>{{ p.salesOrderId }}</dd>
+              </div>
+            }
+          </dl>
+        }
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4 text-sm">
+        <dl class="grid grid-cols-2 gap-y-2">
+          @if (p.documentType === 'sales' && p.docKind) {
+            <dt class="text-muted-foreground">Comprobante</dt><dd>{{ kindLabel(p.docKind) }}</dd>
+          }
+          @if (p.documentType === 'sales' && p.series) {
+            <dt class="text-muted-foreground">Serie · correlativo</dt><dd class="font-mono text-xs">{{ p.series }}-{{ p.correlativo }}</dd>
+          }
+          <dt class="text-muted-foreground">Moneda</dt><dd>{{ p.currency }}</dd>
+          <dt class="text-muted-foreground">Emitida</dt><dd>{{ p.issuedAt }}</dd>
+          <dt class="text-muted-foreground">Vencimiento</dt><dd>{{ p.dueDate }}</dd>
+          @if (p.documentType === 'sales' && p.paymentCondition) {
+            <dt class="text-muted-foreground">Condición de pago</dt><dd>{{ conditionLabel(p.paymentCondition) }}</dd>
+          }
+          @if (p.documentType === 'sales' && p.quotationCode) {
+            <dt class="text-muted-foreground">Cotización</dt><dd>{{ p.quotationCode }}</dd>
+          }
+          @if (p.documentType === 'sales' && p.purchaseOrderRef) {
+            <dt class="text-muted-foreground">OC del cliente</dt><dd>{{ p.purchaseOrderRef }}</dd>
+          }
+          <dt class="text-muted-foreground">Tipo</dt><dd>{{ p.documentType === 'purchase' ? 'Compra' : 'Venta' }}</dd>
+        </dl>
+        @if (p.documentType === 'sales' && p.glosa) {
+          <p class="text-muted-foreground mt-3 border-t pt-2 text-xs"><span class="font-medium">Glosa:</span> {{ p.glosa }}</p>
+        }
+      </div>
+
+      @if (p.documentType === 'sales' && p.paymentVoucher; as v) {
+        <div hlmCard class="p-4">
+          <h3 class="mb-2 text-sm font-semibold">Voucher de pago</h3>
+          <div class="overflow-hidden rounded-md border">
+            @if (v.mimeType.startsWith('image/')) {
+              <img [src]="v.url" [alt]="v.name" class="max-h-56 w-full cursor-zoom-in bg-black/5 object-contain" (click)="voucherZoom.set(true)" />
+            } @else {
+              <div class="text-muted-foreground flex items-center gap-2 p-4 text-sm"><ng-icon name="tablerFileTypePdf" /> {{ v.name }}</div>
+            }
+          </div>
+          <div class="mt-2 flex items-center justify-between text-xs">
+            <span class="text-muted-foreground truncate">{{ v.name }} · {{ v.uploadedAt }}</span>
+            <div class="flex gap-1">
+              @if (v.mimeType.startsWith('image/')) {
+                <button hlmBtn size="sm" variant="ghost" (click)="voucherZoom.set(true)"><ng-icon name="tablerZoomIn" size="15" class="mr-1" /> Ver</button>
+              }
+              <a hlmBtn size="sm" variant="ghost" [href]="v.url" target="_blank" rel="noopener"><ng-icon name="tablerExternalLink" size="15" class="mr-1" /> Abrir</a>
+            </div>
+          </div>
+        </div>
+      }
+
+      @if (payments().length) {
+        <div hlmCard class="p-4">
+          <h3 class="mb-2 text-sm font-semibold">Pagos reportados</h3>
+          <div class="flex flex-col divide-y">
+            @for (pay of payments(); track pay.id) {
+              <div class="py-2 text-sm first:pt-0">
+                <div class="flex items-center justify-between">
+                  <span class="font-medium tabular-nums">{{ p.currency }} {{ pay.amount | number: '1.2-2' }}</span>
+                  <span
+                    class="rounded-full px-2 py-0.5 text-[11px]"
+                    [class.bg-amber-100]="pay.status === 'pending_validation'"
+                    [class.text-amber-800]="pay.status === 'pending_validation'"
+                    [class.bg-emerald-100]="pay.status === 'validated'"
+                    [class.text-emerald-800]="pay.status === 'validated'"
+                    [class.bg-red-100]="pay.status === 'rejected'"
+                    [class.text-red-800]="pay.status === 'rejected'"
+                  >{{ paymentStatusLabel(pay.status) }}</span>
+                </div>
+                <p class="text-muted-foreground text-xs">{{ pay.date }} · {{ pay.method }} · reportó {{ pay.registeredBy }}</p>
+                @if (pay.voucher) {
+                  <a class="text-primary text-xs hover:underline" [href]="pay.voucher.url" target="_blank" rel="noopener">Ver voucher ({{ pay.voucher.name }})</a>
+                }
+                @if (pay.comment) { <p class="text-destructive text-xs">Motivo del rechazo: {{ pay.comment }}</p> }
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  @if (invoice()?.documentType === 'sales' && $any(invoice()).paymentVoucher && voucherZoom()) {
+    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6" (click)="voucherZoom.set(false)">
+      <img [src]="$any(invoice()).paymentVoucher.url" [alt]="$any(invoice()).paymentVoucher.name" class="max-h-full max-w-full rounded shadow-2xl" />
+      <button hlmBtn size="sm" variant="secondary" class="absolute right-4 top-4" (click)="voucherZoom.set(false)"><ng-icon name="tablerX" /></button>
+    </div>
+  }
+} @else {
+  <app-empty-state icon="tablerReceipt2" title="Factura no encontrada" />
+}

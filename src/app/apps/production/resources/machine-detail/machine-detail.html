@@ -1,0 +1,24 @@
+@if (machine(); as m) {
+  <app-entity-header
+    [title]="m.name"
+    [subtitle]="m.code + ' · ' + m.plant"
+    [statusLabel]="statusLabel()"
+    [statusTone]="statusTone()"
+    [crumbs]="[{ label: 'Máquinas', link: '/apps/production/machines' }, { label: m.name }]"
+  >
+    <div actions>
+      <a [routerLink]="['/apps/production/machines', m.id, 'edit']" hlmBtn variant="outline" size="sm">Editar</a>
+    </div>
+  </app-entity-header>
+
+  <div hlmCard class="p-4">
+    <h3 class="mb-3 text-sm font-semibold">Ficha técnica</h3>
+    <dl class="grid grid-cols-2 gap-y-2 text-sm">
+      <dt class="text-muted-foreground">Centro de trabajo</dt><dd>{{ workCenter()?.name ?? '—' }}</dd>
+      <dt class="text-muted-foreground">Último mantenimiento</dt><dd>{{ m.lastMaintenanceAt ?? '—' }}</dd>
+      <dt class="text-muted-foreground">Próximo mantenimiento</dt><dd>{{ m.nextMaintenanceAt ?? '—' }}</dd>
+    </dl>
+  </div>
+} @else {
+  <app-empty-state icon="tablerBuildingFactory2" title="Máquina no encontrada" />
+}

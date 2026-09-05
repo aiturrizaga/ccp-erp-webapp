@@ -1,0 +1,23 @@
+<app-list-toolbar [(search)]="search" searchPlaceholder="Buscar por código o nombre de máquina..." actionLabel="Nueva máquina" (action)="onNew()" />
+
+<app-data-table [columns]="columns" [rows]="rows()" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron máquinas." [cellTemplate]="cellTpl" />
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('code') {
+      {{ row.code }}
+    }
+    @case ('name') {
+      {{ row.name }}
+    }
+    @case ('workCenter') {
+      {{ workCenterName(row) }}
+    }
+    @case ('nextMaintenanceAt') {
+      {{ row.nextMaintenanceAt ?? '—' }}
+    }
+    @case ('status') {
+      <app-status-badge [label]="statusLabel(row)" [tone]="statusTone(row)" />
+    }
+  }
+</ng-template>

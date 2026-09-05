@@ -25,7 +25,11 @@
         @for (r of rows(); track r.order.id) {
           <tr>
             <td class="py-2"><a class="text-primary hover:underline" [routerLink]="['/apps/sales/orders', r.order.id]">{{ r.order.number }}</a></td>
-            <td class="py-2 font-mono text-xs">{{ r.order.workSheetId }}</td>
+            <td class="py-2 font-mono text-xs">
+              @if (r.order.workSheetId) {
+                <a class="text-primary hover:underline" [routerLink]="['/apps/production/work-sheets', r.order.workSheetId]">{{ r.order.workSheetId }}</a>
+              }
+            </td>
             <td class="py-2">{{ r.order.customerName }}</td>
             <td class="py-2"><app-status-badge [label]="statusLabel(r.order.status)" [tone]="statusTone(r.order.status)" /></td>
             <td class="py-2">

@@ -1,0 +1,81 @@
+<app-entity-header
+  [title]="isEdit() ? 'Editar producto' : 'Nuevo producto'"
+  [crumbs]="[{ label: 'Productos', link: '/apps/production/products' }, { label: isEdit() ? 'Editar' : 'Nuevo' }]"
+/>
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-[1.4fr_1fr]">
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Identificación</h3>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="code">Código</label>
+          <input hlmInput id="code" type="text" [ngModel]="code()" (ngModelChange)="code.set($event)" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="version">Versión</label>
+          <input hlmInput id="version" type="text" [ngModel]="version()" (ngModelChange)="version.set($event)" />
+        </div>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="name">Nombre</label>
+        <input hlmInput id="name" type="text" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Artículo terminado (Almacén)</label>
+        <app-item-picker [items]="items" [value]="itemId()" (picked)="onItemPicked($event)" (cleared)="onItemCleared()" placeholder="Buscar artículo terminado por código o descripción…" />
+      </div>
+    </div>
+
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold">Especificaciones técnicas</h3>
+        <button hlmBtn size="sm" variant="outline" (click)="addSpec()"><ng-icon name="tablerPlus" class="mr-1.5" /> Agregar</button>
+      </div>
+      @for (spec of specifications(); track $index) {
+        <div class="flex items-center gap-2">
+          <input hlmInput type="text" class="flex-1" placeholder="Etiqueta (p. ej. Longitud)" [ngModel]="spec.label" (ngModelChange)="setSpec($index, { label: $event })" />
+          <input hlmInput type="text" class="flex-1" placeholder="Valor (p. ej. 9 m)" [ngModel]="spec.value" (ngModelChange)="setSpec($index, { value: $event })" />
+          @if (specifications().length > 1) {
+            <button hlmBtn size="sm" variant="ghost" (click)="removeSpec($index)"><ng-icon name="tablerX" /></button>
+          }
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Estado</h3>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Estado del producto</label>
+        <hlm-select class="block w-full" [value]="status()" (valueChange)="status.set($any($event))" [itemToString]="statusToString">
+          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (o of statusOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+      @if (!isEdit()) {
+        <p class="text-muted-foreground rounded-md border bg-muted/40 px-3 py-2 text-xs">El BOM/receta se crea por separado, después de guardar el producto.</p>
+      }
+    </div>
+
+    <div class="flex gap-2">
+      <hlm-popover [state]="submitPopover()" (stateChanged)="submitPopover.set($event)">
+        <button hlmPopoverTrigger hlmBtn size="sm" [disabled]="!canSubmit()">{{ isEdit() ? 'Guardar cambios' : 'Crear producto' }}</button>
+        <hlm-popover-content *hlmPopoverPortal class="w-80">
+          <hlm-popover-header>
+            <h3 hlmPopoverTitle>{{ isEdit() ? '¿Guardar los cambios?' : '¿Crear el producto?' }}</h3>
+            <p hlmPopoverDescription>"{{ name() }}" ({{ code() }}) {{ isEdit() ? 'se actualizará' : 'se registrará en el maestro de productos' }}.</p>
+          </hlm-popover-header>
+          <div class="mt-3 flex justify-end gap-2">
+            <button hlmBtn variant="outline" size="sm" (click)="submitPopover.set('closed')">Cancelar</button>
+            <button hlmBtn size="sm" (click)="submit()">Confirmar</button>
+          </div>
+        </hlm-popover-content>
+      </hlm-popover>
+      <button hlmBtn size="sm" variant="ghost" (click)="cancel()">Cancelar</button>
+    </div>
+  </div>
+</div>

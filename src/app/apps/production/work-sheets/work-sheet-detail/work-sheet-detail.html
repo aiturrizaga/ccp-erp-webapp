@@ -1,13 +1,15 @@
 @if (workSheet(); as ws) {
   <app-entity-header
     [title]="ws.number"
-    [subtitle]="(product()?.name ?? ws.productId) + ' · ' + ws.plant"
-    [statusLabel]="statusLabel(ws.status)"
-    [statusTone]="statusTone(ws.status)"
+    [subtitle]="(ws.customerName ? ws.customerName + ' · ' : '') + ws.plant"
+    [statusLabel]="statusLabel(status())"
+    [statusTone]="statusTone(status())"
     [crumbs]="[{ label: 'Hojas de trabajo', link: '/apps/production/work-sheets' }, { label: ws.number }]"
   >
     <div actions>
-      <a [routerLink]="['/apps/plm/bill-of-materials', ws.bomId]" class="text-primary text-sm hover:underline">Ver BOM {{ ws.bomVersion }}</a>
+      @if (ws.salesOrderId) {
+        <a [routerLink]="['/apps/sales/orders', ws.salesOrderId]" class="text-primary text-sm hover:underline">Ver pedido {{ ws.salesOrderNumber }}</a>
+      }
     </div>
   </app-entity-header>
 
@@ -18,55 +20,349 @@
     </div>
   }
 
-  <div hlmCard class="p-4">
-    <h3 class="mb-3 text-sm font-semibold">Materiales y suministros</h3>
-    <table class="w-full text-sm">
-      <thead class="text-muted-foreground border-b text-xs">
-        <tr>
-          <th class="py-1.5 text-start font-medium">Artículo</th>
-          <th class="py-1.5 text-start font-medium">Tipo</th>
-          <th class="py-1.5 text-end font-medium">Requerido</th>
-          <th class="py-1.5 text-end font-medium">Disponible</th>
-          <th class="py-1.5 text-end font-medium">Reservado</th>
-          <th class="py-1.5 text-end font-medium">Consumido</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y">
-        @for (material of ws.materials; track material.itemId) {
-          <tr>
-            <td class="py-2">{{ itemLabel(material.itemId) }}</td>
-            <td class="py-2">{{ material.isSupply ? 'Suministro' : 'Materia prima' }}</td>
-            <td class="py-2 text-end">{{ material.required }} {{ material.unitOfMeasure }}</td>
-            <td class="py-2 text-end" [class.text-destructive]="shortfall(material.required, material.available)" [class.font-medium]="shortfall(material.required, material.available)">
-              {{ material.available }}
-            </td>
-            <td class="py-2 text-end">{{ material.reserved }}</td>
-            <td class="py-2 text-end">{{ material.consumed }}</td>
-          </tr>
-          @if (material.exception) {
-            <tr><td colspan="6" class="text-muted-foreground pb-2 text-xs italic"><ng-icon name="tablerAlertTriangle" class="align-middle" /> {{ material.exception }}</td></tr>
-          }
-        }
-      </tbody>
-    </table>
+  <div class="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+    <div hlmCard class="p-4">
+      <p class="text-muted-foreground text-xs">Avance</p>
+      <div class="mt-1 flex items-center gap-2">
+        <div class="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
+          <div class="bg-primary h-full rounded-full" [style.width.%]="progress()"></div>
+        </div>
+        <span class="text-sm font-medium tabular-nums">{{ progress() }}%</span>
+      </div>
+    </div>
+    <div hlmCard class="p-4">
+      <p class="text-muted-foreground text-xs">Fecha compromiso</p>
+      <p class="mt-1 text-sm font-medium">{{ ws.committedDate }}</p>
+      @if (isDelayed()) {
+        <p class="text-destructive mt-1 text-xs">Atrasada</p>
+      }
+    </div>
+    <div hlmCard class="p-4">
+      <p class="text-muted-foreground text-xs">Motivo del atraso (Plan vs Real)</p>
+      @if (bottleneck(); as b) {
+        <p class="mt-1 text-sm font-medium">{{ b.operationName }}</p>
+        <p class="text-muted-foreground text-xs">Corrida {{ b.runId }} sigue abierta</p>
+      } @else {
+        <p class="text-muted-foreground mt-1 text-sm">Sin atraso detectado</p>
+      }
+    </div>
   </div>
 
-  @if (stockIssue(); as issue) {
-    <div hlmCard class="mt-4 p-4">
-      <div class="flex items-center justify-between">
-        <div>
-          <h3 class="text-sm font-semibold">Salida de materiales de Almacén</h3>
-          <p class="text-muted-foreground text-xs">Lo que Almacén ha entregado realmente para esta HT, independiente de lo planificado arriba.</p>
+  <div class="flex flex-col gap-4">
+    @for (line of ws.lines; track line.id) {
+      <div hlmCard class="p-4">
+        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 class="text-sm font-semibold">{{ productName(line.productId) }}</h3>
+            <p class="text-muted-foreground text-xs">
+              <a [routerLink]="['/apps/production/bill-of-materials', line.bomId]" class="text-primary hover:underline">BOM {{ line.bomVersion }}</a>
+              · {{ lineProduced(line) }} / {{ line.plannedQuantity }} {{ line.unitOfMeasure }}
+            </p>
+          </div>
+          <app-status-badge [label]="statusLabel(lineStatus(line))" [tone]="statusTone(lineStatus(line))" />
         </div>
-        <app-status-badge [label]="issueStatusLabel(issue.status)" [tone]="issueStatusTone(issue.status)" />
+
+        <h4 class="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">Ruta de operaciones</h4>
+        <ol class="mb-4 flex flex-wrap gap-2 text-xs">
+          @for (op of line.routing; track op.id) {
+            <li class="rounded-full border px-2.5 py-1">{{ op.sequence }}. {{ op.name }}</li>
+          }
+        </ol>
+
+        <div class="mb-4 flex items-center justify-between">
+          <h4 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Corridas de fabricación</h4>
+          <hlm-popover>
+            <button hlmPopoverTrigger hlmBtn size="sm" variant="outline" (click)="openNewRunDraft(line)">Nueva corrida</button>
+            <hlm-popover-content *hlmPopoverPortal class="w-96">
+              <hlm-popover-header>
+                <h3 hlmPopoverTitle>Registrar corrida</h3>
+                <p hlmPopoverDescription>Divide la producción de esta línea en una corrida más — centro, máquina, molde, materiales y cantidades planificadas.</p>
+              </hlm-popover-header>
+              <div class="flex max-h-[70vh] flex-col gap-2 overflow-y-auto pe-1">
+                <div class="flex flex-col gap-1">
+                  <label hlmLabel for="run-operator">Operador</label>
+                  <input hlmInput id="run-operator" [ngModel]="newRunOperator()" (ngModelChange)="newRunOperator.set($event)" />
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label hlmLabel for="run-qty">Cantidad planificada</label>
+                  <input hlmInput id="run-qty" type="number" min="0" [ngModel]="newRunPlannedQty()" (ngModelChange)="newRunPlannedQty.set($event)" />
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel for="run-start">Inicio</label>
+                    <input hlmInput id="run-start" type="datetime-local" [ngModel]="newRunScheduledStart()" (ngModelChange)="newRunScheduledStart.set($event)" />
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel for="run-end">Fin</label>
+                    <input hlmInput id="run-end" type="datetime-local" [ngModel]="newRunScheduledEnd()" (ngModelChange)="newRunScheduledEnd.set($event)" />
+                  </div>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label hlmLabel for="run-wc">Centro de trabajo</label>
+                  <select id="run-wc" class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="newRunWorkCenterId()" (ngModelChange)="newRunWorkCenterId.set($event)">
+                    <option value="">Selecciona…</option>
+                    @for (wc of workCenterOptions(); track wc.id) {
+                      <option [value]="wc.id">{{ wc.name }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label hlmLabel for="run-machine">Máquina</label>
+                  <select id="run-machine" class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="newRunMachineId()" (ngModelChange)="newRunMachineId.set($event)">
+                    <option value="">Sin asignar</option>
+                    @for (m of machineOptions(); track m.id) {
+                      <option [value]="m.id">{{ m.name }}</option>
+                    }
+                  </select>
+                </div>
+                <div class="flex flex-col gap-1">
+                  <label hlmLabel for="run-mold">Molde</label>
+                  <select id="run-mold" class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="newRunMoldId()" (ngModelChange)="newRunMoldId.set($event)">
+                    <option value="">Sin asignar</option>
+                    @for (m of moldOptions(); track m.id) {
+                      <option [value]="m.id">{{ m.code }} ({{ m.estado }})</option>
+                    }
+                  </select>
+                </div>
+
+                <div class="flex items-center justify-between">
+                  <label hlmLabel>Materiales consumidos</label>
+                  <button type="button" hlmBtn size="sm" variant="ghost" (click)="addNewRunMaterial()"><ng-icon name="tablerPlus" class="mr-1" />Agregar</button>
+                </div>
+                @for (m of newRunMaterials(); track m._uid; let mi = $index) {
+                  <div class="rounded border p-2">
+                    <app-item-picker [items]="items" [value]="m.itemId" (picked)="onNewRunMaterialPicked(mi, $event)" (cleared)="onNewRunMaterialCleared(mi)" placeholder="Artículo…" />
+                    <div class="mt-1.5 flex items-center gap-2">
+                      <input hlmInput type="number" min="0" step="0.01" class="flex-1" placeholder="Cantidad" [ngModel]="m.quantity" (ngModelChange)="setNewRunMaterial(mi, { quantity: +$event })" />
+                      <input hlmInput type="text" class="w-20" placeholder="Lote" [ngModel]="m.lotId ?? ''" (ngModelChange)="setNewRunMaterial(mi, { lotId: $event || undefined })" />
+                      <button type="button" hlmBtn size="sm" variant="ghost" (click)="removeNewRunMaterial(mi)"><ng-icon name="tablerX" /></button>
+                    </div>
+                  </div>
+                }
+
+                <div class="flex flex-col gap-1">
+                  <label hlmLabel for="run-incidents">Incidencias (opcional)</label>
+                  <textarea id="run-incidents" class="border-input min-h-16 rounded-md border bg-transparent px-3 py-2 text-sm" [ngModel]="newRunIncidents()" (ngModelChange)="newRunIncidents.set($event)"></textarea>
+                </div>
+              </div>
+              <div class="mt-2 flex justify-end gap-2">
+                <button hlmBtn size="sm" [disabled]="!canAddRun()" (click)="confirmAddRun()">Registrar</button>
+              </div>
+            </hlm-popover-content>
+          </hlm-popover>
+        </div>
+
+        @if (line.runs.length) {
+          <div class="overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="text-muted-foreground border-b text-xs">
+                <tr>
+                  <th class="py-1.5 text-start font-medium">Corrida</th>
+                  <th class="py-1.5 text-start font-medium">Centro / Máquina / Molde</th>
+                  <th class="py-1.5 text-start font-medium">Operador</th>
+                  <th class="py-1.5 text-start font-medium">Programada</th>
+                  <th class="py-1.5 text-end font-medium">Plan</th>
+                  <th class="py-1.5 text-end font-medium">Producido</th>
+                  <th class="py-1.5 text-end font-medium">Rechazado</th>
+                  <th class="py-1.5 text-start font-medium">Estado</th>
+                  <th class="py-1.5"></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y">
+                @for (run of line.runs; track run.id) {
+                  <tr>
+                    <td class="py-2 font-mono text-xs">{{ run.id }}</td>
+                    <td class="py-2 text-xs">{{ workCenterLabel(run.workCenterId) }} · {{ machineLabel(run.machineId) }} · {{ moldLabel(run.moldId) }}</td>
+                    <td class="py-2">{{ run.operatorName }}</td>
+                    <td class="py-2 text-xs">{{ run.scheduledStart }} — {{ run.scheduledEnd }}</td>
+                    <td class="py-2 text-end">{{ run.plannedQuantity }}</td>
+                    <td class="py-2 text-end">{{ run.producedQuantity }}</td>
+                    <td class="py-2 text-end" [class.text-destructive]="run.rejectedQuantity > 0">{{ run.rejectedQuantity }}</td>
+                    <td class="py-2"><app-status-badge [label]="runStatusLabel(run.status)" [tone]="runStatusTone(run.status)" /></td>
+                    <td class="py-2 text-end">
+                      <hlm-popover>
+                        <button hlmPopoverTrigger hlmBtn size="sm" variant="ghost" (click)="openEditRunDraft(line, run)">Editar</button>
+                        <hlm-popover-content *hlmPopoverPortal class="w-80">
+                          <hlm-popover-header>
+                            <h3 hlmPopoverTitle>Editar corrida {{ run.id }}</h3>
+                            <p hlmPopoverDescription>Actualiza avance, tiempos reales e incidencias.</p>
+                          </hlm-popover-header>
+                          <div class="flex flex-col gap-2">
+                            <div class="flex flex-col gap-1">
+                              <label hlmLabel>Estado</label>
+                              <hlm-select class="block w-full" [value]="editRunStatus()" (valueChange)="editRunStatus.set($any($event))" [itemToString]="runStatusToString">
+                                <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+                                <hlm-select-content *hlmSelectPortal>
+                                  @for (o of runStatusOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+                                </hlm-select-content>
+                              </hlm-select>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2">
+                              <div class="flex flex-col gap-1">
+                                <label hlmLabel for="edit-run-astart">Inicio real</label>
+                                <input hlmInput id="edit-run-astart" type="datetime-local" [ngModel]="editRunActualStart()" (ngModelChange)="editRunActualStart.set($event)" />
+                              </div>
+                              <div class="flex flex-col gap-1">
+                                <label hlmLabel for="edit-run-aend">Fin real</label>
+                                <input hlmInput id="edit-run-aend" type="datetime-local" [ngModel]="editRunActualEnd()" (ngModelChange)="editRunActualEnd.set($event)" />
+                              </div>
+                            </div>
+                            <div class="grid grid-cols-3 gap-2">
+                              <div class="flex flex-col gap-1">
+                                <label hlmLabel for="edit-run-prod">Producido</label>
+                                <input hlmInput id="edit-run-prod" type="number" min="0" [ngModel]="editRunProduced()" (ngModelChange)="editRunProduced.set(+$event)" />
+                              </div>
+                              <div class="flex flex-col gap-1">
+                                <label hlmLabel for="edit-run-rej">Rechazado</label>
+                                <input hlmInput id="edit-run-rej" type="number" min="0" [ngModel]="editRunRejected()" (ngModelChange)="editRunRejected.set(+$event)" />
+                              </div>
+                              <div class="flex flex-col gap-1">
+                                <label hlmLabel for="edit-run-rep">Reproceso</label>
+                                <input hlmInput id="edit-run-rep" type="number" min="0" [ngModel]="editRunReprocessed()" (ngModelChange)="editRunReprocessed.set(+$event)" />
+                              </div>
+                            </div>
+                            <div class="flex flex-col gap-1">
+                              <label hlmLabel for="edit-run-incidents">Incidencias</label>
+                              <textarea
+                                id="edit-run-incidents"
+                                class="border-input min-h-16 rounded-md border bg-transparent px-3 py-2 text-sm"
+                                [ngModel]="editRunIncidents()"
+                                (ngModelChange)="editRunIncidents.set($event)"
+                              ></textarea>
+                            </div>
+                          </div>
+                          <div class="mt-2 flex justify-end gap-2">
+                            <button hlmBtn size="sm" (click)="confirmEditRun()">Guardar</button>
+                          </div>
+                        </hlm-popover-content>
+                      </hlm-popover>
+                    </td>
+                  </tr>
+                  @if (run.incidents) {
+                    <tr><td colspan="9" class="text-muted-foreground pb-2 text-xs italic"><ng-icon name="tablerAlertTriangle" class="align-middle" /> {{ run.incidents }}</td></tr>
+                  }
+                  @if (run.operations.length) {
+                    <tr>
+                      <td colspan="9" class="pb-3">
+                        <div class="flex flex-wrap gap-1.5">
+                          @for (op of run.operations; track op.operationId) {
+                            <span
+                              class="rounded-full border px-2 py-0.5 text-xs"
+                              [class.bg-emerald-50]="op.status === 'done'"
+                              [class.bg-amber-50]="op.status === 'in_progress'"
+                            >
+                              {{ op.name }}
+                              @if (op.start) { · {{ op.start }} }
+                              @if (op.end) { → {{ op.end }} }
+                            </span>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <app-empty-state icon="tablerClipboardText" title="Sin corridas registradas" description="Registra la primera corrida para empezar a ejecutar esta línea." />
+        }
+
+        <h4 class="text-muted-foreground mt-4 mb-2 text-xs font-semibold tracking-wide uppercase">Materiales — disponibilidad</h4>
+        <table class="w-full text-sm">
+          <thead class="text-muted-foreground border-b text-xs">
+            <tr>
+              <th class="py-1.5 text-start font-medium">Artículo</th>
+              <th class="py-1.5 text-end font-medium">Requerido</th>
+              <th class="py-1.5 text-end font-medium">Disponible</th>
+              <th class="py-1.5 text-end font-medium">Reservado</th>
+              <th class="py-1.5 text-end font-medium">Consumido</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y">
+            @for (material of line.materials; track material.itemId) {
+              <tr>
+                <td class="py-2">{{ itemLabel(material.itemId) }}</td>
+                <td class="py-2 text-end">{{ material.required }} {{ material.unitOfMeasure }}</td>
+                <td class="py-2 text-end" [class.text-destructive]="shortfall(material.required, material.available)" [class.font-medium]="shortfall(material.required, material.available)">
+                  {{ material.available }}
+                </td>
+                <td class="py-2 text-end">{{ material.reserved }}</td>
+                <td class="py-2 text-end">{{ material.consumed }}</td>
+              </tr>
+              @if (material.exception) {
+                <tr><td colspan="5" class="text-muted-foreground pb-2 text-xs italic">{{ material.exception }}</td></tr>
+              }
+            }
+          </tbody>
+        </table>
       </div>
-      <a [routerLink]="['/apps/inventory/stock-issues', issue.id]" class="text-primary mt-2 inline-block text-sm hover:underline">Ver {{ issue.number }}</a>
+    }
+  </div>
+
+  @if (materialShortfalls().length) {
+    <div class="mt-4 flex items-start justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm dark:border-amber-900 dark:bg-amber-950">
+      <div>
+        <p class="font-medium text-amber-800 dark:text-amber-300">Materiales insuficientes para completar esta HT</p>
+        <p class="text-muted-foreground text-xs">{{ materialShortfalls().length }} artículo(s) por debajo de lo requerido — revisa el requerimiento de compra correspondiente.</p>
+      </div>
+      <a routerLink="/apps/purchasing/requirements" class="text-primary shrink-0 text-sm hover:underline">Ver requerimientos de compra</a>
     </div>
   }
 
-  <div class="mt-4 flex gap-2">
-    <button hlmBtn variant="outline">Reservar materiales</button>
-    <button hlmBtn>Agregar a bolsa de salida</button>
+  <div class="mt-4 grid grid-cols-1 gap-4 xl:grid-cols-2">
+    <div hlmCard class="p-4">
+      <div class="mb-3 flex items-center justify-between">
+        <h3 class="text-sm font-semibold">Calidad — inspecciones</h3>
+        <a [routerLink]="['/apps/production/quality/inspections/new']" [queryParams]="{ workSheetId: ws.id }" hlmBtn variant="outline" size="sm">Registrar inspección</a>
+      </div>
+      @if (inspections().length) {
+        <ul class="divide-y text-sm">
+          @for (i of inspections(); track i.id) {
+            <li class="flex items-center justify-between py-2">
+              <div>
+                <a [routerLink]="['/apps/production/quality/inspections', i.id]" class="text-primary hover:underline">{{ i.operationName }}</a>
+                <p class="text-muted-foreground text-xs">{{ i.inspectedBy }} · {{ i.inspectedAt }}</p>
+              </div>
+              <app-status-badge [label]="i.overallResult === 'pass' ? 'Conforme' : i.overallResult === 'fail' ? 'No conforme' : 'Pendiente'" [tone]="i.overallResult === 'pass' ? 'success' : i.overallResult === 'fail' ? 'danger' : 'neutral'" />
+            </li>
+          }
+        </ul>
+      } @else {
+        <app-empty-state icon="tablerZoomCheck" title="Sin inspecciones registradas" />
+      }
+
+      @if (nonConformities().length) {
+        <h4 class="text-muted-foreground mt-4 mb-2 text-xs font-semibold tracking-wide uppercase">No conformidades</h4>
+        <ul class="flex flex-col gap-2 text-sm">
+          @for (nc of nonConformities(); track nc.id) {
+            <li class="rounded-lg border p-2.5" [class.border-amber-200]="!nc.resolved" [class.bg-amber-50]="!nc.resolved">
+              <div class="flex items-center justify-between">
+                <span class="font-medium">{{ nc.operationName }} — {{ nc.disposition }}</span>
+                <app-status-badge [label]="nc.resolved ? 'Resuelta' : 'Abierta'" [tone]="nc.resolved ? 'success' : 'warning'" />
+              </div>
+              <p class="text-muted-foreground mt-1 text-xs">{{ nc.reason }}</p>
+            </li>
+          }
+        </ul>
+      }
+    </div>
+
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Cierre de HT</h3>
+      @if (readyForWarehouse()) {
+        <div class="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-900 dark:bg-emerald-950">
+          <ng-icon name="tablerCircleCheck" class="mt-0.5 shrink-0 text-emerald-600" />
+          <div>
+            <p class="font-medium text-emerald-800 dark:text-emerald-300">Listo para ingresar a almacén</p>
+            <p class="text-muted-foreground text-xs">Todas las corridas están completas y calidad no reporta no conformidades abiertas.</p>
+          </div>
+        </div>
+        <a routerLink="/apps/inventory/goods-receipt" class="text-primary mt-2 inline-block text-sm hover:underline">Ir a Almacén — ingreso de producto terminado</a>
+      } @else {
+        <app-empty-state icon="tablerBuildingWarehouse" title="Todavía no está lista" description="Debe completarse la producción y resolverse cualquier no conformidad de calidad." />
+      }
+    </div>
   </div>
 } @else {
   <app-empty-state icon="tablerClipboardText" title="Hoja de trabajo no encontrada" />

@@ -17,21 +17,15 @@ import { NavItem } from '../nav-item.model';
 import { PURCHASING_NAV } from '@apps/purchasing/purchasing-nav';
 import { INVENTORY_NAV } from '@apps/inventory/inventory-nav';
 import { PRODUCTION_NAV } from '@apps/production/production-nav';
-import { PLM_NAV } from '@apps/plm/plm-nav';
-import { CRM_NAV } from '@apps/crm/crm-nav';
 import { SALES_NAV } from '@apps/sales/sales-nav';
 import { FINANCE_NAV } from '@apps/finance/finance-nav';
-import { INVOICING_NAV } from '@apps/invoicing/invoicing-nav';
 
 const NAV_BY_APP: Record<string, NavItem[]> = {
   purchasing: PURCHASING_NAV,
   inventory: INVENTORY_NAV,
   production: PRODUCTION_NAV,
-  plm: PLM_NAV,
-  crm: CRM_NAV,
   sales: SALES_NAV,
   finance: FINANCE_NAV,
-  invoicing: INVOICING_NAV,
 };
 
 /** Inset main's header: sidebar trigger, breadcrumb, global search, notifications and approvals bell. */
@@ -59,7 +53,7 @@ export class Topbar {
 
   protected readonly pageLabel = computed(() => {
     const role = this.auth.currentUser()?.role;
-    const items = (NAV_BY_APP[this.activeApp.id() ?? ''] ?? []).filter((item) => !item.roles || (role && item.roles.includes(role)));
+    const items = (NAV_BY_APP[this.activeApp.id() ?? ''] ?? []).filter((item) => role === 'admin' || !item.roles || (role && item.roles.includes(role)));
     const current = this.url();
     const match = items.find((item) => current.startsWith(item.route));
     if (match) return match.label;

@@ -60,7 +60,7 @@
             <div class="min-w-0">
               <div class="flex items-center gap-2">
                 <a [routerLink]="['/apps/production/work-sheets', c.ws.id]" class="text-primary font-medium hover:underline">{{ c.ws.number }}</a>
-                <span class="text-muted-foreground text-xs">{{ productName(c.ws.productId) }}</span>
+                <span class="text-muted-foreground text-xs">{{ c.productName }}</span>
               </div>
               <p class="text-muted-foreground mt-0.5 text-xs">
                 {{ c.ws.plant }} · cobertura {{ c.coveragePct }}%

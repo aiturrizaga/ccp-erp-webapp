@@ -1,0 +1,83 @@
+<app-entity-header title="Pagos por validar" [crumbs]="[{ label: 'Cobranzas' }, { label: 'Pagos por validar' }]" />
+
+<p class="text-muted-foreground mb-4 max-w-2xl text-sm">
+  Pagos reportados por Facturación con su voucher adjunto. Al validar, el monto se aplica al saldo de la factura;
+  al rechazar, la factura vuelve a su estado anterior con el motivo registrado.
+</p>
+
+<div class="flex flex-col gap-3">
+  @for (r of rows(); track r.payment.id) {
+    <div hlmCard class="flex flex-col gap-3 p-4 md:flex-row md:items-start">
+      <div class="min-w-0 flex-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <a class="text-primary text-sm font-semibold hover:underline" [routerLink]="['/apps/finance/invoices', r.invoiceId]">{{ r.invoiceNumber }}</a>
+          <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] text-amber-800">En validación</span>
+        </div>
+        <p class="text-muted-foreground mt-0.5 text-xs">{{ r.customerName }}</p>
+        <dl class="mt-2 grid grid-cols-[130px_1fr] gap-y-1 text-sm">
+          <dt class="text-muted-foreground">Monto reportado</dt>
+          <dd class="tabular-nums font-medium">{{ r.currency }} {{ r.payment.amount | number: '1.2-2' }}</dd>
+          <dt class="text-muted-foreground">Saldo de la factura</dt>
+          <dd class="tabular-nums">{{ r.currency }} {{ r.outstandingBalance | number: '1.2-2' }} de {{ r.invoiceTotal | number: '1.2-2' }}</dd>
+          <dt class="text-muted-foreground">Fecha / medio</dt>
+          <dd>{{ r.payment.date }} · {{ methodLabel(r.payment.method) }}</dd>
+          <dt class="text-muted-foreground">Reportó</dt>
+          <dd>{{ r.payment.registeredBy }} · {{ r.payment.registeredAt }}</dd>
+        </dl>
+
+        <div class="mt-3 flex gap-2">
+          <hlm-popover [state]="openPopover() === r.payment.id + ':ok' ? 'open' : 'closed'" (stateChanged)="openPopover.set($event === 'open' ? r.payment.id + ':ok' : null)">
+            <button hlmPopoverTrigger hlmBtn size="sm"><ng-icon name="tablerCheck" class="mr-1.5" /> Validar pago</button>
+            <hlm-popover-content *hlmPopoverPortal class="w-80">
+              <hlm-popover-header>
+                <h3 hlmPopoverTitle>¿Validar el pago de {{ r.invoiceNumber }}?</h3>
+                <p hlmPopoverDescription>Se aplicará {{ r.currency }} {{ r.payment.amount | number: '1.2-2' }} al saldo de la factura.</p>
+              </hlm-popover-header>
+              <div class="mt-3 flex justify-end gap-2">
+                <button hlmBtn variant="outline" size="sm" (click)="openPopover.set(null)">Cancelar</button>
+                <button hlmBtn size="sm" (click)="validate(r.invoiceId, r.payment.id, r.invoiceNumber)">Validar</button>
+              </div>
+            </hlm-popover-content>
+          </hlm-popover>
+
+          <hlm-popover [state]="openPopover() === r.payment.id + ':no' ? 'open' : 'closed'" (stateChanged)="openPopover.set($event === 'open' ? r.payment.id + ':no' : null)">
+            <button hlmPopoverTrigger hlmBtn size="sm" variant="outline" class="text-destructive">Rechazar</button>
+            <hlm-popover-content *hlmPopoverPortal class="w-80">
+              <hlm-popover-header>
+                <h3 hlmPopoverTitle>Rechazar el pago de {{ r.invoiceNumber }}</h3>
+                <p hlmPopoverDescription>Indica el motivo (el voucher no coincide, monto errado, etc.).</p>
+              </hlm-popover-header>
+              <textarea hlmInput rows="2" class="mt-2 w-full" placeholder="Motivo del rechazo" [ngModel]="rejectComment()" (ngModelChange)="rejectComment.set($event)"></textarea>
+              <div class="mt-3 flex justify-end gap-2">
+                <button hlmBtn variant="outline" size="sm" (click)="openPopover.set(null)">Cancelar</button>
+                <button hlmBtn variant="destructive" size="sm" [disabled]="!rejectComment().trim()" (click)="reject(r.invoiceId, r.payment.id, r.invoiceNumber)">Rechazar</button>
+              </div>
+            </hlm-popover-content>
+          </hlm-popover>
+        </div>
+      </div>
+
+      @if (r.payment.voucher; as v) {
+        <div class="w-full shrink-0 md:w-48">
+          <div class="overflow-hidden rounded-md border">
+            @if (v.mimeType.startsWith('image/')) {
+              <img [src]="v.url" [alt]="v.name" class="max-h-40 w-full cursor-zoom-in bg-black/5 object-contain" (click)="zoom.set(v.url)" />
+            } @else {
+              <div class="text-muted-foreground flex items-center gap-2 p-3 text-xs"><ng-icon name="tablerFileTypePdf" /> {{ v.name }}</div>
+            }
+          </div>
+          <a class="text-primary mt-1 block text-xs hover:underline" [href]="v.url" target="_blank" rel="noopener">Abrir voucher</a>
+        </div>
+      }
+    </div>
+  } @empty {
+    <div hlmCard class="text-muted-foreground p-6 text-center text-sm">No hay pagos pendientes de validación.</div>
+  }
+</div>
+
+@if (zoom(); as url) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-6" (click)="zoom.set(null)">
+    <img [src]="url" alt="Voucher" class="max-h-full max-w-full rounded shadow-2xl" />
+    <button hlmBtn size="sm" variant="secondary" class="absolute right-4 top-4" (click)="zoom.set(null)"><ng-icon name="tablerX" /></button>
+  </div>
+}

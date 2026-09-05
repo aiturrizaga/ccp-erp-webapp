@@ -1,0 +1,74 @@
+@if (product(); as p) {
+  <app-entity-header
+    [title]="p.name"
+    [subtitle]="p.code + ' · Artículo terminado ' + (item()?.code ?? '')"
+    [statusLabel]="statusLabel(p.status)"
+    [statusTone]="statusTone(p.status)"
+    [crumbs]="[{ label: 'Productos', link: '/apps/production/products' }, { label: p.name }]"
+  >
+    <div actions>
+      <a [routerLink]="['/apps/production/products', p.id, 'edit']" hlmBtn variant="outline" size="sm">Editar</a>
+    </div>
+  </app-entity-header>
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.4fr_1fr]">
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <h3 class="mb-3 text-sm font-semibold">Especificaciones técnicas</h3>
+        <dl class="grid grid-cols-2 gap-y-2 text-sm">
+          @for (spec of p.specifications; track spec.label) {
+            <dt class="text-muted-foreground">{{ spec.label }}</dt>
+            <dd>{{ spec.value }}</dd>
+          }
+        </dl>
+      </div>
+
+      <div hlmCard class="p-4">
+        <div class="mb-3 flex items-center justify-between">
+          <h3 class="text-sm font-semibold">BOM vigente</h3>
+          @if (activeBom(); as bom) {
+            <a [routerLink]="['/apps/production/bill-of-materials', bom.id]" class="text-primary text-xs hover:underline">Ver receta completa</a>
+          } @else {
+            <a [routerLink]="['/apps/production/bill-of-materials/new']" [queryParams]="{ productId: p.id }" class="text-primary text-xs hover:underline">Crear BOM</a>
+          }
+        </div>
+        @if (activeBom(); as bom) {
+          <p class="text-muted-foreground mb-2 text-xs">Versión {{ bom.version }} · vigente desde {{ bom.effectiveFrom }}</p>
+          <ul class="divide-y text-sm">
+            @for (component of bom.components; track component.itemId) {
+              <li class="flex items-center justify-between py-1.5">
+                <span>{{ itemLabel(component.itemId) }}</span>
+                <span class="text-muted-foreground">{{ component.quantity }} {{ component.unitOfMeasure }}</span>
+              </li>
+            }
+          </ul>
+        } @else {
+          <app-empty-state icon="tablerFlask" title="Sin BOM vigente" description="Este producto todavía no tiene una receta activa registrada." />
+        }
+      </div>
+    </div>
+
+    <div hlmCard class="p-4">
+      <h3 class="mb-3 text-sm font-semibold">Historial de versiones de BOM</h3>
+      @if (bomHistory().length) {
+        <ul class="divide-y text-sm">
+          @for (bom of bomHistory(); track bom.id) {
+            <li class="py-2">
+              <div class="flex items-center justify-between">
+                <a [routerLink]="['/apps/production/bill-of-materials', bom.id]" class="text-primary font-medium hover:underline">{{ bom.version }}</a>
+                <span class="text-muted-foreground text-xs">{{ bom.status === 'active' ? 'Vigente' : bom.status === 'draft' ? 'Borrador' : 'Vencida' }}</span>
+              </div>
+              <p class="text-muted-foreground text-xs">
+                {{ bom.effectiveFrom }} @if (bom.effectiveTo) { — {{ bom.effectiveTo }} }
+              </p>
+            </li>
+          }
+        </ul>
+      } @else {
+        <app-empty-state icon="tablerFileText" title="Sin historial" />
+      }
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerCategory" title="Producto no encontrado" />
+}

@@ -14,6 +14,9 @@ export class AppLauncher {
 
   protected readonly apps = computed(() => {
     const role = this.auth.currentUser()?.role;
+    // admin sees every App, including the ones still `hidden` from the regular launcher (early mockups) —
+    // this is the account used for end-to-end demos, so nothing should be out of reach.
+    if (role === 'admin') return APP_CATALOG;
     return APP_CATALOG.filter((app) => !app.hidden && (!app.roles || (role != null && app.roles.includes(role))));
   });
 

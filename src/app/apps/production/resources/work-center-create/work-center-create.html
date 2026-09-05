@@ -1,0 +1,71 @@
+<app-entity-header
+  [title]="isEdit() ? 'Editar centro de trabajo' : 'Nuevo centro de trabajo'"
+  [crumbs]="[{ label: 'Centros de trabajo', link: '/apps/production/work-centers' }, { label: isEdit() ? 'Editar' : 'Nuevo' }]"
+/>
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-[1.2fr_1fr]">
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Identificación</h3>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="code">Código</label>
+          <input hlmInput id="code" type="text" [ngModel]="code()" (ngModelChange)="code.set($event)" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="plant">Planta</label>
+          <input hlmInput id="plant" type="text" [ngModel]="plant()" (ngModelChange)="plant.set($event)" />
+        </div>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="name">Nombre</label>
+        <input hlmInput id="name" type="text" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="cap">Capacidad / día</label>
+          <input hlmInput id="cap" type="number" min="0" [ngModel]="capacityPerDay()" (ngModelChange)="capacityPerDay.set(+$event)" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="uom">Unidad de medida</label>
+          <input hlmInput id="uom" type="text" [ngModel]="unitOfMeasure()" (ngModelChange)="unitOfMeasure.set($event)" />
+        </div>
+      </div>
+    </div>
+
+    <div hlmCard class="flex flex-col gap-3 p-4">
+      <h3 class="text-sm font-semibold">Máquinas asociadas</h3>
+      @if (productionState.machines().length) {
+        <div class="flex flex-col gap-1.5">
+          @for (m of productionState.machines(); track m.id) {
+            <label class="flex cursor-pointer items-center gap-2 text-sm">
+              <hlm-checkbox [checked]="hasMachine(m.id)" (checkedChange)="toggleMachine(m.id)" />
+              {{ m.code }} — {{ m.name }}
+            </label>
+          }
+        </div>
+      } @else {
+        <p class="text-muted-foreground text-xs">Todavía no hay máquinas registradas.</p>
+      }
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <div class="flex gap-2">
+      <hlm-popover [state]="submitPopover()" (stateChanged)="submitPopover.set($event)">
+        <button hlmPopoverTrigger hlmBtn size="sm" [disabled]="!canSubmit()">{{ isEdit() ? 'Guardar cambios' : 'Crear centro de trabajo' }}</button>
+        <hlm-popover-content *hlmPopoverPortal class="w-80">
+          <hlm-popover-header>
+            <h3 hlmPopoverTitle>{{ isEdit() ? '¿Guardar los cambios?' : '¿Crear el centro de trabajo?' }}</h3>
+            <p hlmPopoverDescription>"{{ name() }}" ({{ code() }}) {{ isEdit() ? 'se actualizará' : 'se registrará en el maestro' }}.</p>
+          </hlm-popover-header>
+          <div class="mt-3 flex justify-end gap-2">
+            <button hlmBtn variant="outline" size="sm" (click)="submitPopover.set('closed')">Cancelar</button>
+            <button hlmBtn size="sm" (click)="submit()">Confirmar</button>
+          </div>
+        </hlm-popover-content>
+      </hlm-popover>
+      <button hlmBtn size="sm" variant="ghost" (click)="cancel()">Cancelar</button>
+    </div>
+  </div>
+</div>

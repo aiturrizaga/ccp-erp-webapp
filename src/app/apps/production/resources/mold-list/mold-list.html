@@ -1,0 +1,23 @@
+<app-list-toolbar [(search)]="search" searchPlaceholder="Buscar por código de molde..." actionLabel="Nuevo molde" (action)="onNew()" />
+
+<app-data-table [columns]="columns" [rows]="rows()" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron moldes." [cellTemplate]="cellTpl" />
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('code') {
+      {{ row.code }}
+    }
+    @case ('tipo') {
+      {{ typeLabel(row) }}
+    }
+    @case ('location') {
+      {{ row.location }} · {{ productNames(row) }}
+    }
+    @case ('usage') {
+      {{ row.usageCount }} / {{ row.maxUsageCount ?? '—' }}
+    }
+    @case ('estado') {
+      <app-status-badge [label]="conditionLabel(row)" [tone]="conditionTone(row)" />
+    }
+  }
+</ng-template>

@@ -1,0 +1,97 @@
+<app-entity-header
+  [title]="isEdit() ? 'Editar protocolo' : 'Nuevo protocolo de calidad'"
+  [crumbs]="[{ label: 'Protocolos de calidad', link: '/apps/production/quality/protocols' }, { label: isEdit() ? 'Editar' : 'Nuevo' }]"
+/>
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-[1.4fr_1fr]">
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Identificación</h3>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="name">Nombre</label>
+        <input hlmInput id="name" type="text" [ngModel]="name()" (ngModelChange)="name.set($event)" />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="version">Versión</label>
+          <input hlmInput id="version" type="text" [ngModel]="version()" (ngModelChange)="version.set($event)" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="family">Familia de producto</label>
+          <input hlmInput id="family" type="text" [ngModel]="productFamily()" (ngModelChange)="productFamily.set($event)" />
+        </div>
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="ops">Aplica a operaciones (separadas por coma)</label>
+        <input hlmInput id="ops" type="text" placeholder="p. ej. Fabricación, Liberación de calidad" [ngModel]="appliesToOperations()" (ngModelChange)="appliesToOperations.set($event)" />
+      </div>
+    </div>
+
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-sm font-semibold">Campos de inspección</h3>
+        <button hlmBtn size="sm" variant="outline" (click)="addField()"><ng-icon name="tablerPlus" class="mr-1.5" /> Agregar campo</button>
+      </div>
+      @for (f of fields(); track f._uid; let i = $index) {
+        <div class="rounded-md border p-3">
+          <div class="mb-2 flex items-center gap-2">
+            <input hlmInput type="text" class="flex-1" placeholder="Etiqueta del campo" [ngModel]="f.label" (ngModelChange)="setField(i, { label: $event })" />
+            @if (fields().length > 1) {
+              <button hlmBtn size="sm" variant="ghost" (click)="removeField(i)"><ng-icon name="tablerX" /></button>
+            }
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <hlm-select class="block w-full" [value]="f.dataType" (valueChange)="setField(i, { dataType: $any($event) })" [itemToString]="dataTypeToString">
+              <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+              <hlm-select-content *hlmSelectPortal>
+                @for (o of dataTypeOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+              </hlm-select-content>
+            </hlm-select>
+            <input hlmInput type="text" placeholder="Unidad (opcional)" [ngModel]="f.unit ?? ''" (ngModelChange)="setField(i, { unit: $event || undefined })" />
+          </div>
+          @if (f.dataType === 'number') {
+            <div class="mt-2 grid grid-cols-2 gap-2">
+              <input hlmInput type="number" placeholder="Rango mínimo" [ngModel]="f.minRange ?? null" (ngModelChange)="setField(i, { minRange: $event === '' ? undefined : +$event })" />
+              <input hlmInput type="number" placeholder="Rango máximo" [ngModel]="f.maxRange ?? null" (ngModelChange)="setField(i, { maxRange: $event === '' ? undefined : +$event })" />
+            </div>
+          } @else {
+            <input hlmInput type="text" class="mt-2 w-full" placeholder="Valor esperado (opcional)" [ngModel]="f.expectedValue ?? ''" (ngModelChange)="setField(i, { expectedValue: $event || undefined })" />
+          }
+          <label class="mt-2 flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="f.required" (checkedChange)="setField(i, { required: $event })" />
+            Obligatorio
+          </label>
+        </div>
+      }
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Estado</h3>
+      <hlm-select class="block w-full" [value]="status()" (valueChange)="status.set($any($event))" [itemToString]="statusToString">
+        <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+        <hlm-select-content *hlmSelectPortal>
+          @for (o of statusOptions; track o.value) { <hlm-select-item [value]="o.value">{{ o.label }}</hlm-select-item> }
+        </hlm-select-content>
+      </hlm-select>
+    </div>
+
+    <div class="flex gap-2">
+      <hlm-popover [state]="submitPopover()" (stateChanged)="submitPopover.set($event)">
+        <button hlmPopoverTrigger hlmBtn size="sm" [disabled]="!canSubmit()">{{ isEdit() ? 'Guardar cambios' : 'Crear protocolo' }}</button>
+        <hlm-popover-content *hlmPopoverPortal class="w-80">
+          <hlm-popover-header>
+            <h3 hlmPopoverTitle>{{ isEdit() ? '¿Guardar los cambios?' : '¿Crear el protocolo?' }}</h3>
+            <p hlmPopoverDescription>"{{ name() }}" {{ isEdit() ? 'se actualizará' : 'se registrará en el maestro de protocolos' }}.</p>
+          </hlm-popover-header>
+          <div class="mt-3 flex justify-end gap-2">
+            <button hlmBtn variant="outline" size="sm" (click)="submitPopover.set('closed')">Cancelar</button>
+            <button hlmBtn size="sm" (click)="submit()">Confirmar</button>
+          </div>
+        </hlm-popover-content>
+      </hlm-popover>
+      <button hlmBtn size="sm" variant="ghost" (click)="cancel()">Cancelar</button>
+    </div>
+  </div>
+</div>

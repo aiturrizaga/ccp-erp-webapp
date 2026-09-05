@@ -18,10 +18,12 @@ export class AuthState {
 
   readonly currentUser = signal<SessionUser | null>(this.restore());
 
-  readonly isWarehouse = computed(() => this.currentUser()?.role === 'warehouse');
-  readonly isPurchasing = computed(() => this.currentUser()?.role === 'purchasing');
-  readonly isSales = computed(() => this.currentUser()?.role === 'sales');
-  readonly isBilling = computed(() => this.currentUser()?.role === 'billing');
+  readonly isAdmin = computed(() => this.currentUser()?.role === 'admin');
+  /** `admin` passes every one of these — the demo user can take any role-gated action. */
+  readonly isWarehouse = computed(() => this.isAdmin() || this.currentUser()?.role === 'warehouse');
+  readonly isPurchasing = computed(() => this.isAdmin() || this.currentUser()?.role === 'purchasing');
+  readonly isSales = computed(() => this.isAdmin() || this.currentUser()?.role === 'sales');
+  readonly isBilling = computed(() => this.isAdmin() || this.currentUser()?.role === 'billing');
 
   constructor() {
     this.store.fetchAll().then((rows) => {

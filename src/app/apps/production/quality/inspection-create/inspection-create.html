@@ -1,0 +1,137 @@
+<app-entity-header
+  title="Registrar inspección"
+  [crumbs]="[{ label: 'Inspecciones', link: '/apps/production/quality/inspections' }, { label: 'Nueva' }]"
+/>
+
+<div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-[1.4fr_1fr]">
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <h3 class="text-sm font-semibold">Dónde se inspecciona</h3>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Hoja de trabajo</label>
+        <hlm-select class="block w-full" [value]="workSheetId()" (valueChange)="onWorkSheetChange($any($event))" [itemToString]="workSheetToString">
+          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (ws of productionState.workSheets(); track ws.id) { <hlm-select-item [value]="ws.id">{{ ws.number }}</hlm-select-item> }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+      @if (workSheet()) {
+        <div class="grid grid-cols-2 gap-3">
+          <div class="flex flex-col gap-1.5">
+            <label hlmLabel>Línea</label>
+            <hlm-select class="block w-full" [value]="lineId()" (valueChange)="onLineChange($any($event))" [itemToString]="lineToString">
+              <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+              <hlm-select-content *hlmSelectPortal>
+                @for (line of lines(); track line.id) { <hlm-select-item [value]="line.id">{{ lineToString(line.id) }}</hlm-select-item> }
+              </hlm-select-content>
+            </hlm-select>
+          </div>
+          <div class="flex flex-col gap-1.5">
+            <label hlmLabel>Corrida</label>
+            <select class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="runId()" (ngModelChange)="runId.set($event)">
+              <option value="">Selecciona…</option>
+              @for (run of runs(); track run.id) { <option [value]="run.id">{{ run.id }} — {{ run.operatorName }}</option> }
+            </select>
+          </div>
+        </div>
+      }
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel>Protocolo</label>
+        <hlm-select class="block w-full" [value]="protocolId()" (valueChange)="onProtocolChange($any($event))" [itemToString]="protocolToString">
+          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>
+            @for (p of productionState.qualityProtocols(); track p.id) { <hlm-select-item [value]="p.id">{{ p.name }}</hlm-select-item> }
+          </hlm-select-content>
+        </hlm-select>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="opname">Operación</label>
+          <input hlmInput id="opname" type="text" [ngModel]="operationName()" (ngModelChange)="operationName.set($event)" />
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="inspBy">Inspeccionado por</label>
+          <input hlmInput id="inspBy" type="text" [ngModel]="inspectedBy()" (ngModelChange)="inspectedBy.set($event)" />
+        </div>
+      </div>
+    </div>
+
+    @if (fieldDrafts().length) {
+      <div hlmCard class="flex flex-col gap-4 p-4">
+        <h3 class="text-sm font-semibold">Resultados por campo</h3>
+        @for (d of fieldDrafts(); track d.field.id; let i = $index) {
+          <div class="rounded-md border p-3">
+            <div class="mb-2 flex items-center justify-between gap-2">
+              <p class="text-sm font-medium">{{ d.field.label }} @if (d.field.unit) { <span class="text-muted-foreground font-normal">({{ d.field.unit }})</span> }</p>
+              <span class="text-xs" [class.text-emerald-600]="computedPass(d)" [class.text-destructive]="!computedPass(d)">{{ computedPass(d) ? 'Conforme' : 'No conforme' }}</span>
+            </div>
+            @if (d.field.dataType === 'boolean') {
+              <select class="border-input h-9 w-full rounded-md border bg-transparent px-2 text-sm" [ngModel]="d.value" (ngModelChange)="setFieldValue(i, $event)">
+                <option value="">Selecciona…</option>
+                <option value="true">Sí</option>
+                <option value="false">No</option>
+              </select>
+            } @else {
+              <input
+                hlmInput
+                [type]="d.field.dataType === 'number' ? 'number' : 'text'"
+                class="w-full"
+                [placeholder]="d.field.minRange != null || d.field.maxRange != null ? 'Rango: ' + (d.field.minRange ?? '—') + ' – ' + (d.field.maxRange ?? '—') : d.field.expectedValue ?? ''"
+                [ngModel]="d.value"
+                (ngModelChange)="setFieldValue(i, $event)"
+              />
+            }
+            <div class="mt-2 flex items-center gap-3 text-xs">
+              <button type="button" class="text-primary hover:underline" (click)="setFieldPassOverride(i, true)">Marcar conforme</button>
+              <button type="button" class="text-destructive hover:underline" (click)="setFieldPassOverride(i, false)">Marcar no conforme</button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+
+    <div hlmCard class="flex flex-col gap-3 p-4">
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="evidence">Evidencia (referencias separadas por coma, opcional)</label>
+        <input hlmInput id="evidence" type="text" [ngModel]="evidenceRefs()" (ngModelChange)="evidenceRefs.set($event)" />
+      </div>
+      <div class="flex flex-col gap-1.5">
+        <label hlmLabel for="notes">Observaciones</label>
+        <textarea id="notes" class="border-input min-h-16 rounded-md border bg-transparent px-3 py-2 text-sm" [ngModel]="notes()" (ngModelChange)="notes.set($event)"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="p-4">
+      <h3 class="mb-2 text-sm font-semibold">Resultado general</h3>
+      <p class="text-lg font-semibold" [class.text-emerald-600]="overallResult() === 'pass'" [class.text-destructive]="overallResult() === 'fail'">
+        {{ overallResult() === 'pass' ? 'Conforme' : overallResult() === 'fail' ? 'No conforme' : 'Sin evaluar' }}
+      </p>
+      @if (overallResult() === 'fail') {
+        <label class="mt-3 flex cursor-pointer items-center gap-2 text-sm">
+          <hlm-checkbox [checked]="generateNonConformity()" (checkedChange)="generateNonConformity.set($event)" />
+          Generar no conformidad (reproceso)
+        </label>
+      }
+    </div>
+
+    <div class="flex gap-2">
+      <hlm-popover [state]="submitPopover()" (stateChanged)="submitPopover.set($event)">
+        <button hlmPopoverTrigger hlmBtn size="sm" [disabled]="!canSubmit()">Registrar inspección</button>
+        <hlm-popover-content *hlmPopoverPortal class="w-80">
+          <hlm-popover-header>
+            <h3 hlmPopoverTitle>¿Registrar la inspección?</h3>
+            <p hlmPopoverDescription>Resultado general: {{ overallResult() === 'pass' ? 'Conforme' : 'No conforme' }}.</p>
+          </hlm-popover-header>
+          <div class="mt-3 flex justify-end gap-2">
+            <button hlmBtn variant="outline" size="sm" (click)="submitPopover.set('closed')">Cancelar</button>
+            <button hlmBtn size="sm" (click)="submit()">Confirmar</button>
+          </div>
+        </hlm-popover-content>
+      </hlm-popover>
+      <button hlmBtn size="sm" variant="ghost" (click)="cancel()">Cancelar</button>
+    </div>
+  </div>
+</div>
