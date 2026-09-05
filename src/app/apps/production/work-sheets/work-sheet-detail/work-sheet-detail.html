@@ -71,14 +71,14 @@
 
         <div class="mb-4 flex items-center justify-between">
           <h4 class="text-muted-foreground text-xs font-semibold tracking-wide uppercase">Corridas de fabricación</h4>
-          <hlm-popover>
-            <button hlmPopoverTrigger hlmBtn size="sm" variant="outline" (click)="openNewRunDraft(line)">Nueva corrida</button>
-            <hlm-popover-content *hlmPopoverPortal class="w-96">
-              <hlm-popover-header>
-                <h3 hlmPopoverTitle>Registrar corrida</h3>
-                <p hlmPopoverDescription>Divide la producción de esta línea en una corrida más — centro, máquina, molde, materiales y cantidades planificadas.</p>
-              </hlm-popover-header>
-              <div class="flex max-h-[70vh] flex-col gap-2 overflow-y-auto pe-1">
+          <hlm-dialog>
+            <button hlmDialogTrigger hlmBtn size="sm" variant="outline" (click)="openNewRunDraft(line)">Nueva corrida</button>
+            <hlm-dialog-content *hlmDialogPortal="let ctx" class="max-h-[90vh] w-[calc(100vw-2rem)] overflow-hidden sm:max-w-2xl">
+              <hlm-dialog-header>
+                <h3 hlmDialogTitle>Registrar corrida</h3>
+                <p hlmDialogDescription>Divide la producción de esta línea en una corrida más — centro, máquina, molde, materiales y cantidades planificadas.</p>
+              </hlm-dialog-header>
+              <div class="flex max-h-[68vh] flex-col gap-3 overflow-y-auto pe-2">
                 <div class="flex flex-col gap-1">
                   <label hlmLabel for="run-operator">Operador</label>
                   <input hlmInput id="run-operator" [ngModel]="newRunOperator()" (ngModelChange)="newRunOperator.set($event)" />
@@ -145,11 +145,12 @@
                   <textarea id="run-incidents" class="border-input min-h-16 rounded-md border bg-transparent px-3 py-2 text-sm" [ngModel]="newRunIncidents()" (ngModelChange)="newRunIncidents.set($event)"></textarea>
                 </div>
               </div>
-              <div class="mt-2 flex justify-end gap-2">
-                <button hlmBtn size="sm" [disabled]="!canAddRun()" (click)="confirmAddRun()">Registrar</button>
-              </div>
-            </hlm-popover-content>
-          </hlm-popover>
+              <hlm-dialog-footer>
+                <button hlmBtn variant="outline" hlmDialogClose>Cancelar</button>
+                <button hlmBtn [disabled]="!canAddRun()" hlmDialogClose (click)="confirmAddRun()">Registrar</button>
+              </hlm-dialog-footer>
+            </hlm-dialog-content>
+          </hlm-dialog>
         </div>
 
         @if (line.runs.length) {
@@ -180,14 +181,14 @@
                     <td class="py-2 text-end" [class.text-destructive]="run.rejectedQuantity > 0">{{ run.rejectedQuantity }}</td>
                     <td class="py-2"><app-status-badge [label]="runStatusLabel(run.status)" [tone]="runStatusTone(run.status)" /></td>
                     <td class="py-2 text-end">
-                      <hlm-popover>
-                        <button hlmPopoverTrigger hlmBtn size="sm" variant="ghost" (click)="openEditRunDraft(line, run)">Editar</button>
-                        <hlm-popover-content *hlmPopoverPortal class="w-80">
-                          <hlm-popover-header>
-                            <h3 hlmPopoverTitle>Editar corrida {{ run.id }}</h3>
-                            <p hlmPopoverDescription>Actualiza avance, tiempos reales e incidencias.</p>
-                          </hlm-popover-header>
-                          <div class="flex flex-col gap-2">
+                      <hlm-dialog>
+                        <button hlmDialogTrigger hlmBtn size="sm" variant="ghost" (click)="openEditRunDraft(line, run)">Editar</button>
+                        <hlm-dialog-content *hlmDialogPortal="let ctx" class="w-[calc(100vw-2rem)] sm:max-w-2xl">
+                          <hlm-dialog-header>
+                            <h3 hlmDialogTitle>Editar corrida {{ run.id }}</h3>
+                            <p hlmDialogDescription>Actualiza avance, tiempos reales e incidencias.</p>
+                          </hlm-dialog-header>
+                          <div class="flex max-h-[68vh] flex-col gap-4 overflow-y-auto pe-2">
                             <div class="flex flex-col gap-1">
                               <label hlmLabel>Estado</label>
                               <hlm-select class="block w-full" [value]="editRunStatus()" (valueChange)="editRunStatus.set($any($event))" [itemToString]="runStatusToString">
@@ -231,11 +232,12 @@
                               ></textarea>
                             </div>
                           </div>
-                          <div class="mt-2 flex justify-end gap-2">
-                            <button hlmBtn size="sm" (click)="confirmEditRun()">Guardar</button>
-                          </div>
-                        </hlm-popover-content>
-                      </hlm-popover>
+                          <hlm-dialog-footer>
+                            <button hlmBtn variant="outline" hlmDialogClose>Cancelar</button>
+                            <button hlmBtn hlmDialogClose (click)="confirmEditRun()">Guardar cambios</button>
+                          </hlm-dialog-footer>
+                        </hlm-dialog-content>
+                      </hlm-dialog>
                     </td>
                   </tr>
                   @if (run.incidents) {

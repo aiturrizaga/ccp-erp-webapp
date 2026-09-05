@@ -7,6 +7,7 @@ import { HlmButtonImports } from '@ui/button';
 import { HlmInputImports } from '@ui/input';
 import { HlmLabelImports } from '@ui/label';
 import { HlmPopoverImports } from '@ui/popover';
+import { HlmDialogImports } from '@ui/dialog';
 import { HlmSelectImports } from '@ui/select';
 import { toast } from '@shared/toast';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
@@ -67,6 +68,7 @@ const RUN_STATUS_TONE: Record<RunStatus, Tone> = {
     ...HlmInputImports,
     ...HlmLabelImports,
     ...HlmPopoverImports,
+    ...HlmDialogImports,
     ...HlmSelectImports,
     EntityHeader,
     StatusBadge,
