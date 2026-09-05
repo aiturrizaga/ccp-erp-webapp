@@ -125,10 +125,10 @@ export const WORK_SHEETS: WorkSheet[] = [
         runs: [
           {
             id: 'RUN-0305-1', sequence: 1, workCenterId: 'WC-003', machineId: 'MCH-004', moldId: 'MLD-004', operatorName: 'Haldeer Vasquez',
-            scheduledStart: '2026-08-06T07:00', scheduledEnd: '2026-08-07T15:00',
+            scheduledStart: '2026-09-02T07:00', scheduledEnd: '2026-09-03T15:00',
             plannedQuantity: 40, producedQuantity: 0, rejectedQuantity: 0, reprocessedQuantity: 0,
             materialsConsumed: [],
-            operations: opsLog('BOM-004', 0, '2026-08-06T07:00'),
+            operations: opsLog('BOM-004', 0, '2026-09-02T07:00'),
             status: 'planned',
           },
         ],
@@ -162,7 +162,93 @@ export const WORK_SHEETS: WorkSheet[] = [
           { itemId: 'MP00008', required: 160, available: 900, reserved: 0, consumed: 0, unitOfMeasure: 'BOL', isSupply: false },
           { itemId: 'MA00031', required: 180, available: 45, reserved: 0, consumed: 0, unitOfMeasure: 'UND', isSupply: false, exception: 'Stock insuficiente de tubería PVC — se generó un requerimiento de compra automático.' },
         ],
-        runs: [],
+        runs: [
+          {
+            id: 'RUN-0330-1', sequence: 1, workCenterId: 'WC-002', machineId: 'MCH-003', moldId: 'MLD-003', operatorName: 'Cristian Espinoza',
+            scheduledStart: '2026-09-03T07:00', scheduledEnd: '2026-09-04T15:00',
+            plannedQuantity: 45, producedQuantity: 0, rejectedQuantity: 0, reprocessedQuantity: 0,
+            materialsConsumed: [],
+            operations: opsLog('BOM-002', 0, '2026-09-03T07:00'),
+            status: 'planned',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'HT-2026-0320', number: 'HT-2026-0320', plant: 'AL01 · Planta 03',
+    scheduledDate: '2026-08-18', committedDate: '2026-08-24', responsible: 'Cristian Espinoza', atRisk: false,
+    lines: [
+      {
+        id: 'HTL-0320-1', productId: 'PROD-002', bomId: 'BOM-002', bomVersion: 'v1.3', routing: routingFor('BOM-002'),
+        plannedQuantity: 90, unitOfMeasure: 'UND',
+        materials: [
+          { itemId: 'MP00008', required: 315, available: 900, reserved: 0, consumed: 315, unitOfMeasure: 'BOL', isSupply: false },
+        ],
+        runs: [
+          {
+            id: 'RUN-0320-1', sequence: 1, workCenterId: 'WC-002', machineId: 'MCH-003', moldId: 'MLD-003', operatorName: 'Cristian Espinoza',
+            scheduledStart: '2026-08-18T07:00', scheduledEnd: '2026-08-19T15:00', actualStart: '2026-08-18T07:00', actualEnd: '2026-08-19T14:00',
+            plannedQuantity: 45, producedQuantity: 44, rejectedQuantity: 1, reprocessedQuantity: 1,
+            materialsConsumed: [{ itemId: 'MP00008', lotId: 'LOT-014', quantity: 158, unitOfMeasure: 'BOL' }],
+            operations: opsLog('BOM-002', 5, '2026-08-18T07:00'),
+            status: 'completed',
+          },
+          {
+            id: 'RUN-0320-2', sequence: 2, workCenterId: 'WC-002', machineId: 'MCH-003', moldId: 'MLD-003', operatorName: 'Cristian Espinoza',
+            scheduledStart: '2026-08-20T07:00', scheduledEnd: '2026-08-21T15:00', actualStart: '2026-08-20T07:00', actualEnd: '2026-08-21T13:30',
+            plannedQuantity: 45, producedQuantity: 45, rejectedQuantity: 0, reprocessedQuantity: 0,
+            materialsConsumed: [{ itemId: 'MP00008', lotId: 'LOT-014', quantity: 157, unitOfMeasure: 'BOL' }],
+            operations: opsLog('BOM-002', 5, '2026-08-20T07:00'),
+            status: 'completed',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'HT-2026-0335', number: 'HT-2026-0335', plant: 'AL01 · Accesorios 01',
+    scheduledDate: '2026-08-24', committedDate: '2026-08-28', responsible: 'Haldeer Vasquez', atRisk: false,
+    lines: [
+      {
+        id: 'HTL-0335-1', productId: 'PROD-005', bomId: 'BOM-005', bomVersion: 'v1.0', routing: routingFor('BOM-005'),
+        plannedQuantity: 35, unitOfMeasure: 'UND',
+        materials: [
+          { itemId: 'MP00009', required: 88, available: 120, reserved: 0, consumed: 88, unitOfMeasure: 'BOL', isSupply: false },
+        ],
+        runs: [
+          {
+            id: 'RUN-0335-1', sequence: 1, workCenterId: 'WC-003', machineId: 'MCH-004', moldId: 'MLD-005', operatorName: 'Haldeer Vasquez',
+            scheduledStart: '2026-08-24T07:00', scheduledEnd: '2026-08-25T15:00', actualStart: '2026-08-24T07:00', actualEnd: '2026-08-25T15:00',
+            plannedQuantity: 35, producedQuantity: 33, rejectedQuantity: 2, reprocessedQuantity: 2,
+            materialsConsumed: [{ itemId: 'MP00009', lotId: 'LOT-003', quantity: 88, unitOfMeasure: 'BOL' }],
+            operations: opsLog('BOM-005', 5, '2026-08-24T07:00'),
+            status: 'completed',
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'HT-2026-1010', number: 'HT-2026-1010', plant: 'AL01 · Planta 02',
+    scheduledDate: '2026-08-29', committedDate: '2026-09-03', responsible: 'Alex Vasquez', atRisk: false,
+    lines: [
+      {
+        id: 'HTL-1010-1', productId: 'PROD-006', bomId: 'BOM-006', bomVersion: 'v1.0', routing: routingFor('BOM-006'),
+        plannedQuantity: 20, unitOfMeasure: 'UND',
+        materials: [
+          { itemId: 'MP00006', required: 200, available: 850, reserved: 0, consumed: 200, unitOfMeasure: 'BOL', isSupply: false },
+        ],
+        runs: [
+          {
+            id: 'RUN-1010-1', sequence: 1, workCenterId: 'WC-001', machineId: 'MCH-001', moldId: 'MLD-006', operatorName: 'Alex Vasquez',
+            scheduledStart: '2026-08-29T07:00', scheduledEnd: '2026-08-30T15:00', actualStart: '2026-08-29T07:00', actualEnd: '2026-08-30T14:00',
+            plannedQuantity: 20, producedQuantity: 19, rejectedQuantity: 1, reprocessedQuantity: 0,
+            materialsConsumed: [{ itemId: 'MP00006', lotId: 'LOT-002', quantity: 200, unitOfMeasure: 'BOL' }],
+            operations: opsLog('BOM-006', 5, '2026-08-29T07:00'),
+            status: 'completed',
+          },
+        ],
       },
     ],
   },
