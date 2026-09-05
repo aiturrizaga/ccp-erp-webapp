@@ -16,16 +16,96 @@
 
   <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
     <div class="flex flex-col gap-1">
-      <label hlmLabel for="planning-order">Pedido</label>
-      <input hlmInput id="planning-order" placeholder="Ej. SO-2026-0001" [ngModel]="draftOrder()" (ngModelChange)="draftOrder.set($event)" (keyup.enter)="search()" />
+      <label hlmLabel for="planning-customer">Empresa / cliente</label>
+      <select id="planning-customer"
+        class="border-input h-9 rounded-md border bg-transparent px-2 text-sm"
+        [ngModel]="draftCustomer()"
+        (ngModelChange)="draftCustomer.set($event); clearSelectedOrders()">
+        <option value="">Todas las empresas</option>
+        @for (customer of customerOptions(); track customer) {
+          <option [value]="customer">{{ customer }}</option>
+        }
+      </select>
     </div>
 
     <div class="flex flex-col gap-1">
-      <label hlmLabel for="planning-customer">Empresa / cliente</label>
-      <select id="planning-customer" class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="draftCustomer()" (ngModelChange)="draftCustomer.set($event)">
-        <option value="">Todas</option>
-        @for (customer of customerOptions(); track customer) { <option [value]="customer">{{ customer }}</option> }
-      </select>
+      <label hlmLabel>Pedido</label>
+      <div class="flex gap-1">
+        <div class="border-input flex h-9 min-w-0 flex-1 items-center rounded-md border bg-transparent px-3 text-sm">
+          @if (selectedOrderIds().size === 0) {
+            <span class="text-muted-foreground truncate">Todos los pedidos</span>
+          } @else {
+            <span class="truncate">{{ selectedOrderIds().size }} pedido(s) seleccionado(s)</span>
+          }
+        </div>
+
+        <hlm-dialog>
+          <button hlmDialogTrigger hlmBtn variant="outline" size="icon" title="Buscar pedidos">
+            <ng-icon name="tablerSearch" />
+          </button>
+
+          <hlm-dialog-content *brnDialogContent="let ctx" class="w-[95vw] sm:max-w-5xl max-h-[90vh] overflow-hidden">
+            <hlm-dialog-header>
+              <h3 hlmDialogTitle>Seleccionar pedidos</h3>
+              <p hlmDialogDescription>
+                @if (draftCustomer()) {
+                  Pedidos de {{ draftCustomer() }}. Marca uno, varios o todos.
+                } @else {
+                  Pedidos de todas las empresas. Marca uno, varios o todos.
+                }
+              </p>
+            </hlm-dialog-header>
+
+            <input hlmInput class="mt-3" placeholder="Buscar por pedido o empresa..."
+              [ngModel]="orderModalSearch()" (ngModelChange)="orderModalSearch.set($event)" />
+
+            <div class="mt-3 max-h-[55vh] overflow-auto rounded-md border">
+              <table class="w-full text-sm">
+                <thead class="sticky top-0 z-10 border-b bg-background">
+                  <tr>
+                    <th class="w-12 px-3 py-2 text-center">
+                      <hlm-checkbox [checked]="allVisibleOrdersSelected()" (checkedChange)="toggleAllOrders()" />
+                    </th>
+                    <th class="px-3 py-2 text-start">Pedido</th>
+                    <th class="px-3 py-2 text-start">Empresa</th>
+                    <th class="px-3 py-2 text-start">Fecha</th>
+                    <th class="px-3 py-2 text-start">Estado</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y">
+                  @for (order of ordersForPlanning(); track order.id) {
+                    <tr class="cursor-pointer hover:bg-muted/40" (click)="toggleOrder(order.id)">
+                      <td class="px-3 py-3 text-center" (click)="$event.stopPropagation()">
+                        <hlm-checkbox [checked]="selectedOrderIds().has(order.id)" (checkedChange)="toggleOrder(order.id)" />
+                      </td>
+                      <td class="px-3 py-3 font-medium">{{ order.number }}</td>
+                      <td class="px-3 py-3">{{ order.customerName }}</td>
+                      <td class="px-3 py-3">{{ order.confirmedAt }}</td>
+                      <td class="px-3 py-3">{{ orderStatusLabel(order.status) }}</td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="5" class="text-muted-foreground px-4 py-10 text-center">
+                        No hay pedidos para la empresa o búsqueda seleccionada.
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mt-4 flex items-center justify-between gap-3">
+              <span class="text-muted-foreground text-xs">{{ selectedOrderIds().size }} pedido(s) seleccionado(s)</span>
+              <div class="flex gap-2">
+                @if (selectedOrderIds().size > 0) {
+                  <button hlmBtn variant="ghost" (click)="clearSelectedOrders()">Limpiar</button>
+                }
+                <button hlmBtn (click)="ctx.close(); search()">Ver planificación</button>
+              </div>
+            </div>
+          </hlm-dialog-content>
+        </hlm-dialog>
+      </div>
     </div>
 
     <div class="flex flex-col gap-1">

@@ -7,10 +7,14 @@ import { HlmButtonImports } from '@ui/button';
 import { HlmInputImports } from '@ui/input';
 import { HlmLabelImports } from '@ui/label';
 import { HlmPopoverImports } from '@ui/popover';
+import { HlmDialogImports } from '@ui/dialog';
+import { HlmCheckboxImports } from '@ui/checkbox';
+import { NgIcon } from '@ng-icons/core';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { toast } from '@shared/toast';
-import { ManufacturingRun } from '@core/models';
+import { ManufacturingRun, SALES_ORDER_STATUS_LABEL } from '@core/models';
+import { salesOrders } from '../../sales/sales-state';
 import { ProductionState } from '../production-state';
 
 interface RunCell {
@@ -43,7 +47,7 @@ function eachDay(from: string, to: string): string[] {
 
 @Component({
   selector: 'app-planning',
-  imports: [FormsModule, NgTemplateOutlet, RouterLink, ...HlmCardImports, ...HlmButtonImports, ...HlmInputImports, ...HlmLabelImports, ...HlmPopoverImports, EntityHeader, EmptyState],
+  imports: [FormsModule, NgTemplateOutlet, RouterLink, ...HlmCardImports, ...HlmButtonImports, ...HlmInputImports, ...HlmLabelImports, ...HlmPopoverImports, ...HlmDialogImports, ...HlmCheckboxImports, NgIcon, EntityHeader, EmptyState],
   templateUrl: './planning.html',
 })
 export class Planning {
@@ -53,18 +57,70 @@ export class Planning {
 
   // Filtros de negocio. Se aplican al presionar Buscar para que el usuario pueda completar
   // varios criterios antes de refrescar el tablero.
-  protected readonly draftOrder = signal('');
   protected readonly draftCustomer = signal('');
   protected readonly draftWorkSheet = signal('');
   protected readonly draftMonth = signal('');
   protected readonly draftFrom = signal('');
   protected readonly draftTo = signal('');
 
-  protected readonly filterOrder = signal('');
   protected readonly filterCustomer = signal('');
   protected readonly filterWorkSheet = signal('');
   protected readonly filterFrom = signal('');
   protected readonly filterTo = signal('');
+
+
+  // Selección de pedidos desde modal.
+  protected readonly selectedOrderIds = signal<Set<string>>(new Set());
+  protected readonly orderModalSearch = signal('');
+
+  // Empresas que tienen al menos un pedido.
+  protected readonly customerOptions = computed(() =>
+    [...new Set(salesOrders().map((o) => o.customerName).filter(Boolean))]
+      .sort((a, b) => a.localeCompare(b)),
+  );
+
+  // Pedidos del modal: todos o solo los de la empresa seleccionada.
+  protected readonly ordersForPlanning = computed(() => {
+    const customer = this.draftCustomer().trim().toLowerCase();
+    const term = this.orderModalSearch().trim().toLowerCase();
+
+    return salesOrders().filter((order) => {
+      if (customer && order.customerName.toLowerCase() !== customer) return false;
+      if (term && !order.number.toLowerCase().includes(term) && !order.customerName.toLowerCase().includes(term)) return false;
+      return true;
+    });
+  });
+
+  protected readonly allVisibleOrdersSelected = computed(() => {
+    const rows = this.ordersForPlanning();
+    return rows.length > 0 && rows.every((o) => this.selectedOrderIds().has(o.id));
+  });
+
+  protected toggleOrder(orderId: string): void {
+    this.selectedOrderIds.update((current) => {
+      const next = new Set(current);
+      next.has(orderId) ? next.delete(orderId) : next.add(orderId);
+      return next;
+    });
+  }
+
+  protected toggleAllOrders(): void {
+    const rows = this.ordersForPlanning();
+    const remove = rows.length > 0 && rows.every((o) => this.selectedOrderIds().has(o.id));
+    this.selectedOrderIds.update((current) => {
+      const next = new Set(current);
+      rows.forEach((o) => remove ? next.delete(o.id) : next.add(o.id));
+      return next;
+    });
+  }
+
+  protected clearSelectedOrders(): void {
+    this.selectedOrderIds.set(new Set());
+  }
+
+  protected orderStatusLabel(status: string): string {
+    return SALES_ORDER_STATUS_LABEL[status as keyof typeof SALES_ORDER_STATUS_LABEL] ?? status;
+  }
 
   private readonly allRunCells = computed<RunCell[]>(() =>
     this.productionState.workSheets().flatMap((ws) =>
@@ -84,19 +140,16 @@ export class Planning {
     ),
   );
 
-  protected readonly customerOptions = computed(() =>
-    [...new Set(this.productionState.workSheets().map((ws) => ws.customerName).filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b)),
-  );
 
   protected readonly runCells = computed(() => {
-    const order = this.filterOrder().trim().toLowerCase();
+    const selectedOrderNumbers = new Set(salesOrders().filter((o) => this.selectedOrderIds().has(o.id)).map((o) => o.number));
     const customer = this.filterCustomer().trim().toLowerCase();
     const ws = this.filterWorkSheet().trim().toLowerCase();
     const from = this.filterFrom();
     const to = this.filterTo();
 
     return this.allRunCells().filter((cell) => {
-      if (order && !cell.salesOrderNumber.toLowerCase().includes(order)) return false;
+      if (selectedOrderNumbers.size > 0 && !selectedOrderNumbers.has(cell.salesOrderNumber)) return false;
       if (customer && !cell.customerName.toLowerCase().includes(customer)) return false;
       if (ws && !cell.workSheetNumber.toLowerCase().includes(ws)) return false;
 
@@ -143,7 +196,6 @@ export class Planning {
       toast.error('La fecha desde no puede ser mayor que la fecha hasta.');
       return;
     }
-    this.filterOrder.set(this.draftOrder());
     this.filterCustomer.set(this.draftCustomer());
     this.filterWorkSheet.set(this.draftWorkSheet());
     this.filterFrom.set(this.draftFrom());
@@ -151,17 +203,17 @@ export class Planning {
   }
 
   protected clearFilters(): void {
-    this.draftOrder.set('');
     this.draftCustomer.set('');
     this.draftWorkSheet.set('');
     this.draftMonth.set('');
     this.draftFrom.set('');
     this.draftTo.set('');
-    this.filterOrder.set('');
     this.filterCustomer.set('');
     this.filterWorkSheet.set('');
     this.filterFrom.set('');
     this.filterTo.set('');
+    this.clearSelectedOrders();
+    this.orderModalSearch.set('');
   }
 
   protected cellsFor(machineId: string, day: string): RunCell[] {
