@@ -73,27 +73,51 @@ export class Planning {
   protected readonly selectedOrderIds = signal<Set<string>>(new Set());
   protected readonly orderModalSearch = signal('');
 
-  // Empresas que tienen al menos un pedido.
+  // Pedidos que realmente tienen una HT existente en Producción.
+  protected readonly ordersWithWorkSheet = computed(() => {
+    const workSheets = this.productionState.workSheets();
+
+    return salesOrders()
+      .map((order) => {
+        const workSheet = workSheets.find((ws) =>
+          ws.id === order.workSheetId ||
+          ws.salesOrderId === order.id ||
+          ws.salesOrderNumber === order.number
+        );
+
+        return workSheet ? { order, workSheet } : null;
+      })
+      .filter((row): row is NonNullable<typeof row> => row !== null);
+  });
+
+  // En Planificación solo aparecen empresas que tienen Pedido + HT.
   protected readonly customerOptions = computed(() =>
-    [...new Set(salesOrders().map((o) => o.customerName).filter(Boolean))]
+    [...new Set(this.ordersWithWorkSheet().map((row) => row.order.customerName).filter(Boolean))]
       .sort((a, b) => a.localeCompare(b)),
   );
 
-  // Pedidos del modal: todos o solo los de la empresa seleccionada.
+  // Modal de pedidos: únicamente pedidos que tienen HT.
   protected readonly ordersForPlanning = computed(() => {
     const customer = this.draftCustomer().trim().toLowerCase();
     const term = this.orderModalSearch().trim().toLowerCase();
 
-    return salesOrders().filter((order) => {
+    return this.ordersWithWorkSheet().filter(({ order, workSheet }) => {
       if (customer && order.customerName.toLowerCase() !== customer) return false;
-      if (term && !order.number.toLowerCase().includes(term) && !order.customerName.toLowerCase().includes(term)) return false;
+
+      if (
+        term &&
+        !order.number.toLowerCase().includes(term) &&
+        !order.customerName.toLowerCase().includes(term) &&
+        !workSheet.number.toLowerCase().includes(term)
+      ) return false;
+
       return true;
     });
   });
 
   protected readonly allVisibleOrdersSelected = computed(() => {
     const rows = this.ordersForPlanning();
-    return rows.length > 0 && rows.every((o) => this.selectedOrderIds().has(o.id));
+    return rows.length > 0 && rows.every(({ order }) => this.selectedOrderIds().has(order.id));
   });
 
   protected toggleOrder(orderId: string): void {
@@ -106,10 +130,10 @@ export class Planning {
 
   protected toggleAllOrders(): void {
     const rows = this.ordersForPlanning();
-    const remove = rows.length > 0 && rows.every((o) => this.selectedOrderIds().has(o.id));
+    const remove = rows.length > 0 && rows.every(({ order }) => this.selectedOrderIds().has(order.id));
     this.selectedOrderIds.update((current) => {
       const next = new Set(current);
-      rows.forEach((o) => remove ? next.delete(o.id) : next.add(o.id));
+      rows.forEach(({ order }) => remove ? next.delete(order.id) : next.add(order.id));
       return next;
     });
   }

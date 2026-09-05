@@ -68,24 +68,29 @@
                     </th>
                     <th class="px-3 py-2 text-start">Pedido</th>
                     <th class="px-3 py-2 text-start">Empresa</th>
-                    <th class="px-3 py-2 text-start">Fecha</th>
-                    <th class="px-3 py-2 text-start">Estado</th>
+                    <th class="px-3 py-2 text-start">HT</th>
+                    <th class="px-3 py-2 text-start">Estado pedido</th>
+                    <th class="px-3 py-2 text-start">Estado HT</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y">
-                  @for (order of ordersForPlanning(); track order.id) {
-                    <tr class="cursor-pointer hover:bg-muted/40" (click)="toggleOrder(order.id)">
+                  @for (row of ordersForPlanning(); track row.order.id) {
+                    <tr class="cursor-pointer hover:bg-muted/40" (click)="toggleOrder(row.order.id)">
                       <td class="px-3 py-3 text-center" (click)="$event.stopPropagation()">
-                        <hlm-checkbox [checked]="selectedOrderIds().has(order.id)" (checkedChange)="toggleOrder(order.id)" />
+                        <hlm-checkbox
+                          [checked]="selectedOrderIds().has(row.order.id)"
+                          (checkedChange)="toggleOrder(row.order.id)"
+                        />
                       </td>
-                      <td class="px-3 py-3 font-medium">{{ order.number }}</td>
-                      <td class="px-3 py-3">{{ order.customerName }}</td>
-                      <td class="px-3 py-3">{{ order.confirmedAt }}</td>
-                      <td class="px-3 py-3">{{ orderStatusLabel(order.status) }}</td>
+                      <td class="px-3 py-3 font-medium">{{ row.order.number }}</td>
+                      <td class="px-3 py-3">{{ row.order.customerName }}</td>
+                      <td class="px-3 py-3 font-medium">{{ row.workSheet.number }}</td>
+                      <td class="px-3 py-3">{{ orderStatusLabel(row.order.status) }}</td>
+                      <td class="px-3 py-3">{{ row.workSheet.status }}</td>
                     </tr>
                   } @empty {
                     <tr>
-                      <td colspan="5" class="text-muted-foreground px-4 py-10 text-center">
+                      <td colspan="6" class="text-muted-foreground px-4 py-10 text-center">
                         No hay pedidos para la empresa o búsqueda seleccionada.
                       </td>
                     </tr>
