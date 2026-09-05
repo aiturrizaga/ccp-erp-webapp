@@ -41,6 +41,18 @@
     @case ('status') {
       <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
     }
+    @case ('actions') {
+      <div class="flex items-center gap-2" (click)="$event.stopPropagation()">
+        <button hlmBtn variant="outline" size="sm" class="gap-1.5" (click)="openRecipe($event, row)">
+          <ng-icon name="tablerFlask" />
+          {{ productBom(row) ? 'Ver receta' : 'Crear receta' }}
+        </button>
+        <button hlmBtn variant="ghost" size="sm" class="gap-1.5" (click)="openRouting($event, row)">
+          <ng-icon name="tablerRoute" />
+          Ruta
+        </button>
+      </div>
+    }
     @default {
       {{ row[key] }}
     }

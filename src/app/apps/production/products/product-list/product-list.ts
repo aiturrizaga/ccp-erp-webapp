@@ -44,6 +44,7 @@ export class ProductList {
     { key: 'name', header: 'Producto' },
     { key: 'version', header: 'Versión', width: '100px' },
     { key: 'status', header: 'Estado', width: '140px' },
+    { key: 'actions', header: 'Acciones', width: '270px' },
   ];
 
   protected readonly filteredRows = computed(() => {
@@ -87,6 +88,31 @@ export class ProductList {
 
   protected openDetail(product: Product): void {
     this.router.navigate(['/apps/production/products', product.id]);
+  }
+
+  protected productBom(product: Product) {
+    const versions = this.productionState.billsOfMaterials().filter((b) => b.productId === product.id);
+    return versions.find((b) => b.status === 'active') ?? versions.sort((a, b) => (a.effectiveFrom < b.effectiveFrom ? 1 : -1))[0];
+  }
+
+  protected openRecipe(event: Event, product: Product): void {
+    event.stopPropagation();
+    const bom = this.productBom(product);
+    if (bom) {
+      this.router.navigate(['/apps/production/bill-of-materials', bom.id]);
+      return;
+    }
+    this.router.navigate(['/apps/production/bill-of-materials/new'], { queryParams: { productId: product.id } });
+  }
+
+  protected openRouting(event: Event, product: Product): void {
+    event.stopPropagation();
+    const bom = this.productBom(product);
+    if (bom) {
+      this.router.navigate(['/apps/production/bill-of-materials', bom.id], { fragment: 'ruta-operaciones' });
+      return;
+    }
+    this.router.navigate(['/apps/production/bill-of-materials/new'], { queryParams: { productId: product.id } });
   }
 
   protected onNew(): void {
