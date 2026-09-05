@@ -18,28 +18,29 @@ interface RunCell {
   workSheetId: string;
   lineId: string;
   workSheetNumber: string;
+  salesOrderNumber: string;
+  customerName: string;
   productLabel: string;
-}
-
-/** One column per day across a 16-day window that covers every scheduled run in the data. */
-function dayRange(days: string[]): string[] {
-  if (days.length === 0) return [];
-  const sorted = [...days].sort();
-  const start = new Date(sorted[0]);
-  const out: string[] = [];
-  for (let i = 0; i < 16; i++) {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i);
-    out.push(d.toISOString().slice(0, 10));
-  }
-  return out;
 }
 
 type PlanningView = 'gantt' | 'calendar';
 
-/** Planificación MVP: Gantt manual + vista de calendario, ambas de solo lectura salvo por la
- *  reasignación manual de una corrida (fecha/máquina/molde) — sin validación automática de
- *  restricciones, solo alertas visuales de doble reserva. */
+function isoDay(value: string): string {
+  return value.slice(0, 10);
+}
+
+function eachDay(from: string, to: string): string[] {
+  if (!from || !to || from > to) return [];
+  const start = new Date(`${from}T00:00:00`);
+  const end = new Date(`${to}T00:00:00`);
+  const out: string[] = [];
+  for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    out.push(d.toISOString().slice(0, 10));
+    if (out.length >= 370) break;
+  }
+  return out;
+}
+
 @Component({
   selector: 'app-planning',
   imports: [FormsModule, NgTemplateOutlet, RouterLink, ...HlmCardImports, ...HlmButtonImports, ...HlmInputImports, ...HlmLabelImports, ...HlmPopoverImports, EntityHeader, EmptyState],
@@ -47,11 +48,25 @@ type PlanningView = 'gantt' | 'calendar';
 })
 export class Planning {
   protected readonly productionState = inject(ProductionState);
-
   protected readonly machines = computed(() => this.productionState.machines());
   protected readonly view = signal<PlanningView>('gantt');
 
-  private readonly runCells = computed<RunCell[]>(() =>
+  // Filtros de negocio. Se aplican al presionar Buscar para que el usuario pueda completar
+  // varios criterios antes de refrescar el tablero.
+  protected readonly draftOrder = signal('');
+  protected readonly draftCustomer = signal('');
+  protected readonly draftWorkSheet = signal('');
+  protected readonly draftMonth = signal('');
+  protected readonly draftFrom = signal('');
+  protected readonly draftTo = signal('');
+
+  protected readonly filterOrder = signal('');
+  protected readonly filterCustomer = signal('');
+  protected readonly filterWorkSheet = signal('');
+  protected readonly filterFrom = signal('');
+  protected readonly filterTo = signal('');
+
+  private readonly allRunCells = computed<RunCell[]>(() =>
     this.productionState.workSheets().flatMap((ws) =>
       ws.lines.flatMap((line) =>
         line.runs
@@ -61,36 +76,109 @@ export class Planning {
             workSheetId: ws.id,
             lineId: line.id,
             workSheetNumber: ws.number,
+            salesOrderNumber: ws.salesOrderNumber ?? '',
+            customerName: ws.customerName ?? '',
             productLabel: this.productionState.products().find((p) => p.id === line.productId)?.code ?? line.productId,
           })),
       ),
     ),
   );
 
-  protected readonly days = computed(() => dayRange(this.runCells().map((c) => c.run.scheduledStart.slice(0, 10))));
+  protected readonly customerOptions = computed(() =>
+    [...new Set(this.productionState.workSheets().map((ws) => ws.customerName).filter((v): v is string => !!v))].sort((a, b) => a.localeCompare(b)),
+  );
 
-  protected cellsFor(machineId: string, day: string): RunCell[] {
-    return this.runCells().filter((c) => c.run.machineId === machineId && c.run.scheduledStart.slice(0, 10) <= day && c.run.scheduledEnd.slice(0, 10) >= day);
+  protected readonly runCells = computed(() => {
+    const order = this.filterOrder().trim().toLowerCase();
+    const customer = this.filterCustomer().trim().toLowerCase();
+    const ws = this.filterWorkSheet().trim().toLowerCase();
+    const from = this.filterFrom();
+    const to = this.filterTo();
+
+    return this.allRunCells().filter((cell) => {
+      if (order && !cell.salesOrderNumber.toLowerCase().includes(order)) return false;
+      if (customer && !cell.customerName.toLowerCase().includes(customer)) return false;
+      if (ws && !cell.workSheetNumber.toLowerCase().includes(ws)) return false;
+
+      const start = isoDay(cell.run.scheduledStart);
+      const end = isoDay(cell.run.scheduledEnd);
+      // Una corrida se muestra si su ventana toca el rango consultado.
+      if (from && end < from) return false;
+      if (to && start > to) return false;
+      return true;
+    });
+  });
+
+  protected readonly days = computed(() => {
+    const cells = this.runCells();
+    if (!cells.length) return [];
+    const starts = cells.map((c) => isoDay(c.run.scheduledStart)).sort();
+    const ends = cells.map((c) => isoDay(c.run.scheduledEnd)).sort();
+    const from = this.filterFrom() || starts[0];
+    const to = this.filterTo() || ends[ends.length - 1];
+    return eachDay(from, to);
+  });
+
+  protected readonly resultSummary = computed(() => {
+    const cells = this.runCells();
+    return {
+      runs: cells.length,
+      workSheets: new Set(cells.map((c) => c.workSheetId)).size,
+      orders: new Set(cells.map((c) => c.salesOrderNumber).filter(Boolean)).size,
+      customers: new Set(cells.map((c) => c.customerName).filter(Boolean)).size,
+    };
+  });
+
+  protected applyMonth(month: string): void {
+    this.draftMonth.set(month);
+    if (!month) return;
+    const [year, m] = month.split('-').map(Number);
+    const last = new Date(year, m, 0).getDate();
+    this.draftFrom.set(`${month}-01`);
+    this.draftTo.set(`${month}-${String(last).padStart(2, '0')}`);
   }
 
-  /** Purely visual overbooking flag — a machine with more than one run scheduled the same day. Never blocking. */
+  protected search(): void {
+    if (this.draftFrom() && this.draftTo() && this.draftFrom() > this.draftTo()) {
+      toast.error('La fecha desde no puede ser mayor que la fecha hasta.');
+      return;
+    }
+    this.filterOrder.set(this.draftOrder());
+    this.filterCustomer.set(this.draftCustomer());
+    this.filterWorkSheet.set(this.draftWorkSheet());
+    this.filterFrom.set(this.draftFrom());
+    this.filterTo.set(this.draftTo());
+  }
+
+  protected clearFilters(): void {
+    this.draftOrder.set('');
+    this.draftCustomer.set('');
+    this.draftWorkSheet.set('');
+    this.draftMonth.set('');
+    this.draftFrom.set('');
+    this.draftTo.set('');
+    this.filterOrder.set('');
+    this.filterCustomer.set('');
+    this.filterWorkSheet.set('');
+    this.filterFrom.set('');
+    this.filterTo.set('');
+  }
+
+  protected cellsFor(machineId: string, day: string): RunCell[] {
+    return this.runCells().filter((c) => c.run.machineId === machineId && isoDay(c.run.scheduledStart) <= day && isoDay(c.run.scheduledEnd) >= day);
+  }
+
   protected isDoubleBooked(machineId: string, day: string): boolean {
     return this.cellsFor(machineId, day).length > 1;
   }
 
-  // --- Vista calendario ------------------------------------------------------
-
-  /** Every run whose scheduled window touches `day`, across all machines — the calendar cell's chips. */
   protected cellsForDay(day: string): RunCell[] {
-    return this.runCells().filter((c) => c.run.scheduledStart.slice(0, 10) <= day && c.run.scheduledEnd.slice(0, 10) >= day);
+    return this.runCells().filter((c) => isoDay(c.run.scheduledStart) <= day && isoDay(c.run.scheduledEnd) >= day);
   }
 
-  /** Visual double-booking alert per day (any machine with 2+ runs that day), for the calendar cell. */
   protected dayHasDoubleBooking(day: string): boolean {
     return this.machines().some((m) => this.isDoubleBooked(m.id, day));
   }
-
-  // --- Reasignar corrida (Gantt y calendario) --------------------------------
 
   protected readonly reassignRun = signal<RunCell | null>(null);
   protected readonly reassignStart = signal('');

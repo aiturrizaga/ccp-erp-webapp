@@ -1,9 +1,67 @@
-<app-entity-header title="Planificación" subtitle="Gantt y calendario manuales de corridas — sin validación automática de restricciones, solo alertas visuales." [crumbs]="[{ label: 'Producción' }, { label: 'Planificación' }]">
+<app-entity-header title="Planificación" subtitle="Consulta y organiza las corridas por pedido, empresa, hoja de trabajo y período." [crumbs]="[{ label: 'Producción' }, { label: 'Planificación' }]">
   <div actions class="flex items-center gap-1 rounded-md border p-0.5">
     <button hlmBtn size="sm" [variant]="view() === 'gantt' ? 'default' : 'ghost'" (click)="view.set('gantt')">Gantt</button>
     <button hlmBtn size="sm" [variant]="view() === 'calendar' ? 'default' : 'ghost'" (click)="view.set('calendar')">Calendario</button>
   </div>
 </app-entity-header>
+
+<!-- Filtros de planificación -->
+<div hlmCard class="mb-4 p-4">
+  <div class="mb-3 flex items-center justify-between gap-3">
+    <div>
+      <h2 class="text-sm font-semibold">Filtros de planificación</h2>
+      <p class="text-muted-foreground text-xs">Busca una producción aunque esté programada en otro mes.</p>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-6">
+    <div class="flex flex-col gap-1">
+      <label hlmLabel for="planning-order">Pedido</label>
+      <input hlmInput id="planning-order" placeholder="Ej. SO-2026-0001" [ngModel]="draftOrder()" (ngModelChange)="draftOrder.set($event)" (keyup.enter)="search()" />
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label hlmLabel for="planning-customer">Empresa / cliente</label>
+      <select id="planning-customer" class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="draftCustomer()" (ngModelChange)="draftCustomer.set($event)">
+        <option value="">Todas</option>
+        @for (customer of customerOptions(); track customer) { <option [value]="customer">{{ customer }}</option> }
+      </select>
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label hlmLabel for="planning-ht">Hoja de trabajo</label>
+      <input hlmInput id="planning-ht" placeholder="Ej. HT-2026-1001" [ngModel]="draftWorkSheet()" (ngModelChange)="draftWorkSheet.set($event)" (keyup.enter)="search()" />
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label hlmLabel for="planning-month">Mes</label>
+      <input hlmInput id="planning-month" type="month" [ngModel]="draftMonth()" (ngModelChange)="applyMonth($event)" />
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label hlmLabel for="planning-from">Fecha desde</label>
+      <input hlmInput id="planning-from" type="date" [ngModel]="draftFrom()" (ngModelChange)="draftFrom.set($event); draftMonth.set('')" />
+    </div>
+
+    <div class="flex flex-col gap-1">
+      <label hlmLabel for="planning-to">Fecha hasta</label>
+      <input hlmInput id="planning-to" type="date" [ngModel]="draftTo()" (ngModelChange)="draftTo.set($event); draftMonth.set('')" />
+    </div>
+  </div>
+
+  <div class="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-3">
+    <div class="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-xs">
+      <span><strong class="text-foreground">{{ resultSummary().runs }}</strong> corridas</span>
+      <span><strong class="text-foreground">{{ resultSummary().workSheets }}</strong> HT</span>
+      <span><strong class="text-foreground">{{ resultSummary().orders }}</strong> pedidos</span>
+      <span><strong class="text-foreground">{{ resultSummary().customers }}</strong> empresas</span>
+    </div>
+    <div class="flex gap-2">
+      <button hlmBtn variant="outline" size="sm" (click)="clearFilters()">Limpiar filtros</button>
+      <button hlmBtn size="sm" (click)="search()">Buscar</button>
+    </div>
+  </div>
+</div>
 
 <ng-template #reassignPopoverContent let-cell>
   <hlm-popover-header>
@@ -11,6 +69,10 @@
     <p hlmPopoverDescription>{{ cell.workSheetNumber }} · {{ cell.productLabel }}</p>
   </hlm-popover-header>
   <div class="flex flex-col gap-2">
+    <div class="rounded-md bg-muted/50 p-2 text-xs">
+      @if (cell.salesOrderNumber) { <div><span class="text-muted-foreground">Pedido:</span> {{ cell.salesOrderNumber }}</div> }
+      @if (cell.customerName) { <div><span class="text-muted-foreground">Empresa:</span> {{ cell.customerName }}</div> }
+    </div>
     <div class="grid grid-cols-2 gap-2">
       <div class="flex flex-col gap-1">
         <label hlmLabel for="reassign-start">Inicio</label>
@@ -48,34 +110,27 @@
       <table class="w-full border-collapse text-xs">
         <thead>
           <tr>
-            <th class="text-muted-foreground sticky start-0 z-10 bg-inherit py-1.5 pe-3 text-start font-medium">Máquina</th>
+            <th class="text-muted-foreground sticky start-0 z-10 bg-background py-1.5 pe-3 text-start font-medium">Máquina</th>
             @for (day of days(); track day) {
-              <th class="text-muted-foreground min-w-[64px] border-s py-1.5 text-center font-medium">{{ day.slice(5) }}</th>
+              <th class="text-muted-foreground min-w-[64px] border-s py-1.5 text-center font-medium" [title]="day">{{ day.slice(5) }}</th>
             }
           </tr>
         </thead>
         <tbody>
           @for (machine of machines(); track machine.id) {
             <tr class="border-t">
-              <td class="sticky start-0 z-10 bg-inherit py-2 pe-3 font-medium whitespace-nowrap">{{ machine.name }}</td>
+              <td class="sticky start-0 z-10 bg-background py-2 pe-3 font-medium whitespace-nowrap">{{ machine.name }}</td>
               @for (day of days(); track day) {
                 <td class="min-w-[64px] border-s p-1 align-top">
                   @for (cell of cellsFor(machine.id, day); track cell.run.id) {
                     <hlm-popover>
-                      <button
-                        hlmPopoverTrigger
-                        type="button"
-                        class="mb-1 block w-full truncate rounded px-1.5 py-0.5 text-start text-[10px] leading-tight"
-                        [class.bg-primary\/10]="!isDoubleBooked(machine.id, day)"
-                        [class.bg-destructive\/15]="isDoubleBooked(machine.id, day)"
-                        [class.border]="isDoubleBooked(machine.id, day)"
-                        [class.border-destructive]="isDoubleBooked(machine.id, day)"
-                        [title]="cell.workSheetNumber + ' · ' + cell.productLabel"
-                        (click)="openReassign(cell)"
-                      >
+                      <button hlmPopoverTrigger type="button" class="mb-1 block w-full truncate rounded px-1.5 py-0.5 text-start text-[10px] leading-tight"
+                        [class.bg-primary/10]="!isDoubleBooked(machine.id, day)" [class.bg-destructive/15]="isDoubleBooked(machine.id, day)"
+                        [class.border]="isDoubleBooked(machine.id, day)" [class.border-destructive]="isDoubleBooked(machine.id, day)"
+                        [title]="cell.workSheetNumber + ' · ' + cell.customerName + ' · ' + cell.productLabel" (click)="openReassign(cell)">
                         {{ cell.workSheetNumber }}
                       </button>
-                      <hlm-popover-content *hlmPopoverPortal class="w-72">
+                      <hlm-popover-content *hlmPopoverPortal class="w-80">
                         <ng-container [ngTemplateOutlet]="reassignPopoverContent" [ngTemplateOutletContext]="{ $implicit: cell }" />
                       </hlm-popover-content>
                     </hlm-popover>
@@ -88,32 +143,27 @@
       </table>
       <p class="text-muted-foreground mt-3 flex items-center gap-1.5 text-xs">
         <span class="border-destructive bg-destructive/15 inline-block h-3 w-3 rounded border"></span>
-        Máquina con más de una corrida el mismo día — solo alerta visual, no bloquea la asignación.
+        Máquina con más de una corrida el mismo día — alerta visual, no bloquea la asignación.
       </p>
     </div>
   } @else {
-    <app-empty-state icon="tablerCalendar" title="Sin corridas programadas" description="Registra corridas de fabricación desde una Hoja de trabajo para verlas aquí." />
+    <app-empty-state icon="tablerCalendar" title="Sin corridas para los filtros seleccionados" description="Cambia el pedido, empresa, HT o período y vuelve a buscar." />
   }
 } @else {
   @if (days().length) {
     <div hlmCard class="overflow-x-auto p-4">
-      <div class="grid grid-cols-4 gap-2 sm:grid-cols-8">
+      <div class="grid grid-cols-4 gap-2 sm:grid-cols-7 xl:grid-cols-10">
         @for (day of days(); track day) {
           <div class="min-h-24 rounded-md border p-1.5" [class.border-destructive]="dayHasDoubleBooking(day)">
-            <p class="text-muted-foreground mb-1 text-[11px] font-medium">{{ day.slice(5) }}</p>
+            <p class="text-muted-foreground mb-1 text-[11px] font-medium" [title]="day">{{ day.slice(5) }}</p>
             <div class="flex flex-col gap-1">
               @for (cell of cellsForDay(day); track cell.run.id) {
                 <hlm-popover>
-                  <button
-                    hlmPopoverTrigger
-                    type="button"
-                    class="block w-full truncate rounded bg-primary/10 px-1.5 py-0.5 text-start text-[10px] leading-tight"
-                    [title]="cell.workSheetNumber + ' · ' + cell.productLabel"
-                    (click)="openReassign(cell)"
-                  >
+                  <button hlmPopoverTrigger type="button" class="block w-full truncate rounded bg-primary/10 px-1.5 py-0.5 text-start text-[10px] leading-tight"
+                    [title]="cell.workSheetNumber + ' · ' + cell.customerName + ' · ' + cell.productLabel" (click)="openReassign(cell)">
                     {{ cell.workSheetNumber }} · {{ cell.productLabel }}
                   </button>
-                  <hlm-popover-content *hlmPopoverPortal class="w-72">
+                  <hlm-popover-content *hlmPopoverPortal class="w-80">
                     <ng-container [ngTemplateOutlet]="reassignPopoverContent" [ngTemplateOutletContext]="{ $implicit: cell }" />
                   </hlm-popover-content>
                 </hlm-popover>
@@ -124,10 +174,10 @@
       </div>
       <p class="text-muted-foreground mt-3 flex items-center gap-1.5 text-xs">
         <span class="border-destructive inline-block h-3 w-3 rounded border"></span>
-        Día con alguna máquina reservada más de una vez — solo alerta visual, no bloquea la asignación.
+        Día con alguna máquina reservada más de una vez — alerta visual, no bloquea la asignación.
       </p>
     </div>
   } @else {
-    <app-empty-state icon="tablerCalendar" title="Sin corridas programadas" description="Registra corridas de fabricación desde una Hoja de trabajo para verlas aquí." />
+    <app-empty-state icon="tablerCalendar" title="Sin corridas para los filtros seleccionados" description="Cambia el pedido, empresa, HT o período y vuelve a buscar." />
   }
 }
