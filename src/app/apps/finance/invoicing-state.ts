@@ -7,6 +7,7 @@ import {
   DocumentDelivery,
   Invoice,
   InvoicePaymentRecord,
+  InvoiceRelatedDocument,
   PaymentMethod,
   PaymentVoucher,
   SalesInvoice,
@@ -213,6 +214,52 @@ export class InvoicingState {
         return next;
       }),
     );
+  }
+
+
+  /** Guías atendidas (entregadas) que todavía no tienen comprobante de venta generado. */
+  billingQueue(): DispatchGuide[] {
+    return this.guides().filter((g) => g.status === 'delivered' && !g.generatedInvoiceId);
+  }
+
+  /** Verificación previa de RUC para el flujo de facturación (mockup, sin consulta SUNAT real). */
+  validateCustomerTaxId(customerTaxId: string): { status: 'valid' | 'observed'; message: string } {
+    const normalized = customerTaxId.replace(/\D/g, '');
+    if (normalized.length !== 11) return { status: 'observed', message: 'El RUC debe contener 11 dígitos.' };
+    return { status: 'valid', message: 'RUC válido para continuar con la emisión.' };
+  }
+
+  /** Marca la guía como facturada y conserva la relación guía → comprobante. */
+  linkInvoiceToGuide(guideId: string, invoiceId: string): void {
+    this.updateGuide(guideId, { generatedInvoiceId: invoiceId });
+  }
+
+  /** Encola/envía el expediente completo al correo del cliente (mockup). */
+  sendInvoiceExpedient(invoiceId: string, to: string): void {
+    const invoice = this.invoices().find((i): i is SalesInvoice => i.id === invoiceId && i.documentType === 'sales');
+    if (!invoice || !to.trim()) return;
+    const documents = (invoice.relatedDocuments ?? []).map((d) => d.number ?? d.fileName ?? d.label);
+    if (!documents.includes(invoice.number)) documents.push(invoice.number);
+    this.recordDelivery({
+      customerId: invoice.customerId ?? '', customerName: invoice.customerName, documents,
+      channel: 'email', to: to.trim(), sentAt: '2026-09-01', kind: 'expediente', status: 'sent',
+    });
+    this.invoices.update((rows) => rows.map((i) => {
+      if (i.id !== invoiceId || i.documentType !== 'sales') return i;
+      const next: SalesInvoice = { ...i, emailStatus: 'sent', billingEmail: to.trim(), emailSentAt: '2026-09-01', sentToCustomerAt: '2026-09-01' };
+      this.invoicesStore.upsert(next, (x) => ({ status: x.status, document_type: x.documentType }));
+      return next;
+    }));
+  }
+
+  /** Actualiza los documentos del expediente sin requerir backend en el prototipo. */
+  updateInvoiceDocuments(invoiceId: string, documents: InvoiceRelatedDocument[]): void {
+    this.invoices.update((rows) => rows.map((i) => {
+      if (i.id !== invoiceId || i.documentType !== 'sales') return i;
+      const next: SalesInvoice = { ...i, relatedDocuments: documents };
+      this.invoicesStore.upsert(next, (x) => ({ status: x.status, document_type: x.documentType }));
+      return next;
+    }));
   }
 
   // ---- Guías de remisión ---------------------------------------------------

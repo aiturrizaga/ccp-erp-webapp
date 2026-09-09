@@ -165,6 +165,18 @@ export interface SunatTotals {
   importeTotal: number;
 }
 
+export interface InvoiceRelatedDocument {
+  id: string;
+  type: 'orden_compra' | 'pedido' | 'guia' | 'rin' | 'garantia' | 'factura' | 'xml' | 'cdr' | 'otro';
+  label: string;
+  number?: string;
+  fileName?: string;
+  url?: string;
+}
+
+export type RucValidationStatus = 'pending' | 'valid' | 'observed';
+export type InvoiceEmailStatus = 'not_sent' | 'queued' | 'sent' | 'failed';
+
 export interface SalesInvoice extends InvoiceBase {
   documentType: 'sales';
   customerName: string;
@@ -200,6 +212,17 @@ export interface SalesInvoice extends InvoiceBase {
   paymentVoucher?: PaymentVoucher;
   /** Pagos reportados contra el comprobante (en validación / validados / rechazados). */
   payments?: InvoicePaymentRecord[];
+  /** Contacto/dirección que recibe el comprobante y expediente. */
+  billingEmail?: string;
+  /** Resultado de la revisión de datos tributarios antes de emitir. */
+  rucValidationStatus?: RucValidationStatus;
+  rucValidatedAt?: string;
+  /** Expediente comercial asociado a la facturación. */
+  relatedDocuments?: InvoiceRelatedDocument[];
+  /** Ruta conceptual de la carpeta digital del expediente (mockup). */
+  digitalFolderPath?: string;
+  emailStatus?: InvoiceEmailStatus;
+  emailSentAt?: string;
 }
 
 export type Invoice = PurchaseInvoice | SalesInvoice;

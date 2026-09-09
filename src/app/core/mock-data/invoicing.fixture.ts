@@ -80,6 +80,17 @@ export const INVOICES: Invoice[] = [
     salesOrderId: 'SO-001', quotationCode: 'CV-2026-0301', purchaseOrderRef: '2982026ISSAEIRL',
     glosa: 'Suministro de postes CAC para línea de media tensión.', paymentCondition: 'contado',
     dispatchGuideId: 'DG-001', sunatStatus: 'accepted', sentToCustomerAt: '2026-07-20',
+    billingEmail: 'facturacion@constructoraandina.pe', rucValidationStatus: 'valid', rucValidatedAt: '2026-07-20',
+    digitalFolderPath: '/expedientes/2026/20486185296/PV-2026-0501/', emailStatus: 'sent', emailSentAt: '2026-07-20',
+    relatedDocuments: [
+      { id: 'DOC-OC-001', type: 'orden_compra', label: 'Orden de compra del cliente', number: 'OC-2982026ISSAEIRL.pdf', fileName: 'OC-2982026ISSAEIRL.pdf' },
+      { id: 'DOC-PED-001', type: 'pedido', label: 'Pedido de venta', number: 'PV-2026-0501' },
+      { id: 'DOC-GR-001', type: 'guia', label: 'Guía de remisión', number: 'T001-00006287', fileName: 'T001-00006287.pdf' },
+      { id: 'DOC-RIN-001', type: 'rin', label: 'RIN / documento de almacén', number: 'RIN-2026-00451', fileName: 'RIN-2026-00451.pdf' },
+      { id: 'DOC-GAR-001', type: 'garantia', label: 'Carta de garantía', fileName: 'carta-garantia-PV-2026-0501.pdf' },
+      { id: 'DOC-XML-001', type: 'xml', label: 'XML', fileName: 'F001-00801.xml' },
+      { id: 'DOC-CDR-001', type: 'cdr', label: 'CDR SUNAT', fileName: 'R-20549546626-F001-00801.xml' },
+    ],
     sunatTotals: { gravado: 17000, inafecto: 0, exonerado: 0, exportacion: 0, descuentos: 0, gratuitos: 0, igv: 3060, isc: 0, anticipos: 0, importeTotal: 20060 },
   },
   {

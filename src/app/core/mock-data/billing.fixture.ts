@@ -44,6 +44,15 @@ export const DISPATCH_GUIDES: DispatchGuide[] = [
     issuedAt: '2026-08-27', status: 'issued',
     lines: [{ description: 'POSTES DE C.A.C DE 9/300/2/150/285 C/PERILLA', quantity: 45, unitOfMeasure: 'UND' }],
   },
+  {
+    id: 'DG-004', kind: 'sunat', series: 'T001', correlativo: '00006315', number: 'T001-00006315',
+    salesOrderId: 'SO-003', salesOrderNumber: 'PV-2026-0503',
+    customerName: 'CONSORCIO VIAL CHINCHA S.A.', customerTaxId: '20548001234',
+    glosa: 'traslado', motivoTraslado: 'Venta', transportista: 'FLOTA PROPIA CCP',
+    originAddress: 'URB. LAS DALMACIAS LOTE 17, PUENTE PIEDRA - LIMA', destinationAddress: 'Ca. Los Pinos 234, Chincha Baja, Ica',
+    issuedAt: '2026-08-29', status: 'delivered',
+    lines: [{ description: 'Poste de concreto centrifugado 9m / 200 kgf', quantity: 45, unitOfMeasure: 'UND' }],
+  },
 ];
 
 export const CREDIT_AGREEMENTS: CreditAgreement[] = [

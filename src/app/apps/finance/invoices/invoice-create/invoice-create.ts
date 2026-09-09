@@ -1,7 +1,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { NgIcon } from '@ng-icons/core';
 import { HlmButtonImports } from '@ui/button';
 import { HlmCardImports } from '@ui/card';
@@ -13,7 +13,7 @@ import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { ProductPicker } from '@shared/components/product-picker/product-picker';
 import { toast } from '@shared/toast';
 
-import { salesCustomers, salesOrders, salesProducts } from '@apps/sales/sales-state';
+import { salesCustomers, salesOrders, salesProducts, salesContacts } from '@apps/sales/sales-state';
 import { InvoicingState } from '../../invoicing-state';
 import {
   COMPROBANTE_KIND_LABEL,
@@ -24,6 +24,7 @@ import {
   PaymentVoucher,
   SalesInvoice,
   SalesProduct,
+  InvoiceRelatedDocument,
   cuotaIdentifier,
   formatSalesProductName,
 } from '@core/models';
@@ -67,10 +68,14 @@ function addDays(iso: string, days: number): string {
 })
 export class InvoiceCreate {
   private readonly router = inject(Router);
+  private readonly route = inject(ActivatedRoute);
   private readonly state = inject(InvoicingState);
 
   protected readonly docKind = signal<ComprobanteKind>('factura');
   protected readonly orderId = signal('');
+  protected readonly guideId = signal('');
+  protected readonly billingEmail = signal('');
+  protected readonly rucValidation = signal<'pending' | 'valid' | 'observed'>('pending');
   protected readonly customerId = signal('');
   protected readonly customerName = signal('');
   protected readonly customerTaxId = signal('');
@@ -95,6 +100,7 @@ export class InvoiceCreate {
   protected readonly advances = signal<DraftAdvance[]>([]);
 
   protected readonly customers = salesCustomers;
+  protected readonly contacts = salesContacts;
   protected readonly products = salesProducts;
   protected readonly orders = computed(() => salesOrders().filter((o) => o.status !== 'cancelled'));
   protected readonly salesInvoices = computed(() => this.state.invoices().filter((i): i is SalesInvoice => i.documentType === 'sales' && i.status !== 'voided'));
@@ -142,6 +148,7 @@ export class InvoiceCreate {
 
   protected readonly canSubmit = computed(() => {
     if (this.customerName().trim().length === 0 || this.subtotal() <= 0) return false;
+    if (this.guideId() && this.rucValidation() !== 'valid') return false;
     if (this.isNote() && (!this.correctsInvoiceId() || this.noteReason().trim().length === 0)) return false;
     if (this.showInstallments() && !this.installmentsValid()) return false;
     if (this.showAdvances() && this.advances().length > 0 && !this.advancesValid()) return false;
@@ -149,6 +156,11 @@ export class InvoiceCreate {
   });
 
   constructor() {
+    const guideId = this.route.snapshot.queryParamMap.get('guideId');
+    if (guideId) {
+      this.guideId.set(guideId);
+      this.loadFromGuide(guideId);
+    }
     effect(() => {
       if (!this.isNote()) return;
       this.correctsInvoiceId.set('');
@@ -190,6 +202,28 @@ export class InvoiceCreate {
   protected readonly submitPopover = signal<'open' | 'closed'>('closed');
   protected readonly docKindLower = computed(() => COMPROBANTE_KIND_LABEL[this.docKind()].toLowerCase());
 
+  protected loadFromGuide(id: string): void {
+    const guide = this.state.guides().find((g) => g.id === id);
+    if (!guide) return;
+    const order = this.orders().find((o) => o.id === guide.salesOrderId);
+    this.orderId.set(guide.salesOrderId ?? '');
+    this.customerName.set(guide.customerName);
+    this.customerTaxId.set(guide.customerTaxId);
+    this.customerId.set(order?.customerId ?? salesCustomers().find((c) => c.taxId === guide.customerTaxId)?.id ?? '');
+    this.currency.set(order?.currency ?? 'PEN');
+    this.glosa.set(order?.glosa ?? '');
+    this.paymentCondition.set(order?.paymentGate ? 'contado' : (salesCustomers().find((c) => c.id === this.customerId())?.paymentMode === 'cash' ? 'contado' : 'credito'));
+    this.lines.set(guide.lines.map((l) => ({ description: l.description, salesProductId: '', quantity: l.quantity, unitPrice: order?.lines.find((ol) => ol.description === l.description)?.unitPrice ?? 0 })));
+    const contact = salesContacts().find((c) => c.id === order?.contactId) ?? salesContacts().find((c) => c.customerId === this.customerId());
+    this.billingEmail.set(contact?.email ?? '');
+    this.validateRuc();
+  }
+
+  protected validateRuc(): void {
+    const result = this.state.validateCustomerTaxId(this.customerTaxId());
+    this.rucValidation.set(result.status);
+  }
+
   protected onCustomerChange(id: string): void {
     this.customerId.set(id);
     const c = salesCustomers().find((x) => x.id === id);
@@ -197,6 +231,9 @@ export class InvoiceCreate {
     this.customerName.set(c.legalName);
     this.customerTaxId.set(c.taxId);
     this.currency.set(c.currency);
+    this.rucValidation.set('pending');
+    const contact = salesContacts().find((x) => x.customerId === id);
+    this.billingEmail.set(contact?.email ?? '');
     this.paymentCondition.set(c.paymentMode === 'cash' ? 'contado' : 'credito');
   }
 
@@ -304,6 +341,18 @@ export class InvoiceCreate {
     );
   }
 
+  private buildRelatedDocuments(): InvoiceRelatedDocument[] {
+    const docs: InvoiceRelatedDocument[] = [];
+    const guide = this.guideId() ? this.state.guides().find((g) => g.id === this.guideId()) : undefined;
+    const order = this.orderId() ? this.orders().find((o) => o.id === this.orderId()) : undefined;
+    if (order?.customerOrderDocumentNumber) docs.push({ id: `OC-${order.id}`, type: 'orden_compra', label: 'Orden de compra del cliente', number: order.customerOrderDocumentNumber, fileName: order.customerOrderDocument?.name });
+    if (order) docs.push({ id: `PED-${order.id}`, type: 'pedido', label: 'Pedido de venta', number: order.number });
+    if (guide) docs.push({ id: guide.id, type: 'guia', label: 'Guía de remisión', number: guide.number });
+    if (order?.guaranteeLetter) docs.push({ id: `GAR-${order.id}`, type: 'garantia', label: 'Carta de garantía', fileName: order.guaranteeLetter.name });
+    docs.push({ id: `RIN-${this.orderId() || '001'}`, type: 'rin', label: 'RIN / documento de almacén', fileName: 'RIN.pdf' });
+    return docs;
+  }
+
   // --- Emitir -----------------------------------------------------------------
 
   protected submit(): void {
@@ -331,6 +380,9 @@ export class InvoiceCreate {
       customerName: this.customerName().trim(),
       customerId: this.customerId() || undefined,
       customerTaxId: this.customerTaxId().trim() || undefined,
+      billingEmail: this.billingEmail().trim() || undefined,
+      rucValidationStatus: this.rucValidation(),
+      rucValidatedAt: this.rucValidation() !== 'pending' ? ISSUE_DATE : undefined,
       salesOrderId: this.orderId() || undefined,
       quotationCode: src?.quotationCode,
       purchaseOrderRef: src?.purchaseOrderRef,
@@ -352,12 +404,16 @@ export class InvoiceCreate {
       advances,
       isAdvanceInvoice: this.isAdvanceInvoice() || undefined,
       paymentVoucher: this.voucher() ?? undefined,
+      relatedDocuments: this.buildRelatedDocuments(),
+      digitalFolderPath: `/expedientes/2026/${this.customerTaxId()}/${this.orderId() || 'sin-pedido'}/`,
+      emailStatus: 'not_sent',
       sunatTotals: {
         gravado: this.taxable(), inafecto: 0, exonerado: 0, exportacion: 0,
         descuentos: this.discount(), gratuitos: 0, igv: this.igv(), isc: 0,
         anticipos: advances ? this.advancesTotal() : 0, importeTotal: this.total(),
       },
     });
+    if (this.guideId()) this.state.linkInvoiceToGuide(this.guideId(), invoice.id);
     toast.success(`${COMPROBANTE_KIND_LABEL[this.docKind()]} ${invoice.number} emitida`, {
       description: advances ? `Neto a pagar tras anticipos: ${this.currency()} ${this.netPayable().toFixed(2)}` : this.isAdvanceInvoice() ? 'Comprobante por anticipo' : undefined,
     });

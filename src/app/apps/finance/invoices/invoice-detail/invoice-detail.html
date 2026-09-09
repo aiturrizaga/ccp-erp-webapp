@@ -12,6 +12,20 @@
           Pago en validación por Cobranzas
         </span>
       }
+      @if (p.documentType === 'sales') {
+        <hlm-dialog>
+          <button hlmBtn variant="outline" size="sm" (click)="openEmailDialog(p)"><ng-icon name="tablerMail" class="mr-1.5" /> {{ p.emailStatus === 'sent' ? 'Reenviar expediente' : 'Enviar expediente' }}</button>
+          <hlm-dialog-content *brnDialogContent="let ctx" class="sm:max-w-md">
+            <hlm-dialog-header><h3 hlmDialogTitle>Enviar expediente al cliente</h3><p hlmDialogDescription>Se enviará el comprobante junto con OC, pedido, guía, RIN y garantía cuando estén disponibles.</p></hlm-dialog-header>
+            <div class="flex flex-col gap-3">
+              <label class="flex flex-col gap-1 text-sm">Correo destinatario<input hlmInput type="email" [ngModel]="emailTo()" (ngModelChange)="emailTo.set($event)" placeholder="facturacion@cliente.com" /></label>
+              <div class="rounded-md border p-3 text-xs"><p class="mb-2 font-medium">Documentos</p><div class="flex flex-wrap gap-1.5">@for (d of relatedDocuments(); track d.id) { <span class="rounded bg-muted px-2 py-1">{{ d.label }}{{ d.number ? ' · ' + d.number : '' }}</span> }</div></div>
+              @if (p.digitalFolderPath) { <p class="text-muted-foreground text-xs">Carpeta digital: {{ p.digitalFolderPath }}</p> }
+            </div>
+            <hlm-dialog-footer><button hlmBtn variant="outline" hlmDialogClose>Cancelar</button><button hlmBtn hlmDialogClose [disabled]="!emailTo().trim()" (click)="sendExpedient(p)">Enviar</button></hlm-dialog-footer>
+          </hlm-dialog-content>
+        </hlm-dialog>
+      }
       @if (canRegisterPayment(p)) {
         <hlm-dialog>
           <button hlmDialogTrigger hlmBtn size="sm" (click)="openPaymentDialog(p)">Registrar pago</button>
@@ -189,6 +203,13 @@
               }
             </tbody>
           </table>
+        </div>
+      }
+
+      @if (p.documentType === 'sales') {
+        <div hlmCard class="p-4">
+          <div class="mb-3 flex items-center justify-between gap-2"><div><h3 class="text-sm font-semibold">Expediente de facturación</h3><p class="text-muted-foreground text-xs">Documentos que acompañan al comprobante.</p></div><span class="text-muted-foreground text-xs">{{ relatedDocuments().length }} docs</span></div>
+          <div class="flex flex-col divide-y">@for (d of relatedDocuments(); track d.id) {<div class="flex items-center justify-between gap-3 py-2 text-sm"><div><p class="font-medium">{{ d.label }}</p><p class="text-muted-foreground text-xs">{{ d.number ?? d.fileName ?? 'Documento asociado' }}</p></div>@if (d.fileName) {<span class="text-muted-foreground text-xs">Adjunto</span>}</div>} @empty {<p class="text-muted-foreground text-xs">Sin documentos asociados.</p>}</div>
         </div>
       }
 

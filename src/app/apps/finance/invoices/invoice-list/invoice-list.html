@@ -79,6 +79,9 @@
     @case ('party') {
       {{ partyName(row) }}
     }
+    @case ('origin') {
+      <span class="font-mono text-xs">{{ originLabel(row) }}</span>
+    }
     @case ('total') {
       {{ row.currency }} {{ row.total | number: '1.2-2' }}
     }

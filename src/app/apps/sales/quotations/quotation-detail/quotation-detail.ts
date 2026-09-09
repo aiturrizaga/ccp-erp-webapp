@@ -46,6 +46,7 @@ export class QuotationDetail {
       id: quotation.id,
       customerId: quotation.customerId,
       customerName: quotation.customerName,
+      contactId: quotation.contactId,
       currency: quotation.currency,
       total: quotation.total,
       lines: quotation.lines,

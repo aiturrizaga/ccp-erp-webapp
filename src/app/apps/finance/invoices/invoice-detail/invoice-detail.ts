@@ -70,6 +70,7 @@ export class InvoiceDetail {
   protected readonly paymentDate = signal('2026-09-01');
   protected readonly paymentMethod = signal<PaymentMethod>('transfer');
   protected readonly paymentVoucher = signal<PaymentVoucher | null>(null);
+  protected readonly emailTo = signal('');
 
   protected readonly payments = computed(() => {
     const inv = this.invoice();
@@ -83,6 +84,18 @@ export class InvoiceDetail {
   });
   protected readonly advances = computed(() => this.salesInvoice()?.advances ?? []);
   protected readonly advancesTotal = computed(() => this.advances().reduce((s, a) => s + (a.amount || 0), 0));
+  protected readonly relatedDocuments = computed(() => this.salesInvoice()?.relatedDocuments ?? []);
+
+  protected openEmailDialog(invoice: SalesInvoice): void {
+    this.emailTo.set(invoice.billingEmail ?? '');
+  }
+
+  protected sendExpedient(invoice: SalesInvoice): void {
+    const to = this.emailTo().trim();
+    if (!to) return;
+    this.state.sendInvoiceExpedient(invoice.id, to);
+    toast.success('Expediente enviado', { description: `Factura ${invoice.number} y documentos asociados enviados a ${to}` });
+  }
 
   protected supplierName(supplierId: string): string {
     return SUPPLIERS.find((s) => s.id === supplierId)?.legalName ?? supplierId;

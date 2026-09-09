@@ -66,6 +66,7 @@ export class InvoiceList {
     { key: 'number', header: 'Número', width: '140px' },
     { key: 'documentType', header: 'Tipo', width: '90px' },
     { key: 'party', header: 'Cliente / Proveedor' },
+    { key: 'origin', header: 'Pedido / Guía', width: '170px' },
     { key: 'dueDate', header: 'Vencimiento', width: '130px' },
     { key: 'total', header: 'Total', width: '120px', align: 'end' },
     { key: 'outstandingBalance', header: 'Saldo pendiente', width: '130px', align: 'end' },
@@ -133,6 +134,11 @@ export class InvoiceList {
       return SUPPLIERS.find((s) => s.id === invoice.supplierId)?.legalName ?? invoice.supplierId;
     }
     return invoice.customerName;
+  }
+
+  protected originLabel(invoice: Invoice): string {
+    if (invoice.documentType !== 'sales') return invoice.purchaseOrderId ?? '—';
+    return `${invoice.salesOrderId ?? 'Sin pedido'}${invoice.dispatchGuideId ? ` · ${invoice.dispatchGuideId}` : ''}`;
   }
 
   protected documentTypeLabel(type: InvoiceDocumentType): string {

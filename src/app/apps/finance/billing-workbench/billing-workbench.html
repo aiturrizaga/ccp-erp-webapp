@@ -1,0 +1,61 @@
+<div class="flex flex-col gap-6">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <h1 class="text-xl font-semibold tracking-tight">Facturación</h1>
+      <p class="text-muted-foreground text-sm">Facturación desde guías atendidas, con expediente completo y envío al cliente.</p>
+    </div>
+    <button hlmBtn variant="outline" size="sm" (click)="goToReports()"><ng-icon name="tablerTrendingUp" class="mr-1.5" /> Reportes</button>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <app-stat-card label="Guías atendidas" [value]="delivered() + ''" hint="listas para facturar" />
+    <app-stat-card label="Por facturar" [value]="pending() + ''" hint="requieren revisión" [trend]="pending() ? 'down' : 'flat'" />
+    <app-stat-card label="Facturadas" [value]="invoiced() + ''" hint="guías con comprobante" />
+    <app-stat-card label="Automatización" value="3 pasos" hint="validar · emitir · enviar" />
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_1.25fr]">
+    <div hlmCard class="overflow-hidden p-0">
+      <div class="border-b px-4 py-3"><h2 class="text-sm font-semibold">Guías atendidas para facturar</h2><p class="text-muted-foreground text-xs">La cola se alimenta automáticamente cuando almacén marca la guía como entregada.</p></div>
+      <div class="divide-y">
+        @for (g of queue(); track g.id) {
+          <button class="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-muted/40" [class.bg-muted/50]="selectedGuideId() === g.id" (click)="selectGuide(g)">
+            <div class="min-w-0"><p class="font-medium text-sm">{{ g.number }}</p><p class="text-muted-foreground truncate text-xs">{{ g.customerName }} · Pedido {{ g.salesOrderNumber ?? '—' }}</p></div>
+            <app-status-badge [label]="statusLabel(g.status)" [tone]="statusTone(g.status)" />
+          </button>
+        } @empty {
+          <div class="text-muted-foreground px-4 py-8 text-center text-sm">No hay guías atendidas pendientes de facturación.</div>
+        }
+      </div>
+    </div>
+
+    @if (selectedGuide(); as g) {
+      <div class="flex flex-col gap-4">
+        <div hlmCard class="p-4">
+          <div class="mb-4 flex items-start justify-between gap-3"><div><h2 class="text-sm font-semibold">Preparación de comprobante</h2><p class="text-muted-foreground text-xs">{{ g.number }} · emitida {{ g.issuedAt }}</p></div><app-status-badge label="Guía atendida" tone="success" /></div>
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <div><span class="text-muted-foreground block text-xs">Cliente</span>{{ g.customerName }}</div>
+            <div><span class="text-muted-foreground block text-xs">RUC</span>{{ g.customerTaxId }}</div>
+            <div><span class="text-muted-foreground block text-xs">Pedido</span>{{ g.salesOrderNumber ?? '—' }}</div>
+            <div><span class="text-muted-foreground block text-xs">Contacto</span>{{ selectedContact()?.name ?? 'Sin contacto' }}</div>
+            <div class="col-span-2"><span class="text-muted-foreground block text-xs">Correo de facturación</span>{{ selectedContact()?.email ?? 'No registrado' }}</div>
+          </div>
+          <div class="mt-4 flex flex-wrap gap-2"><button hlmBtn variant="outline" size="sm" (click)="validateRuc()"><ng-icon name="tablerShieldCheck" class="mr-1.5" /> Validar RUC</button><button hlmBtn size="sm" (click)="prepareInvoice()"><ng-icon name="tablerReceipt2" class="mr-1.5" /> Preparar factura</button></div>
+        </div>
+
+        <div hlmCard class="p-4">
+          <h3 class="mb-3 text-sm font-semibold">Expediente que viajará con la factura</h3>
+          <div class="flex flex-col gap-2 text-sm">
+            <div class="flex items-center justify-between rounded-md border px-3 py-2"><span>Orden de compra</span><span class="font-mono text-xs">{{ selectedOrder()?.customerOrderDocumentNumber ?? 'Según pedido' }}</span></div>
+            <div class="flex items-center justify-between rounded-md border px-3 py-2"><span>Pedido</span><span class="font-mono text-xs">{{ g.salesOrderNumber ?? '—' }}</span></div>
+            <div class="flex items-center justify-between rounded-md border px-3 py-2"><span>Guía de remisión</span><span class="font-mono text-xs">{{ g.number }}</span></div>
+            <div class="flex items-center justify-between rounded-md border px-3 py-2"><span>RIN / documento de almacén</span><span class="text-muted-foreground text-xs">Adjunto del cliente</span></div>
+            <div class="flex items-center justify-between rounded-md border px-3 py-2"><span>Carta de garantía</span><span class="text-muted-foreground text-xs">Adjunta al pedido</span></div>
+          </div>
+        </div>
+      </div>
+    } @else {
+      <div hlmCard class="flex min-h-72 items-center justify-center p-6"><div class="text-center"><ng-icon name="tablerFileInvoice" size="36" class="text-muted-foreground mx-auto mb-3" /><p class="text-sm font-medium">Selecciona una guía</p><p class="text-muted-foreground mt-1 text-xs">Verás los datos del pedido, cliente, contacto y expediente antes de emitir.</p></div></div>
+    }
+  </div>
+</div>
