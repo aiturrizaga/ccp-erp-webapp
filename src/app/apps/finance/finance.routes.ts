@@ -10,6 +10,7 @@ export const FINANCE_ROUTES: Routes = [
   { path: 'guides/new', loadComponent: () => import('./guides/guide-create/guide-create').then((m) => m.GuideCreate) },
   { path: 'series', loadComponent: () => import('./series/series-list').then((m) => m.SeriesList) },
   { path: 'collections', loadComponent: () => import('./collections-dashboard/dashboard').then((m) => m.CollectionsDashboard) },
+  { path: 'project-backlog', loadComponent: () => import('./project-backlog/project-backlog').then((m) => m.ProjectBacklog) },
   { path: 'payments', loadComponent: () => import('./payments-review/payments-review').then((m) => m.PaymentsReview) },
   { path: 'customer-file', loadComponent: () => import('./customer-file/customer-file').then((m) => m.CustomerFile) },
   { path: 'agreements', loadComponent: () => import('./agreements/agreement-list/agreement-list').then((m) => m.AgreementList) },

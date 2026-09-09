@@ -1,0 +1,83 @@
+<div class="flex flex-col gap-5">
+  <div class="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+    <div>
+      <div class="flex items-center gap-2">
+        <h1 class="text-xl font-semibold tracking-tight">Backlog de Proyectos</h1>
+        <span class="rounded-full border bg-muted/40 px-2 py-0.5 text-[11px] font-medium">Corte 31/05/2026</span>
+      </div>
+      <p class="text-muted-foreground mt-1 text-sm">Seguimiento contractual, avance, facturación pendiente, oportunidades y cartas fianza.</p>
+    </div>
+    <div class="rounded-md border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+      Fuente base: <span class="font-medium text-foreground">BBVA - BACK LOG 05-MAYO-26.xlsx</span><br />
+      Los campos “calculado/ponderado” son indicadores gerenciales derivados de la data del Excel.
+    </div>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3 xl:grid-cols-6">
+    <div class="rounded-lg border p-3"><p class="text-muted-foreground text-[11px] font-medium uppercase">Contratado en ejecución</p><p class="mt-1 text-lg font-semibold">{{ formatCurrency(activeContracted()) }}</p><p class="text-muted-foreground text-[11px]">{{ filteredActive().length }} proyectos visibles</p></div>
+    <div class="rounded-lg border p-3"><p class="text-muted-foreground text-[11px] font-medium uppercase">Backlog calculado</p><p class="mt-1 text-lg font-semibold">{{ formatCurrency(activeBacklog()) }}</p><p class="text-muted-foreground text-[11px]">Contrato − avance valorizado</p></div>
+    <div class="rounded-lg border p-3"><p class="text-muted-foreground text-[11px] font-medium uppercase">Pendiente 2026 (Excel)</p><p class="mt-1 text-lg font-semibold">{{ formatCurrency(pending2026()) }}</p><p class="text-muted-foreground text-[11px]">Campo original del archivo</p></div>
+    <div class="rounded-lg border p-3"><p class="text-muted-foreground text-[11px] font-medium uppercase">Pipeline bruto</p><p class="mt-1 text-lg font-semibold">{{ formatCurrency(pipelineGross()) }}</p><p class="text-muted-foreground text-[11px]">Por adjudicarse</p></div>
+    <div class="rounded-lg border p-3"><p class="text-muted-foreground text-[11px] font-medium uppercase">Pipeline ponderado</p><p class="mt-1 text-lg font-semibold">{{ formatCurrency(pipelineWeighted()) }}</p><p class="text-muted-foreground text-[11px]">Monto × probabilidad</p></div>
+    <div class="rounded-lg border p-3"><p class="text-muted-foreground text-[11px] font-medium uppercase">Fianzas ≤ 90 días</p><p class="mt-1 text-lg font-semibold">{{ guaranteesAtRisk() }}</p><p class="text-muted-foreground text-[11px]">Requieren seguimiento</p></div>
+  </div>
+
+  <div class="rounded-lg border bg-card p-3">
+    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(280px,1.5fr)_1fr_1fr_auto]">
+      <label class="flex flex-col gap-1 text-xs font-medium">Buscar
+        <input class="h-9 rounded-md border bg-background px-3 text-sm font-normal outline-none focus:ring-2 focus:ring-ring/30" type="search" placeholder="Cliente, proyecto, contrato o código..." [value]="search()" (input)="updateSearch($any($event.target).value)" />
+      </label>
+      <label class="flex flex-col gap-1 text-xs font-medium">Cliente
+        <select class="h-9 rounded-md border bg-background px-2 text-sm font-normal" [value]="customer()" (change)="updateCustomer($any($event.target).value)">
+          <option value="ALL">Todos los clientes</option>
+          @for (name of customers(); track name) { <option [value]="name">{{ name }}</option> }
+        </select>
+      </label>
+      <label class="flex flex-col gap-1 text-xs font-medium">Estado de ejecución
+        <select class="h-9 rounded-md border bg-background px-2 text-sm font-normal" [value]="activeStatus()" (change)="updateStatus($any($event.target).value)">
+          <option value="ALL">Todos</option><option value="En ejecución">En ejecución</option><option value="Por vencer">Por vencer</option><option value="Vencido">Vencido</option><option value="Completado">Completado</option>
+        </select>
+      </label>
+      <button type="button" class="mt-auto h-9 rounded-md border px-3 text-sm hover:bg-muted" (click)="clearFilters()">Limpiar</button>
+    </div>
+  </div>
+
+  <div hlmTabs tab="executed" class="min-w-0">
+    <div hlmTabsList class="mb-4 w-full justify-start overflow-x-auto">
+      <button hlmTabsTrigger="executed">Proyectos ejecutados <span class="ml-1 text-[11px] opacity-60">{{ filteredExecuted().length }}</span></button>
+      <button hlmTabsTrigger="active">Proyectos en ejecución <span class="ml-1 text-[11px] opacity-60">{{ filteredActive().length }}</span></button>
+      <button hlmTabsTrigger="pipeline">Por adjudicarse <span class="ml-1 text-[11px] opacity-60">{{ filteredPipeline().length }}</span></button>
+      <button hlmTabsTrigger="guarantees">Cartas fianza <span class="ml-1 text-[11px] opacity-60">{{ filteredGuarantees().length }}</span></button>
+    </div>
+
+    <div hlmTabsContent="executed" class="rounded-lg border bg-card">
+      <div class="border-b px-4 py-3"><h2 class="text-sm font-semibold">Proyectos ejecutados</h2><p class="text-muted-foreground text-xs">Histórico del Excel. Se agregan código interno, facturación visible acumulada y estado.</p></div>
+      <div class="max-h-[620px] overflow-auto">
+        <table class="w-full min-w-[1500px] text-xs"><thead class="sticky top-0 z-10 bg-muted/95 text-left"><tr><th class="px-3 py-2">Código</th><th class="px-3 py-2">Cliente</th><th class="px-3 py-2">Proyecto</th><th class="px-3 py-2 text-right">Contrato</th><th class="px-3 py-2 text-right">Avance</th><th class="px-3 py-2 text-right">Fact. 2025</th><th class="px-3 py-2 text-right">Fact. 2026</th><th class="px-3 py-2 text-right">Fact. visible</th><th class="px-3 py-2">Inicio</th><th class="px-3 py-2">Término</th><th class="px-3 py-2">Consorcio</th><th class="px-3 py-2">Estado</th></tr></thead>
+          <tbody class="divide-y">@for (row of filteredExecuted(); track row.id) {<tr class="hover:bg-muted/30"><td class="px-3 py-2 font-medium">{{ row.id }}</td><td class="max-w-[260px] px-3 py-2">{{ row.customer }}</td><td class="px-3 py-2">{{ row.project }}</td><td class="px-3 py-2 text-right tabular-nums">{{ formatCurrency(row.contractAmount) }}</td><td class="px-3 py-2 text-right">{{ row.progress | percent:'1.0-1' }}</td><td class="px-3 py-2 text-right">{{ formatCurrency(row.billed2025) }}</td><td class="px-3 py-2 text-right">{{ formatCurrency(row.billed2026) }}</td><td class="px-3 py-2 text-right font-medium">{{ formatCurrency(visibleBilled(row)) }}</td><td class="px-3 py-2 whitespace-nowrap">{{ displayDate(row.startDate) }}</td><td class="px-3 py-2 whitespace-nowrap">{{ displayDate(row.endDate) }}</td><td class="px-3 py-2">{{ row.consortium }}</td><td class="px-3 py-2"><span class="rounded-full border bg-emerald-50 px-2 py-0.5 text-[11px] text-emerald-700">Ejecutado</span></td></tr>} @empty {<tr><td colspan="12" class="px-4 py-10 text-center text-muted-foreground">No hay resultados con los filtros aplicados.</td></tr>}</tbody>
+        </table>
+      </div>
+    </div>
+
+    <div hlmTabsContent="active" class="rounded-lg border bg-card">
+      <div class="border-b px-4 py-3"><h2 class="text-sm font-semibold">Proyectos en ejecución</h2><p class="text-muted-foreground text-xs">Incluye avance valorizado, backlog calculado, días restantes y semáforo de plazo.</p></div>
+      <div class="max-h-[620px] overflow-auto"><table class="w-full min-w-[1750px] text-xs"><thead class="sticky top-0 z-10 bg-muted/95 text-left"><tr><th class="px-3 py-2">Código</th><th class="px-3 py-2">Cliente</th><th class="px-3 py-2">Proyecto</th><th class="px-3 py-2">Estado</th><th class="px-3 py-2 text-right">Contrato</th><th class="px-3 py-2 text-right">Avance</th><th class="px-3 py-2 text-right">Avance valorizado</th><th class="px-3 py-2 text-right">Backlog calculado</th><th class="px-3 py-2 text-right">Pendiente 2026</th><th class="px-3 py-2">Inicio</th><th class="px-3 py-2">Término</th><th class="px-3 py-2 text-right">Días</th><th class="px-3 py-2">Consorcio</th><th class="px-3 py-2">Semáforo</th></tr></thead>
+        <tbody class="divide-y">@for (row of filteredActive(); track row.id) {<tr class="hover:bg-muted/30"><td class="px-3 py-2 font-medium">{{ row.id }}</td><td class="max-w-[260px] px-3 py-2">{{ row.customer }}</td><td class="px-3 py-2">{{ row.project }}</td><td class="px-3 py-2"><span class="rounded-full border px-2 py-0.5 text-[11px]" [ngClass]="riskClass(projectRisk(row))">{{ projectStatus(row) }}</span></td><td class="px-3 py-2 text-right">{{ formatCurrency(row.contractAmount) }}</td><td class="px-3 py-2 text-right font-medium">{{ row.progress | percent:'1.0-1' }}</td><td class="px-3 py-2 text-right">{{ formatCurrency(calculatedBilled(row)) }}</td><td class="px-3 py-2 text-right font-semibold">{{ formatCurrency(calculatedBacklog(row)) }}</td><td class="px-3 py-2 text-right">{{ formatCurrency(row.pendingBilling2026) }}</td><td class="px-3 py-2 whitespace-nowrap">{{ displayDate(row.startDate) }}</td><td class="px-3 py-2 whitespace-nowrap">{{ displayDate(row.endDate) }}</td><td class="px-3 py-2 text-right" [class.text-red-600]="daysUntil(row.endDate) < 0">{{ daysUntil(row.endDate) }}</td><td class="px-3 py-2">{{ row.consortium }}</td><td class="px-3 py-2"><span class="inline-block h-2.5 w-2.5 rounded-full" [class.bg-emerald-500]="projectRisk(row) === 'success'" [class.bg-amber-500]="projectRisk(row) === 'warning'" [class.bg-red-500]="projectRisk(row) === 'danger'"></span></td></tr>} @empty {<tr><td colspan="14" class="px-4 py-10 text-center text-muted-foreground">No hay resultados con los filtros aplicados.</td></tr>}</tbody>
+      </table></div>
+    </div>
+
+    <div hlmTabsContent="pipeline" class="rounded-lg border bg-card">
+      <div class="border-b px-4 py-3"><h2 class="text-sm font-semibold">Proyectos por adjudicarse</h2><p class="text-muted-foreground text-xs">El monto ponderado permite separar el pipeline comercial bruto del valor probable.</p></div>
+      <div class="overflow-auto"><table class="w-full min-w-[1300px] text-xs"><thead class="bg-muted/95 text-left"><tr><th class="px-3 py-2">Código</th><th class="px-3 py-2">Cliente</th><th class="px-3 py-2">Proyecto</th><th class="px-3 py-2">Etapa</th><th class="px-3 py-2 text-right">Monto</th><th class="px-3 py-2 text-right">Probabilidad</th><th class="px-3 py-2 text-right">Monto ponderado</th><th class="px-3 py-2 text-right">Proyección 2026</th><th class="px-3 py-2">Partícipes</th><th class="px-3 py-2">Plazo</th></tr></thead>
+        <tbody class="divide-y">@for (row of filteredPipeline(); track row.id) {<tr class="hover:bg-muted/30"><td class="px-3 py-2 font-medium">{{ row.id }}</td><td class="max-w-[280px] px-3 py-2">{{ row.customer }}</td><td class="px-3 py-2">{{ row.project }}</td><td class="px-3 py-2"><span class="rounded-full border bg-blue-50 px-2 py-0.5 text-[11px] text-blue-700">{{ pipelineStage(row) }}</span></td><td class="px-3 py-2 text-right">{{ formatCurrency(row.contractAmount) }}</td><td class="px-3 py-2 text-right font-medium">{{ row.probability | percent:'1.0-0' }}</td><td class="px-3 py-2 text-right font-semibold">{{ formatCurrency(weightedAmount(row)) }}</td><td class="px-3 py-2 text-right">{{ formatCurrency(row.year2026) }}</td><td class="px-3 py-2">{{ row.consortiumParticipants || '—' }}</td><td class="px-3 py-2">{{ row.term || 'Por definir' }}</td></tr>} @empty {<tr><td colspan="10" class="px-4 py-10 text-center text-muted-foreground">No hay resultados con los filtros aplicados.</td></tr>}</tbody>
+      </table></div>
+    </div>
+
+    <div hlmTabsContent="guarantees" class="rounded-lg border bg-card">
+      <div class="border-b px-4 py-3"><h2 class="text-sm font-semibold">Estatus de cartas fianza</h2><p class="text-muted-foreground text-xs">Se agregan entidad emisora consolidada, días al vencimiento y semáforo de renovación.</p></div>
+      <div class="overflow-auto"><table class="w-full min-w-[1650px] text-xs"><thead class="bg-muted/95 text-left"><tr><th class="px-3 py-2">Código</th><th class="px-3 py-2">Beneficiario</th><th class="px-3 py-2">Contrato</th><th class="px-3 py-2">Tipo</th><th class="px-3 py-2">Emisor</th><th class="px-3 py-2 text-right">Monto PEN</th><th class="px-3 py-2 text-right">Monto USD</th><th class="px-3 py-2 text-right">Participación</th><th class="px-3 py-2">Inicio</th><th class="px-3 py-2">Término</th><th class="px-3 py-2 text-right">Días</th><th class="px-3 py-2">Renovación / reducción</th><th class="px-3 py-2">Situación</th><th class="px-3 py-2">Observación legal</th></tr></thead>
+        <tbody class="divide-y">@for (row of filteredGuarantees(); track row.id) {<tr class="hover:bg-muted/30"><td class="px-3 py-2 font-medium">{{ row.id }}</td><td class="px-3 py-2">{{ row.beneficiary }}</td><td class="px-3 py-2 font-mono text-[11px]">{{ row.contract }}</td><td class="px-3 py-2">{{ row.guaranteeType }}</td><td class="px-3 py-2">{{ row.issuer || 'Por registrar' }}</td><td class="px-3 py-2 text-right">{{ formatCurrency(row.amountPen) }}</td><td class="px-3 py-2 text-right">{{ row.amountUsd ? formatCurrency(row.amountUsd, 'USD') : '—' }}</td><td class="px-3 py-2 text-right">{{ row.participation | percent:'1.0-0' }}</td><td class="px-3 py-2 whitespace-nowrap">{{ displayDate(row.startDate) }}</td><td class="px-3 py-2 whitespace-nowrap">{{ displayDate(row.endDate) }}</td><td class="px-3 py-2 text-right"><span class="rounded-full border px-2 py-0.5 text-[11px]" [ngClass]="riskClass(guaranteeRisk(row))">{{ daysUntil(row.endDate) }}</span></td><td class="px-3 py-2">{{ row.renewalAction }}</td><td class="px-3 py-2">{{ row.observation }}</td><td class="px-3 py-2">{{ row.legalObservation || '—' }}</td></tr>} @empty {<tr><td colspan="14" class="px-4 py-10 text-center text-muted-foreground">No hay resultados con los filtros aplicados.</td></tr>}</tbody>
+      </table></div>
+    </div>
+  </div>
+</div>

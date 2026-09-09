@@ -6,6 +6,7 @@ export const FINANCE_NAV: NavItem[] = [
   { label: 'Guías de remisión', route: '/apps/finance/guides', icon: 'tablerTruckDelivery' },
   { label: 'Series y correlativos', route: '/apps/finance/series', icon: 'tablerListDetails' },
   { label: 'Cobranzas', route: '/apps/finance/collections', icon: 'tablerTrendingUp' },
+  { label: 'Backlog de proyectos', route: '/apps/finance/project-backlog', icon: 'tablerClipboardList' },
   { label: 'Pagos por validar', route: '/apps/finance/payments', icon: 'tablerCashBanknote' },
   { label: 'Expediente del cliente', route: '/apps/finance/customer-file', icon: 'tablerFileSearch' },
   { label: 'Convenios de crédito', route: '/apps/finance/agreements', icon: 'tablerClipboardText' },
