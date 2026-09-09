@@ -9,6 +9,7 @@ import {
   SalesOrder,
   SalesProduct,
   SalesQuotation,
+  SalesQuotationDelivery,
   evaluateSalesOrder,
 } from '@core/models';
 import {
@@ -143,24 +144,32 @@ export function saveOrder(o: SalesOrder): void {
 export function createQuotation(input: {
   customerId: string;
   customerName: string;
+  contactId?: string;
   currency: Currency;
+  expiresAt?: string;
   lines: SalesQuotation['lines'];
+  deliveries?: SalesQuotationDelivery[];
   glosa?: string;
   notes?: string;
 }): SalesQuotation {
   const seq = nextQuotationSeq++;
-  const total = input.lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+  const subtotal = input.lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
+  const shippingTotal = (input.deliveries ?? []).reduce((s, d) => s + (+d.cost || 0), 0);
+  const total = subtotal + shippingTotal;
   const quotation: SalesQuotation = {
     id: `SQ-${String(seq).padStart(3, '0')}`,
     number: nextNumber('sales_quotation', salesQuotations()),
     customerId: input.customerId,
     customerName: input.customerName,
+    contactId: input.contactId ?? salesContacts().find((c) => c.customerId === input.customerId)?.id,
     status: 'draft',
     currency: input.currency,
     issuedAt: TODAY,
-    expiresAt: TODAY,
+    expiresAt: input.expiresAt ?? TODAY,
     lines: input.lines,
     total,
+    deliveries: input.deliveries,
+    shippingTotal: (input.deliveries ?? []).reduce((sum, d) => sum + d.cost, 0),
     notes: input.notes,
   };
   saveQuotation(quotation);
@@ -196,6 +205,7 @@ export function createSalesOrderFromQuotation(quotation: {
   id: string;
   customerId: string;
   customerName: string;
+  contactId?: string;
   currency: SalesOrder['currency'];
   total: number;
   lines: SalesOrder['lines'];
@@ -208,18 +218,21 @@ export function createSalesOrderFromQuotation(quotation: {
     number: nextNumber('sales_order', salesOrders()),
     customerId: quotation.customerId,
     customerName: quotation.customerName,
+    contactId: quotation.contactId ?? salesContacts().find((c) => c.customerId === quotation.customerId)?.id,
     quotationId: quotation.id,
-    status: 'confirmed',
+    status: cashSale ? 'pending_payment' : 'confirmed',
     currency: quotation.currency,
     confirmedAt: TODAY,
     committedDeliveryDate: TODAY,
     deliveryAddress: customer?.address ?? 'Por confirmar con el cliente',
-    lines: quotation.lines,
+    lines: quotation.lines.map((l) => ({ ...l, producedQuantity: 0, dispatchedQuantity: 0 })),
     total: quotation.total,
-    workSheetId: `HT-2026-${String(1000 + seq).slice(1)}`,
-    paymentGate: cashSale
-      ? { status: 'pending_docs', advancePct: 50 }
-      : { status: 'not_required', advancePct: 0 },
+    workSheetId: cashSale ? undefined : `HT-2026-${String(1000 + seq).slice(1)}`,
+    paymentGate: cashSale ? { status: 'pending_docs', advancePct: 50 } : { status: 'not_required', advancePct: 0 },
+    relatedDocuments: [
+      { id: `DOC-${seq}-Q`, type: 'cotizacion', label: 'Cotización', number: quotation.id, date: TODAY },
+      ...(!cashSale ? [{ id: `DOC-${seq}-HT`, type: 'hoja_trabajo' as const, label: 'Hoja de trabajo', number: `HT-2026-${String(1000 + seq).slice(1)}`, date: TODAY }] : []),
+    ],
   };
   saveOrder(order);
   return order;
@@ -229,11 +242,16 @@ export function createSalesOrderFromQuotation(quotation: {
 export function createSalesOrder(input: {
   customerId: string;
   customerName: string;
+  contactId?: string;
   currency: SalesOrder['currency'];
   committedDeliveryDate: string;
   deliveryAddress: string;
   glosa?: string;
   notes?: string;
+  customerOrderDocumentType?: SalesOrder['customerOrderDocumentType'];
+  customerOrderDocumentNumber?: string;
+  customerOrderDocument?: SalesOrder['customerOrderDocument'];
+  guaranteeLetter?: SalesOrder['guaranteeLetter'];
   lines: SalesOrder['lines'];
 }): SalesOrder {
   const seq = nextOrderSeq++;
@@ -251,17 +269,25 @@ export function createSalesOrder(input: {
     number: nextNumber('sales_order', salesOrders()),
     customerId: input.customerId,
     customerName: input.customerName,
-    status: 'confirmed',
+    contactId: input.contactId ?? salesContacts().find((c) => c.customerId === input.customerId)?.id,
+    status: cashSale ? 'pending_payment' : 'confirmed',
     currency: input.currency,
     confirmedAt: TODAY,
     committedDeliveryDate: input.committedDeliveryDate,
     deliveryAddress: input.deliveryAddress || customer?.address || 'Por confirmar con el cliente',
-    lines: input.lines,
+    lines: input.lines.map(l => ({ ...l, producedQuantity: 0, dispatchedQuantity: 0 })),
     total,
     glosa: input.glosa,
     notes: input.notes,
-    workSheetId: `HT-2026-${String(1000 + seq).slice(1)}`,
+    customerOrderDocumentType: input.customerOrderDocumentType,
+    customerOrderDocumentNumber: input.customerOrderDocumentNumber,
+    customerOrderDocument: input.customerOrderDocument,
+    guaranteeLetter: input.guaranteeLetter,
+    workSheetId: cashSale ? undefined : `HT-2026-${String(1000 + seq).slice(1)}`,
     paymentGate: cashSale ? { status: 'pending_docs', advancePct: 50 } : { status: 'not_required', advancePct: 0 },
+    relatedDocuments: [
+      ...(!cashSale ? [{ id: `DOC-${seq}-HT`, type: 'hoja_trabajo' as const, label: 'Hoja de trabajo', number: `HT-2026-${String(1000 + seq).slice(1)}`, date: TODAY }] : []),
+    ],
     priceReview: evalResult ? { outcome: evalResult.outcome, reasons: evalResult.reasons } : undefined,
   };
   saveOrder(order);
@@ -308,4 +334,53 @@ export function updateClaim(id: string, patch: Partial<Omit<SalesClaim, 'id'>>):
   let patched: SalesClaim | undefined;
   salesClaims.update((rows) => rows.map((c) => (c.id === id ? ((patched = { ...c, ...patch }), patched) : c)));
   if (patched) claimsStore.upsert(patched, (c) => ({ status: c.status, sales_order_id: c.salesOrderId }));
+}
+
+
+// --------------------------------------------------------------------------
+// Flujo pedido -> HT -> producción -> verificación -> despacho
+// --------------------------------------------------------------------------
+
+export function acceptSalesOrderWorkSheet(orderId: string): void {
+  const order = salesOrders().find((o) => o.id === orderId);
+  if (!order || !order.workSheetId) return;
+  saveOrder({ ...order, status: 'preparing' });
+}
+
+export function markProductionReady(orderId: string): void {
+  const order = salesOrders().find((o) => o.id === orderId);
+  if (!order) return;
+  saveOrder({ ...order, status: 'production_ready' });
+}
+
+export function verifyProduction(orderId: string): void {
+  const order = salesOrders().find((o) => o.id === orderId);
+  if (!order || order.status !== 'production_ready') return;
+  saveOrder({ ...order, status: 'ready_for_dispatch', readyForDispatch: true, readyForDispatchAt: TODAY });
+}
+
+export function validateAdvanceAndGenerateWorkSheet(orderId: string): void {
+  const order = salesOrders().find((o) => o.id === orderId);
+  if (!order || !order.paymentGate || order.paymentGate.status === 'validated') return;
+  const seq = Number(order.id.replace(/\D/g, '')) || nextOrderSeq++;
+  const workSheetId = `HT-2026-${String(1000 + seq).slice(1)}`;
+  saveOrder({
+    ...order,
+    status: 'confirmed',
+    workSheetId,
+    paymentGate: { ...order.paymentGate, status: 'validated', validatedBy: 'Finanzas', validatedAt: TODAY },
+    relatedDocuments: [...(order.relatedDocuments ?? []), { id: `DOC-${seq}-HT`, type: 'hoja_trabajo', label: 'Hoja de trabajo', number: workSheetId, date: TODAY }],
+  });
+}
+
+export function recordDispatch(orderId: string, quantities?: number[]): void {
+  const order = salesOrders().find((o) => o.id === orderId);
+  if (!order) return;
+  const lines = order.lines.map((line, i) => {
+    const qty = Math.max(0, Math.min(line.quantity - (line.dispatchedQuantity ?? 0), quantities?.[i] ?? line.quantity - (line.dispatchedQuantity ?? 0)));
+    return { ...line, dispatchedQuantity: (line.dispatchedQuantity ?? 0) + qty };
+  });
+  const allDispatched = lines.every((l) => (l.dispatchedQuantity ?? 0) >= l.quantity);
+  const anyDispatched = lines.some((l) => (l.dispatchedQuantity ?? 0) > 0);
+  saveOrder({ ...order, lines, dispatchedAt: allDispatched ? TODAY : order.dispatchedAt, status: allDispatched ? 'finished' : anyDispatched ? 'partially_dispatched' : order.status, readyForDispatch: !allDispatched });
 }

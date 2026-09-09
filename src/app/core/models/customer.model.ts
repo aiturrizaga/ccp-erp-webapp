@@ -33,13 +33,14 @@ export interface Customer {
   lastSyncedAt?: string;
 }
 
-export type ContactType = 'representante_legal' | 'comercial' | 'facturacion' | 'cobranzas';
+export type ContactType = 'representante_legal' | 'comercial' | 'facturacion' | 'cobranzas' | 'tesorero';
 
 export const CONTACT_TYPE_LABEL: Record<ContactType, string> = {
   representante_legal: 'Representante legal',
   comercial: 'Comercial',
   facturacion: 'Facturación',
   cobranzas: 'Cobranzas',
+  tesorero: 'Tesorero',
 };
 
 export interface Contact {

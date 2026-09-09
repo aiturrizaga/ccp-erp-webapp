@@ -1,105 +1,25 @@
 @if (order(); as o) {
-  <app-entity-header
-    [title]="o.number"
-    [subtitle]="o.customerName"
-    [statusLabel]="statusLabel(o.status)"
-    [statusTone]="statusTone(o.status)"
-    [crumbs]="[{ label: 'Ventas', link: '/apps/sales/orders' }, { label: o.number }]"
-  >
-    <div actions class="flex gap-2">
-      @if (canRegisterDispatch()) {
-        <hlm-popover align="end" [state]="dispatchPopover()" (stateChanged)="dispatchPopover.set($event)">
-          <button hlmPopoverTrigger hlmBtn size="sm" variant="outline">Registrar despacho</button>
-          <hlm-popover-content *hlmPopoverPortal class="w-80">
-            <hlm-popover-header>
-              <h3 hlmPopoverTitle>¿Registrar el despacho de {{ o.number }}?</h3>
-              <p hlmPopoverDescription>El pedido pasará a "Despachada". Confirma que la mercadería salió del almacén.</p>
-            </hlm-popover-header>
-            <div class="mt-3 flex justify-end gap-2">
-              <button hlmBtn variant="outline" size="sm" (click)="dispatchPopover.set('closed')">Cancelar</button>
-              <button hlmBtn size="sm" (click)="registerDispatch()">Registrar despacho</button>
-            </div>
-          </hlm-popover-content>
-        </hlm-popover>
-      }
-      @if (canIssueInvoice()) {
-        <hlm-popover align="end" [state]="invoicePopover()" (stateChanged)="invoicePopover.set($event)">
-          <button hlmPopoverTrigger hlmBtn size="sm">Emitir factura</button>
-          <hlm-popover-content *hlmPopoverPortal class="w-80">
-            <hlm-popover-header>
-              <h3 hlmPopoverTitle>¿Emitir la factura de {{ o.number }}?</h3>
-              <p hlmPopoverDescription>Se emitirá la factura para {{ o.customerName }} y el pedido pasará a "Facturada".</p>
-            </hlm-popover-header>
-            <div class="mt-3 flex justify-end gap-2">
-              <button hlmBtn variant="outline" size="sm" (click)="invoicePopover.set('closed')">Cancelar</button>
-              <button hlmBtn size="sm" (click)="issueInvoice()">Emitir factura</button>
-            </div>
-          </hlm-popover-content>
-        </hlm-popover>
-      }
-    </div>
-  </app-entity-header>
+<app-entity-header [title]="o.number" [subtitle]="o.customerName" [statusLabel]="statusLabel(o.status)" [statusTone]="statusTone(o.status)" [crumbs]="[{label:'Ventas',link:'/apps/sales/orders'},{label:o.number}]">
+<div actions class="flex flex-wrap gap-2">
+@if(canAccept()){<button hlmBtn size="sm" (click)="acceptProduction()"><ng-icon name="tablerPlayerPlay" class="mr-1.5"/>Aceptar HT</button>}
+@if(o.status==='preparing'){<button hlmBtn size="sm" variant="outline" (click)="notifyReady()">Producción lista</button>}
+@if(canVerify()){<button hlmBtn size="sm" (click)="verify()">Verificar y listo para despacho</button>}
+@if(['ready_for_dispatch','partially_dispatched'].includes(o.status)){<a hlmBtn size="sm" variant="outline" [routerLink]="['/apps/sales/dispatch']"><ng-icon name="tablerTruckDelivery" class="mr-1.5"/>Ir a despacho</a>}
+@if(canInvoice()){<button hlmBtn size="sm" (click)="issueInvoice()">Emitir factura</button>}
+</div></app-entity-header>
 
-  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.6fr_1fr]">
-    <div class="flex flex-col gap-4">
-      <div hlmCard class="p-4">
-        <h3 class="mb-3 text-sm font-semibold">Líneas</h3>
-        <table class="w-full text-sm">
-          <thead class="text-muted-foreground border-b text-xs">
-            <tr>
-              <th class="py-1.5 text-start font-medium">Producto</th>
-              <th class="py-1.5 text-end font-medium">Cantidad</th>
-              <th class="py-1.5 text-end font-medium">Precio unit.</th>
-              <th class="py-1.5 text-end font-medium">Subtotal</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y">
-            @for (line of o.lines; track line.productCode) {
-              <tr>
-                <td class="py-2">{{ line.productCode }} — {{ line.description }}</td>
-                <td class="py-2 text-end">{{ line.quantity }} {{ line.unitOfMeasure }}</td>
-                <td class="py-2 text-end">{{ o.currency }} {{ line.unitPrice }}</td>
-                <td class="py-2 text-end font-medium">{{ o.currency }} {{ (line.quantity * line.unitPrice) | number: '1.2-2' }}</td>
-              </tr>
-            }
-          </tbody>
-          <tfoot>
-            <tr class="border-t">
-              <td colspan="3" class="py-2 text-end text-sm font-semibold">Total</td>
-              <td class="py-2 text-end text-sm font-semibold">{{ o.currency }} {{ o.total | number: '1.2-2' }}</td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
+<div class="grid grid-cols-1 gap-4 xl:grid-cols-[1.7fr_1fr]">
+<div class="flex flex-col gap-4">
+<div hlmCard class="p-4"><div class="mb-3 flex items-center justify-between"><h3 class="text-sm font-semibold">Trazabilidad de producción y despacho</h3>@if(o.workSheetId){<a class="text-primary text-xs hover:underline" [routerLink]="['/apps/production/work-sheets',o.workSheetId]">Ver HT {{o.workSheetId}}</a>}</div>
+<table class="w-full text-sm"><thead class="text-muted-foreground border-b text-xs"><tr><th class="py-1.5 text-start">Producto</th><th class="py-1.5 text-end">Pedido</th><th class="py-1.5 text-end">Producido</th><th class="py-1.5 text-end">Despachado</th><th class="py-1.5 text-end">Pendiente</th></tr></thead><tbody class="divide-y">@for(line of o.lines;track line.productCode){<tr><td class="py-2">{{line.productCode}} — {{line.description}}<div class="text-muted-foreground text-xs">{{line.unitOfMeasure}}</div></td><td class="py-2 text-end">{{line.quantity}}</td><td class="py-2 text-end">{{line.producedQuantity ?? (o.status==='production_ready'||o.status==='ready_for_dispatch'||o.status==='partially_dispatched'||o.status==='dispatched'||o.status==='finished'||o.status==='invoiced'?line.quantity:0)}}</td><td class="py-2 text-end">{{line.dispatchedQuantity ?? 0}}</td><td class="py-2 text-end font-medium">{{line.quantity-(line.dispatchedQuantity ?? 0)}}</td></tr>}</tbody><tfoot><tr class="border-t"><td colspan="4" class="py-2 text-end font-semibold">Total</td><td class="py-2 text-end font-semibold">{{o.total|number:'1.2-2'}} {{o.currency}}</td></tr></tfoot></table></div>
 
-      @if (o.notes) {
-        <div hlmCard class="p-4">
-          <h3 class="mb-3 text-sm font-semibold">Observaciones</h3>
-          <p class="text-sm">{{ o.notes }}</p>
-        </div>
-      }
-    </div>
-
-    <div class="flex flex-col gap-4">
-      <div hlmCard class="p-4 text-sm">
-        <dl class="grid grid-cols-2 gap-y-2">
-          <dt class="text-muted-foreground">Cliente</dt><dd>{{ o.customerName }}</dd>
-          <dt class="text-muted-foreground">Moneda</dt><dd>{{ o.currency }}</dd>
-          <dt class="text-muted-foreground">Confirmada</dt><dd>{{ o.confirmedAt }}</dd>
-          <dt class="text-muted-foreground">Entrega comprometida</dt><dd>{{ o.committedDeliveryDate }}</dd>
-          @if (o.quotationId) {
-            <dt class="text-muted-foreground">Cotización origen</dt>
-            <dd><a [routerLink]="['/apps/sales/quotations', o.quotationId]" class="text-primary hover:underline">{{ o.quotationId }}</a></dd>
-          }
-        </dl>
-      </div>
-
-      <div hlmCard class="p-4">
-        <h3 class="mb-3 text-sm font-semibold">Dirección de entrega</h3>
-        <p class="text-sm">{{ o.deliveryAddress }}</p>
-      </div>
-    </div>
-  </div>
-} @else {
-  <app-empty-state icon="tablerTruckDelivery" title="Orden de venta no encontrada" />
-}
+@if(o.notes){<div hlmCard class="p-4"><h3 class="mb-2 text-sm font-semibold">Observaciones</h3><p class="text-sm">{{o.notes}}</p></div>}
+<div hlmCard class="p-4"><div class="mb-3 flex items-center justify-between"><div><h3 class="text-sm font-semibold">Documentos relacionados</h3><p class="text-muted-foreground text-xs">Trazabilidad documental del pedido.</p></div>@if(['ready_for_dispatch','partially_dispatched','dispatched','finished','invoiced'].includes(o.status)){<button hlmBtn size="sm" variant="outline" (click)="addGuide()"><ng-icon name="tablerPlus" class="mr-1.5"/>Registrar guía</button>}</div><div class="flex flex-col divide-y">@for(doc of (o.relatedDocuments ?? []);track doc.id){<div class="flex items-center justify-between gap-3 py-2"><div class="flex min-w-0 items-center gap-2"><ng-icon name="tablerFileText"/><div><p class="text-sm font-medium">{{doc.label}} @if(doc.number){<span class="font-mono text-xs">{{doc.number}}</span>}</p><p class="text-muted-foreground text-xs">{{doc.date ?? '—'}} @if(doc.fileName){· {{doc.fileName}}}</p></div></div><span class="text-muted-foreground text-xs capitalize">{{doc.type.replace('_',' ')}}</span></div>} @empty {<p class="text-muted-foreground py-2 text-sm">No hay documentos relacionados.</p>}</div></div>
+</div>
+<div class="flex flex-col gap-4">
+<div hlmCard class="p-4 text-sm"><h3 class="mb-3 font-semibold">Estado del flujo</h3><ol class="flex flex-col gap-2">@for(step of ['Pedido confirmado','HT aceptada por Producción','Producción terminada','Ventas verifica','Listo para despacho','Despacho','Facturación'];track step;let i=$index){<li class="flex items-center gap-2"><span class="flex size-6 items-center justify-center rounded-full border text-xs">{{i+1}}</span><span>{{step}}</span></li>}</ol></div>
+<div hlmCard class="p-4 text-sm"><dl class="grid grid-cols-2 gap-y-2"><dt class="text-muted-foreground">Cliente</dt><dd>{{o.customerName}}</dd><dt class="text-muted-foreground">Moneda</dt><dd>{{o.currency}}</dd><dt class="text-muted-foreground">Confirmada</dt><dd>{{o.confirmedAt}}</dd><dt class="text-muted-foreground">Entrega</dt><dd>{{o.committedDeliveryDate}}</dd>@if(o.quotationId){<dt class="text-muted-foreground">Cotización</dt><dd><a class="text-primary hover:underline" [routerLink]="['/apps/sales/quotations',o.quotationId]">{{o.quotationId}}</a></dd>}</dl></div>
+<div hlmCard class="p-4"><h3 class="mb-2 text-sm font-semibold">Dirección de entrega</h3><p class="text-sm">{{o.deliveryAddress}}</p></div>
+@if(o.paymentGate && o.paymentGate.status!=='not_required'){<div hlmCard class="p-4"><h3 class="mb-2 text-sm font-semibold">Adelanto</h3><p class="text-sm">{{o.paymentGate.advancePct}}% · {{o.paymentGate.status}}</p>@if(o.paymentGate.advanceVoucher){<p class="text-muted-foreground mt-1 text-xs">Voucher: {{o.paymentGate.advanceVoucher.name}}</p>}</div>}
+</div></div>
+} @else {<app-empty-state icon="tablerShoppingCart" title="Orden de venta no encontrada" />}

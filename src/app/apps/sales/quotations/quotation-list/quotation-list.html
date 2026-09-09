@@ -148,6 +148,7 @@
     <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
   </div>
   <p class="text-muted-foreground mt-1 text-xs">{{ row.customerName }}</p>
+  <p class="text-muted-foreground mt-1 text-xs">Contacto: <span class="text-foreground font-medium">{{ row.contactName }}</span></p>
   <p class="mt-2 text-xs" [class.text-destructive]="isExpiringSoon(row)" [class.font-medium]="isExpiringSoon(row)">
     Vigente hasta {{ row.expiresAt }}
     @if (isExpiringSoon(row)) { · por vencer }

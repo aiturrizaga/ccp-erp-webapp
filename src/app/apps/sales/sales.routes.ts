@@ -10,6 +10,7 @@ export const SALES_ROUTES: Routes = [
   { path: 'customers', loadComponent: () => import('./customers/customer-list/customer-list').then((m) => m.CustomerList) },
   { path: 'customers/new', loadComponent: () => import('./customers/customer-create/customer-create').then((m) => m.CustomerCreate) },
   { path: 'customers/:id', loadComponent: () => import('./customers/customer-detail/customer-detail').then((m) => m.CustomerDetail) },
+  { path: 'quotations/new', loadComponent: () => import('./quotations/quotation-create/quotation-create').then((m) => m.QuotationCreate) },
   { path: 'quotations', loadComponent: () => import('./quotations/quotation-list/quotation-list').then((m) => m.QuotationList) },
   { path: 'quotations/:id', loadComponent: () => import('./quotations/quotation-detail/quotation-detail').then((m) => m.QuotationDetail) },
   { path: 'orders', loadComponent: () => import('./orders/order-list/order-list').then((m) => m.OrderList) },

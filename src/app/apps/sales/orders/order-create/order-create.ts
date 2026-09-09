@@ -7,14 +7,13 @@ import { HlmButtonImports } from '@ui/button';
 import { HlmCardImports } from '@ui/card';
 import { HlmInputImports } from '@ui/input';
 import { HlmLabelImports } from '@ui/label';
-import { HlmSelectImports } from '@ui/select';
 import { HlmPopoverImports } from '@ui/popover';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { ProductPicker } from '@shared/components/product-picker/product-picker';
 import { toast } from '@shared/toast';
 import { createSalesOrder, salesCustomers, salesDecisionRules, salesProducts } from '../../sales-state';
-import { CUSTOMER_PAYMENT_MODE_LABEL, SalesProduct, evaluateSalesOrder, formatSalesProductName } from '@core/models';
+import { CUSTOMER_ORDER_DOCUMENT_TYPE_LABEL, CUSTOMER_PAYMENT_MODE_LABEL, CustomerOrderDocumentType, SalesProduct, evaluateSalesOrder, formatSalesProductName } from '@core/models';
 
 interface DraftLine {
   salesProductId: string;
@@ -29,7 +28,7 @@ interface DraftLine {
 
 @Component({
   selector: 'app-order-create',
-  imports: [FormsModule, DecimalPipe, PercentPipe, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, ...HlmPopoverImports, EntityHeader, StatusBadge, ProductPicker],
+  imports: [FormsModule, DecimalPipe, PercentPipe, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmPopoverImports, EntityHeader, StatusBadge, ProductPicker],
   templateUrl: './order-create.html',
 })
 export class OrderCreate {
@@ -40,9 +39,20 @@ export class OrderCreate {
   protected readonly deliveryAddress = signal('');
   protected readonly glosa = signal('');
   protected readonly notes = signal('');
+  protected readonly customerOrderDocumentType = signal<CustomerOrderDocumentType>('purchase_order');
+  protected readonly customerOrderDocumentNumber = signal('');
+  protected readonly customerOrderDocument = signal<{ name: string; uploadedAt: string } | null>(null);
+  protected readonly guaranteeLetter = signal<{ name: string; uploadedAt: string } | null>(null);
   protected readonly lines = signal<DraftLine[]>([]);
 
   protected readonly customers = salesCustomers;
+  protected readonly customerSearch = signal('');
+  protected readonly customerSearchOpen = signal(false);
+  protected readonly filteredCustomers = computed(() => {
+    const q = this.customerSearch().trim().toLowerCase();
+    if (!q) return salesCustomers();
+    return salesCustomers().filter(c => `${c.legalName} ${c.taxId ?? ''}`.toLowerCase().includes(q));
+  });
   protected readonly products = salesProducts;
 
   protected readonly customer = computed(() => salesCustomers().find((c) => c.id === this.customerId()));
@@ -64,10 +74,41 @@ export class OrderCreate {
   });
 
   protected readonly canSubmit = computed(
-    () => !!this.customerId() && this.lines().length > 0 && this.lines().every((l) => l.quantity > 0 && l.unitPrice > 0),
+    () => !!this.customerId() && !!this.customerOrderDocumentNumber().trim() && !!this.customerOrderDocument() && !!this.guaranteeLetter() && this.lines().length > 0 && this.lines().every((l) => l.quantity > 0 && l.unitPrice > 0),
   );
 
+  protected readonly customerOrderDocumentTypeOptions = (Object.keys(CUSTOMER_ORDER_DOCUMENT_TYPE_LABEL) as CustomerOrderDocumentType[]).map((value) => ({ value, label: CUSTOMER_ORDER_DOCUMENT_TYPE_LABEL[value] }));
+
+  protected onCustomerOrderDocumentTypeChange(value: string | null | undefined): void {
+    this.customerOrderDocumentType.set(value === 'quotation' ? 'quotation' : 'purchase_order');
+  }
+
+  protected onCustomerOrderDocument(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) this.customerOrderDocument.set({ name: file.name, uploadedAt: new Date().toISOString() });
+  }
+
+  protected onGuaranteeLetter(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (file) this.guaranteeLetter.set({ name: file.name, uploadedAt: new Date().toISOString() });
+  }
+
+  protected clearCustomerOrderDocument(): void { this.customerOrderDocument.set(null); }
+  protected clearGuaranteeLetter(): void { this.guaranteeLetter.set(null); }
+
   protected readonly customerToString = (v: string) => salesCustomers().find((c) => c.id === v)?.legalName ?? v;
+  protected onCustomerSearch(value: string): void {
+    this.customerSearch.set(value);
+    this.customerSearchOpen.set(true);
+    if (!value.trim()) this.customerId.set('');
+  }
+  protected selectCustomer(id: string): void {
+    this.customerId.set(id);
+    const c = salesCustomers().find(x => x.id === id);
+    this.customerSearch.set(c?.legalName ?? '');
+    this.customerSearchOpen.set(false);
+    if (c && !this.deliveryAddress()) this.deliveryAddress.set(c.address);
+  }
   protected readonly modeLabel = computed(() => {
     const c = this.customer();
     const modes = c?.paymentModes ?? (c?.paymentMode ? [c.paymentMode] : []);
@@ -131,6 +172,10 @@ export class OrderCreate {
       deliveryAddress: this.deliveryAddress().trim(),
       glosa: this.glosa().trim() || undefined,
       notes: this.notes().trim() || undefined,
+      customerOrderDocumentType: this.customerOrderDocumentType(),
+      customerOrderDocumentNumber: this.customerOrderDocumentNumber().trim(),
+      customerOrderDocument: this.customerOrderDocument() ? { type: this.customerOrderDocumentType() === 'quotation' ? 'customer_quotation' : 'customer_purchase_order', ...this.customerOrderDocument()! } : undefined,
+      guaranteeLetter: this.guaranteeLetter() ? { type: 'guarantee_letter', ...this.guaranteeLetter()! } : undefined,
       lines: this.lines()
         .filter((l) => l.salesProductId && l.quantity > 0)
         .map((l) => ({

@@ -14,7 +14,7 @@ import { ListPagination } from '@shared/components/list-pagination/list-paginati
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { SelectFilterOption } from '@shared/components/select-filter/select-filter';
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
-import { salesQuotations } from '../../sales-state';
+import { salesContacts, salesQuotations } from '../../sales-state';
 import { Currency, SalesQuotation, SalesQuotationStatus, SALES_QUOTATION_STATUS_LABEL, SALES_QUOTATION_STATUS_TONE, Tone } from '@core/models';
 
 const STATUS_OPTIONS: { value: SalesQuotationStatus; label: string }[] = (Object.keys(SALES_QUOTATION_STATUS_LABEL) as SalesQuotationStatus[]).map((value) => ({
@@ -63,6 +63,7 @@ export class QuotationList {
   protected readonly columns: DataTableColumn[] = [
     { key: 'number', header: 'Cotización', width: '150px' },
     { key: 'customerName', header: 'Cliente' },
+    { key: 'contactName', header: 'Contacto', width: '170px' },
     { key: 'expiresAt', header: 'Vigente hasta', width: '130px' },
     { key: 'currency', header: 'Moneda', width: '90px' },
     { key: 'total', header: 'Total', width: '110px', align: 'end' },
@@ -76,6 +77,7 @@ export class QuotationList {
     const from = this.dateFrom();
     const to = this.dateTo();
     return salesQuotations()
+      .map((q) => ({ ...q, contactName: salesContacts().find((c) => c.id === q.contactId)?.name ?? 'Sin contacto asociado' }))
       .filter((q) => {
         const matchesSearch = !term || q.number.toLowerCase().includes(term) || q.customerName.toLowerCase().includes(term);
         const matchesCurrency = currencies.size === 0 || currencies.has(q.currency);
@@ -176,6 +178,8 @@ export class QuotationList {
   protected statusTone(status: SalesQuotationStatus): Tone {
     return SALES_QUOTATION_STATUS_TONE[status];
   }
+
+  protected newQuotation(): void { this.router.navigate(['/apps/sales/quotations/new']); }
 
   protected openDetail(quotation: SalesQuotation): void {
     this.router.navigate(['/apps/sales/quotations', quotation.id]);

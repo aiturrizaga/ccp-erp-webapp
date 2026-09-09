@@ -97,13 +97,13 @@ export class SalesDashboard {
   // --- KPIs y listas --------------------------------------------------------
   protected readonly pendingQuotations = computed(() => this.filteredQuotations().filter((q) => q.status === 'sent'));
   protected readonly confirmedOrders = computed(() => this.filteredOrders().filter((o) => o.status === 'confirmed').length);
-  protected readonly ordersToDispatch = computed(() => this.filteredOrders().filter((o) => o.status === 'confirmed' || o.status === 'preparing').length);
+  protected readonly ordersToDispatch = computed(() => this.filteredOrders().filter((o) => ['ready_for_dispatch','partially_dispatched'].includes(o.status)).length);
   protected readonly invoicedTotal = computed(() => this.filteredOrders().filter((o) => o.status === 'invoiced').reduce((sum, o) => sum + o.total, 0));
 
   /** "Cómo va producción" — HT con fecha de entrega comprometida, la más próxima primero. */
   protected readonly productionRows = computed(() =>
     this.filteredOrders()
-      .filter((o) => o.workSheetId && o.committedDeliveryDate && o.status !== 'cancelled' && o.status !== 'invoiced')
+      .filter((o) => o.workSheetId && o.committedDeliveryDate && !['cancelled','invoiced','finished'].includes(o.status))
       .map((o) => {
         const days = Math.round((new Date(o.committedDeliveryDate).getTime() - TODAY.getTime()) / 86_400_000);
         return { order: o, days, alert: (days < 0 ? 'overdue' : days <= 5 ? 'soon' : 'ok') as 'overdue' | 'soon' | 'ok' };

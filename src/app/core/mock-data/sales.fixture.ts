@@ -177,7 +177,7 @@ export const SALES_ORDERS: SalesOrder[] = [
     customerId: 'CUST-009',
     customerName: 'Consorcio Vial Chincha S.A.',
     quotationId: 'SQ-009',
-    status: 'preparing',
+    status: 'production_ready',
     currency: 'PEN',
     confirmedAt: '2026-08-10',
     committedDeliveryDate: '2026-08-29',
@@ -215,27 +215,29 @@ export const SALES_ORDERS: SalesOrder[] = [
     number: 'PV-2026-0505',
     customerId: 'CUST-011',
     customerName: 'Municipalidad Provincial de Barranca',
-    status: 'preparing',
+    status: 'ready_for_dispatch',
     currency: 'PEN',
     confirmedAt: '2026-08-15',
     committedDeliveryDate: '2026-09-02',
     deliveryAddress: 'Plaza de Armas s/n, Barranca, Lima',
     lines: [{ productCode: 'PCC-8-200', description: 'Poste de concreto centrifugado 8m / 200 kgf', quantity: 20, unitOfMeasure: 'UND', unitPrice: 410 }],
     total: 8200,
+    readyForDispatch: true,
+    readyForDispatchAt: '2026-09-01'
   },
   {
     id: 'SO-006',
     number: 'PV-2026-0506',
     customerId: 'CUST-012',
     customerName: 'Distribuidora Eléctrica Ica S.A.C.',
-    status: 'dispatched',
+    status: 'partially_dispatched',
     currency: 'PEN',
     confirmedAt: '2026-08-01',
     committedDeliveryDate: '2026-08-22',
     deliveryAddress: 'Av. Los Maestros 145, Ica',
     lines: [
-      { productCode: 'PCC-13-400', description: 'Poste de concreto centrifugado 13m / 400 kgf', quantity: 18, unitOfMeasure: 'UND', unitPrice: 950, unitCost: 690 },
-      { productCode: 'ACC-ABZ-M', description: 'Abrazadera metálica para cruceta', quantity: 72, unitOfMeasure: 'UND', unitPrice: 22, unitCost: 14 },
+      { productCode: 'PCC-13-400', description: 'Poste de concreto centrifugado 13m / 400 kgf', quantity: 18, unitOfMeasure: 'UND', unitPrice: 950, unitCost: 690, producedQuantity: 18, dispatchedQuantity: 10 },
+      { productCode: 'ACC-ABZ-M', description: 'Abrazadera metálica para cruceta', quantity: 72, unitOfMeasure: 'UND', unitPrice: 22, unitCost: 14, producedQuantity: 72, dispatchedQuantity: 40 },
     ],
     total: 18684,
     workSheetId: 'HT-2026-0122',
@@ -288,3 +290,19 @@ export const SALES_ORDERS: SalesOrder[] = [
     total: 9020,
   },
 ];
+
+// Traceability defaults for the presentation mockup.
+SALES_ORDERS.forEach((order) => {
+  const fullyProduced = ['production_ready', 'ready_for_dispatch', 'partially_dispatched', 'dispatched', 'invoiced', 'finished'].includes(order.status);
+  order.lines = order.lines.map((line, index) => {
+    const produced = line.producedQuantity ?? (fullyProduced ? line.quantity : 0);
+    const dispatched = line.dispatchedQuantity ?? (order.status === 'partially_dispatched' ? Math.max(0, Math.floor(line.quantity * 0.5)) : ['dispatched', 'invoiced', 'finished'].includes(order.status) ? line.quantity : 0);
+    return { ...line, producedQuantity: produced, dispatchedQuantity: dispatched };
+  });
+  const docs = order.relatedDocuments ?? [];
+  if (order.quotationId && !docs.some(d => d.type === 'cotizacion')) docs.push({ id: `${order.id}-Q`, type: 'cotizacion', label: 'Cotización', number: order.quotationId, date: order.confirmedAt });
+  if (order.workSheetId && !docs.some(d => d.type === 'hoja_trabajo')) docs.push({ id: `${order.id}-HT`, type: 'hoja_trabajo', label: 'Hoja de trabajo', number: order.workSheetId, date: order.confirmedAt });
+  if (['dispatched', 'invoiced', 'finished'].includes(order.status) && !docs.some(d => d.type === 'guia')) docs.push({ id: `${order.id}-G`, type: 'guia', label: 'Guía de remisión', number: `GR-2026-${order.id.replace(/\D/g, '').padStart(4, '0')}`, date: order.dispatchedAt ?? '2026-09-01' });
+  if (['invoiced'].includes(order.status) && !docs.some(d => d.type === 'factura')) docs.push({ id: `${order.id}-F`, type: 'factura', label: 'Factura', number: `F002-${order.id.replace(/\D/g, '').padStart(5, '0')}`, date: '2026-09-01' });
+  order.relatedDocuments = docs;
+});

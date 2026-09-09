@@ -2,6 +2,9 @@ import { Component, computed, inject } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { HlmCardImports } from '@ui/card';
+import { HlmButtonImports } from '@ui/button';
+import { toast } from '@shared/toast';
+import { validateAdvanceAndGenerateWorkSheet } from '@apps/sales/sales-state';
 import { StatCard } from '@shared/components/stat-card/stat-card';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { salesCustomers, salesOrders } from '@apps/sales/sales-state';
@@ -10,7 +13,7 @@ import { InvoicingState } from '@apps/finance/invoicing-state';
 /** App-level analytics for Cobranzas — credit control, cash-sale collection and overdue receivables. */
 @Component({
   selector: 'app-collections-dashboard',
-  imports: [RouterLink, ...HlmCardImports, StatCard, StatusBadge, DecimalPipe],
+  imports: [RouterLink, ...HlmCardImports, ...HlmButtonImports, StatCard, StatusBadge, DecimalPipe],
   templateUrl: './dashboard.html',
 })
 export class CollectionsDashboard {
@@ -41,6 +44,8 @@ export class CollectionsDashboard {
 
   /** Pagos reportados sobre facturas, a la espera de validar el voucher. */
   protected readonly paymentsToValidate = computed(() => this.state.pendingPayments());
+
+  protected validateAdvance(orderId: string, orderNumber: string): void { validateAdvanceAndGenerateWorkSheet(orderId); toast.success(`Adelanto de ${orderNumber} validado`, { description: 'Se generó la HT y el pedido vuelve al flujo de Producción.' }); }
 
   protected goToInvoice(id: string): void {
     this.router.navigate(['/apps/finance/invoices', id]);

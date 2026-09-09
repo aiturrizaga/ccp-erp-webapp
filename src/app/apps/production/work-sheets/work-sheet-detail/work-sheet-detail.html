@@ -6,9 +6,11 @@
     [statusTone]="statusTone(status())"
     [crumbs]="[{ label: 'Hojas de trabajo', link: '/apps/production/work-sheets' }, { label: ws.number }]"
   >
-    <div actions>
+    <div actions class="flex items-center gap-2">
       @if (ws.salesOrderId) {
         <a [routerLink]="['/apps/sales/orders', ws.salesOrderId]" class="text-primary text-sm hover:underline">Ver pedido {{ ws.salesOrderNumber }}</a>
+        @if (status() === 'planned') { <button hlmBtn size="sm" (click)="acceptForProduction()">Aceptar HT</button> }
+        @if (status() === 'completed') { <button hlmBtn size="sm" (click)="notifySales()">Avisar a Ventas</button> }
       }
     </div>
   </app-entity-header>

@@ -172,6 +172,37 @@ export interface SalesQuotationLine {
   unitPrice: number;
   unitCost?: number;
   salesProductId?: string;
+  /** Mock traceability quantities; production/warehouse would own these in the real system. */
+  producedQuantity?: number;
+  dispatchedQuantity?: number;
+}
+
+export interface SalesQuotationDelivery {
+  id: string;
+  address: string;
+  cost: number;
+}
+
+export type CustomerOrderDocumentType = 'quotation' | 'purchase_order';
+
+export const CUSTOMER_ORDER_DOCUMENT_TYPE_LABEL: Record<CustomerOrderDocumentType, string> = {
+  quotation: 'Cotización del cliente',
+  purchase_order: 'Orden de compra del cliente',
+};
+
+export interface SalesOrderDocument {
+  type: 'customer_quotation' | 'customer_purchase_order' | 'guarantee_letter';
+  name: string;
+  uploadedAt: string;
+}
+
+export interface SalesRelatedDocument {
+  id: string;
+  type: 'cotizacion' | 'hoja_trabajo' | 'guia' | 'factura' | 'voucher' | 'otro';
+  label: string;
+  number?: string;
+  date?: string;
+  fileName?: string;
 }
 
 export interface SalesQuotation {
@@ -179,32 +210,46 @@ export interface SalesQuotation {
   number: string;
   customerId: string;
   customerName: string;
+  /** Contacto del cliente asociado a la cotización. */
+  contactId?: string;
   status: SalesQuotationStatus;
   currency: Currency;
   issuedAt: string;
   expiresAt: string;
   lines: SalesQuotationLine[];
   total: number;
+  deliveries?: SalesQuotationDelivery[];
+  shippingTotal?: number;
   /** Future reference to a CRM Opportunity — plain string until CRM exists. */
   opportunityId?: string;
   notes?: string;
 }
 
-export type SalesOrderStatus = 'confirmed' | 'preparing' | 'dispatched' | 'invoiced' | 'cancelled';
+export type SalesOrderStatus = 'confirmed' | 'pending_payment' | 'preparing' | 'production_ready' | 'ready_for_dispatch' | 'partially_dispatched' | 'dispatched' | 'invoiced' | 'finished' | 'cancelled';
 
 export const SALES_ORDER_STATUS_LABEL: Record<SalesOrderStatus, string> = {
-  confirmed: 'Confirmada',
-  preparing: 'En preparación',
+  confirmed: 'Confirmada · HT pendiente de aceptación',
+  pending_payment: 'Pendiente de adelanto',
+  preparing: 'En producción',
+  production_ready: 'Producción lista · por verificar',
+  ready_for_dispatch: 'Listo para despacho',
+  partially_dispatched: 'Despacho parcial',
   dispatched: 'Despachada',
   invoiced: 'Facturada',
+  finished: 'Pedido terminado',
   cancelled: 'Cancelada',
 };
 
 export const SALES_ORDER_STATUS_TONE: Record<SalesOrderStatus, Tone> = {
   confirmed: 'info',
+  pending_payment: 'warning',
   preparing: 'warning',
+  production_ready: 'info',
+  ready_for_dispatch: 'info',
+  partially_dispatched: 'warning',
   dispatched: 'success',
   invoiced: 'success',
+  finished: 'success',
   cancelled: 'danger',
 };
 
@@ -217,6 +262,9 @@ export interface SalesOrderLine {
   /** Unit cost sin IGV brought over from Producción, so the order can show its margin. Optional — legacy fixture rows don't carry it. */
   unitCost?: number;
   salesProductId?: string;
+  /** Mock traceability quantities; production/warehouse would own these in the real system. */
+  producedQuantity?: number;
+  dispatchedQuantity?: number;
 }
 
 /**
@@ -258,7 +306,15 @@ export interface SalesOrder {
   number: string;
   customerId: string;
   customerName: string;
+  /** Contacto del cliente asociado al pedido. */
+  contactId?: string;
   quotationId?: string;
+  /** Documento comercial entregado por el cliente y su nomenclatura externa. */
+  customerOrderDocumentType?: CustomerOrderDocumentType;
+  customerOrderDocumentNumber?: string;
+  customerOrderDocument?: SalesOrderDocument;
+  /** Carta de garantía adjunta al registrar el pedido. */
+  guaranteeLetter?: SalesOrderDocument;
   status: SalesOrderStatus;
   currency: Currency;
   confirmedAt: string;
@@ -279,6 +335,8 @@ export interface SalesOrder {
   dispatchedAt?: string;
   /** Commercial evaluation outcome (see SalesDecisionRule). */
   priceReview?: { outcome: 'auto' | 'needs_gerencia'; reasons: string[]; approvalId?: string };
+  /** Partial delivery destinations/lines are represented by quantities on each line. */
+  relatedDocuments?: SalesRelatedDocument[];
   /** Reclamos filed against this order, for traceability. */
   claimIds?: string[];
   /** True once a refacturación edit has been made in the `invoiced` state. */

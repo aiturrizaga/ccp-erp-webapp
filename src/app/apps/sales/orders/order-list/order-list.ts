@@ -59,6 +59,7 @@ export class OrderList {
   protected readonly columns: DataTableColumn[] = [
     { key: 'number', header: 'Orden de venta', width: '150px' },
     { key: 'customerName', header: 'Cliente' },
+    { key: 'customerOrderDocumentNumber', header: 'Ref. cliente', width: '150px' },
     { key: 'committedDeliveryDate', header: 'Entrega comprometida', width: '180px' },
     { key: 'currency', header: 'Moneda', width: '90px' },
     { key: 'total', header: 'Total', width: '110px', align: 'end' },
@@ -70,7 +71,7 @@ export class OrderList {
     const statuses = this.statusFilter();
     const currencies = this.currencyFilter();
     return salesOrders().filter((so) => {
-      const matchesSearch = !term || so.number.toLowerCase().includes(term) || so.customerName.toLowerCase().includes(term);
+      const matchesSearch = !term || so.number.toLowerCase().includes(term) || so.customerName.toLowerCase().includes(term) || (so.customerOrderDocumentNumber ?? '').toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(so.status);
       const matchesCurrency = currencies.size === 0 || currencies.has(so.currency);
       return matchesSearch && matchesStatus && matchesCurrency;

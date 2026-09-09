@@ -11,10 +11,15 @@ const TODAY = new Date('2026-09-01');
 
 /** Mock execution % per order status — Producción's real HT feed would replace this. */
 const PROGRESS: Record<SalesOrder['status'], number> = {
-  confirmed: 10,
+  confirmed: 5,
+  pending_payment: 0,
   preparing: 45,
+  production_ready: 100,
+  ready_for_dispatch: 100,
+  partially_dispatched: 100,
   dispatched: 100,
   invoiced: 100,
+  finished: 100,
   cancelled: 0,
 };
 

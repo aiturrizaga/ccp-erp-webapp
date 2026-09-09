@@ -34,6 +34,7 @@ import {
 } from '@core/models';
 import { ProductionState } from '../../production-state';
 import { ItemPicker } from '@shared/components/item-picker/item-picker';
+import { acceptSalesOrderWorkSheet, markProductionReady } from '@apps/sales/sales-state';
 
 interface DraftMaterial extends RunMaterialConsumption {
   _uid: number;
@@ -297,4 +298,16 @@ export class WorkSheetDetail {
     });
     toast.success(`Corrida ${this.editRunId()} actualizada`);
   }
+  protected acceptForProduction(): void {
+    const ws=this.workSheet(); if(!ws?.salesOrderId) return;
+    acceptSalesOrderWorkSheet(ws.salesOrderId);
+    toast.success(`HT ${ws.number} aceptada`, { description: 'El pedido pasó a En producción para Ventas.' });
+  }
+
+  protected notifySales(): void {
+    const ws=this.workSheet(); if(!ws?.salesOrderId) return;
+    markProductionReady(ws.salesOrderId);
+    toast.success(`HT ${ws.number} terminada`, { description: 'Ventas fue notificada para verificar el pedido.' });
+  }
+
 }

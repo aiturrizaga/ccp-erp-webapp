@@ -7,12 +7,19 @@
       <div class="grid grid-cols-2 gap-3">
         <div class="flex flex-col gap-1.5">
           <label hlmLabel>Cliente</label>
-          <hlm-select class="block w-full" [value]="customerId()" (valueChange)="onCustomerChange($event ?? '')" [itemToString]="customerToString">
-            <hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Selecciona el cliente" /></hlm-select-trigger>
-            <hlm-select-content *hlmSelectPortal>
-              @for (c of customers(); track c.id) { <hlm-select-item [value]="c.id">{{ c.legalName }}</hlm-select-item> }
-            </hlm-select-content>
-          </hlm-select>
+          <div class="relative">
+            <input hlmInput type="text" class="w-full" placeholder="Buscar por razón social o RUC" [ngModel]="customerSearch()" (ngModelChange)="onCustomerSearch($event)" (focus)="customerSearchOpen.set(true)" />
+            @if (customerSearchOpen()) {
+              <div class="bg-background absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border shadow-md">
+                @for (c of filteredCustomers(); track c.id) {
+                  <button type="button" class="hover:bg-muted flex w-full flex-col items-start px-3 py-2 text-left text-sm" (click)="selectCustomer(c.id)">
+                    <span>{{ c.legalName }}</span><span class="text-muted-foreground text-xs">{{ c.docType ?? 'RUC' }} {{ c.taxId }}</span>
+                  </button>
+                }
+                @if (!filteredCustomers().length) { <p class="text-muted-foreground px-3 py-2 text-xs">No se encontraron clientes.</p> }
+              </div>
+            }
+          </div>
           @if (customer(); as c) {
             <p class="text-muted-foreground text-xs">{{ c.docType ?? 'RUC' }} {{ c.taxId }} · {{ modeLabel() }} · moneda {{ c.currency }}</p>
           }
@@ -30,6 +37,56 @@
         <label hlmLabel for="gl">Glosa</label>
         <input hlmInput id="gl" type="text" placeholder="Se muestra en el pedido y baja a la factura" [ngModel]="glosa()" (ngModelChange)="glosa.set($event)" />
       </div>
+    </div>
+
+    <div hlmCard class="flex flex-col gap-4 p-4">
+      <div>
+        <h3 class="text-sm font-semibold">Documentación del cliente</h3>
+        <p class="text-muted-foreground mt-1 text-xs">Registra la referencia externa del cliente y adjunta los documentos requeridos para el pedido.</p>
+      </div>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-[220px_1fr]">
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel>Documento del cliente</label>
+          <select hlmInput class="w-full" [ngModel]="customerOrderDocumentType()" (ngModelChange)="onCustomerOrderDocumentTypeChange($event)">
+            @for (option of customerOrderDocumentTypeOptions; track option.value) { <option [value]="option.value">{{ option.label }}</option> }
+          </select>
+        </div>
+        <div class="flex flex-col gap-1.5">
+          <label hlmLabel for="customer-doc-number">N.º / código del cliente</label>
+          <input hlmInput id="customer-doc-number" type="text" placeholder="Ej. OC-2026-00458 o COT-1548" [ngModel]="customerOrderDocumentNumber()" (ngModelChange)="customerOrderDocumentNumber.set($event)" />
+        </div>
+      </div>
+      <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
+        <div class="flex flex-col gap-2">
+          <label hlmLabel>Documento del cliente</label>
+          @if (customerOrderDocument(); as doc) {
+            <div class="flex items-center justify-between rounded-md border px-3 py-2 text-xs">
+              <span class="truncate">{{ doc.name }}</span>
+              <button hlmBtn type="button" size="sm" variant="ghost" (click)="clearCustomerOrderDocument()"><ng-icon name="tablerX" size="14" /></button>
+            </div>
+          } @else {
+            <label class="border-input hover:bg-muted/40 flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 py-4 text-xs">
+              <ng-icon name="tablerPaperclip" size="15" /> Adjuntar cotización u orden de compra
+              <input type="file" accept="image/*,application/pdf" class="hidden" (change)="onCustomerOrderDocument($event)" />
+            </label>
+          }
+        </div>
+        <div class="flex flex-col gap-2">
+          <label hlmLabel>Carta de garantía</label>
+          @if (guaranteeLetter(); as doc) {
+            <div class="flex items-center justify-between rounded-md border px-3 py-2 text-xs">
+              <span class="truncate">{{ doc.name }}</span>
+              <button hlmBtn type="button" size="sm" variant="ghost" (click)="clearGuaranteeLetter()"><ng-icon name="tablerX" size="14" /></button>
+            </div>
+          } @else {
+            <label class="border-input hover:bg-muted/40 flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 py-4 text-xs">
+              <ng-icon name="tablerPaperclip" size="15" /> Adjuntar carta de garantía
+              <input type="file" accept="image/*,application/pdf" class="hidden" (change)="onGuaranteeLetter($event)" />
+            </label>
+          }
+        </div>
+      </div>
+      <p class="text-muted-foreground text-[11px]">Estos documentos forman parte de la trazabilidad del pedido y quedan asociados a la orden.</p>
     </div>
 
     <div hlmCard class="relative z-10 overflow-visible! p-4">
