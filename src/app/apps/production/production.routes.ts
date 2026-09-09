@@ -10,6 +10,7 @@ export const PRODUCTION_ROUTES: Routes = [
   { path: 'products/new', loadComponent: () => import('./products/product-create/product-create').then((m) => m.ProductCreate) },
   { path: 'products/:id', loadComponent: () => import('./products/product-detail/product-detail').then((m) => m.ProductDetail) },
   { path: 'products/:id/edit', loadComponent: () => import('./products/product-create/product-create').then((m) => m.ProductCreate) },
+  { path: 'costing', loadComponent: () => import('./costing/costing').then((m) => m.Costing) },
   { path: 'bill-of-materials', loadComponent: () => import('./bill-of-materials/bom-list/bom-list').then((m) => m.BomList) },
   { path: 'bill-of-materials/new', loadComponent: () => import('./bill-of-materials/bom-create/bom-create').then((m) => m.BomCreate) },
   { path: 'bill-of-materials/:id', loadComponent: () => import('./bill-of-materials/bom-detail/bom-detail').then((m) => m.BomDetail) },

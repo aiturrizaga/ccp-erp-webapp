@@ -5,6 +5,7 @@ export const PRODUCTION_NAV: NavItem[] = [
   { label: 'Hojas de trabajo', route: '/apps/production/work-sheets', icon: 'tablerClipboardText' },
   { label: 'Planificación', route: '/apps/production/planning', icon: 'tablerCalendar' },
   { label: 'Productos', route: '/apps/production/products', icon: 'tablerCategory' },
+  { label: 'Costos y precios', route: '/apps/production/costing', icon: 'tablerCashBanknote' },
   { label: 'BOM / Recetas', route: '/apps/production/bill-of-materials', icon: 'tablerFlask' },
   { label: 'Moldes', route: '/apps/production/molds', icon: 'tablerStack' },
   { label: 'Máquinas', route: '/apps/production/machines', icon: 'tablerBuildingFactory2' },
