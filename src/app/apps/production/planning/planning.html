@@ -86,7 +86,7 @@
                       <td class="px-3 py-3">{{ row.order.customerName }}</td>
                       <td class="px-3 py-3 font-medium">{{ row.workSheet.number }}</td>
                       <td class="px-3 py-3">{{ orderStatusLabel(row.order.status) }}</td>
-                      <td class="px-3 py-3">{{ row.workSheet.status }}</td>
+                      <td class="px-3 py-3">{{ workSheetStatusLabel(row.workSheet) }}</td>
                     </tr>
                   } @empty {
                     <tr>

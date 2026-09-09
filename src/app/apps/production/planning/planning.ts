@@ -10,10 +10,11 @@ import { HlmPopoverImports } from '@ui/popover';
 import { HlmDialogImports } from '@ui/dialog';
 import { HlmCheckboxImports } from '@ui/checkbox';
 import { NgIcon } from '@ng-icons/core';
+import { BrnDialogContent } from '@spartan-ng/brain/dialog';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { toast } from '@shared/toast';
-import { ManufacturingRun, SALES_ORDER_STATUS_LABEL } from '@core/models';
+import { ManufacturingRun, SALES_ORDER_STATUS_LABEL, WorkSheet, WORK_SHEET_STATUS_LABEL, workSheetStatus } from '@core/models';
 import { salesOrders } from '../../sales/sales-state';
 import { ProductionState } from '../production-state';
 
@@ -47,7 +48,7 @@ function eachDay(from: string, to: string): string[] {
 
 @Component({
   selector: 'app-planning',
-  imports: [FormsModule, NgTemplateOutlet, RouterLink, ...HlmCardImports, ...HlmButtonImports, ...HlmInputImports, ...HlmLabelImports, ...HlmPopoverImports, ...HlmDialogImports, ...HlmCheckboxImports, NgIcon, EntityHeader, EmptyState],
+  imports: [FormsModule, NgTemplateOutlet, RouterLink, BrnDialogContent, ...HlmCardImports, ...HlmButtonImports, ...HlmInputImports, ...HlmLabelImports, ...HlmPopoverImports, ...HlmDialogImports, ...HlmCheckboxImports, NgIcon, EntityHeader, EmptyState],
   templateUrl: './planning.html',
 })
 export class Planning {
@@ -144,6 +145,11 @@ export class Planning {
 
   protected orderStatusLabel(status: string): string {
     return SALES_ORDER_STATUS_LABEL[status as keyof typeof SALES_ORDER_STATUS_LABEL] ?? status;
+  }
+
+  protected workSheetStatusLabel(workSheet: WorkSheet): string {
+    const status = workSheetStatus(workSheet);
+    return WORK_SHEET_STATUS_LABEL[status];
   }
 
   private readonly allRunCells = computed<RunCell[]>(() =>
