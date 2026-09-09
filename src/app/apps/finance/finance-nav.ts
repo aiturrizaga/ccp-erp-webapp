@@ -3,6 +3,7 @@ import { NavItem } from '@shell/nav-item.model';
 export const FINANCE_NAV: NavItem[] = [
   { label: 'Dashboard', route: '/apps/finance/dashboard', icon: 'tablerLayoutDashboard' },
   { label: 'Facturación', route: '/apps/finance/billing', icon: 'tablerFileInvoice' },
+  { label: 'Órdenes de venta', route: '/apps/finance/sales-orders', icon: 'tablerShoppingCart' },
   { label: 'Comprobantes', route: '/apps/finance/invoices', icon: 'tablerReceipt2' },
   { label: 'Reportes', route: '/apps/finance/reports', icon: 'tablerTrendingUp' },
   { label: 'Guías de remisión', route: '/apps/finance/guides', icon: 'tablerTruckDelivery' },

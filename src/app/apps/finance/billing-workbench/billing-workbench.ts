@@ -55,5 +55,6 @@ export class BillingWorkbench {
     this.router.navigate(['/apps/finance/invoices/new'], { queryParams: { guideId: g.id } });
   }
 
+  protected goToSalesOrders(): void { this.router.navigate(['/apps/finance/sales-orders']); }
   protected goToReports(): void { this.router.navigate(['/apps/finance/reports']); }
 }

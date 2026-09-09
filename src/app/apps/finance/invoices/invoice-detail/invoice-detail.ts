@@ -11,6 +11,7 @@ import { HlmDialogImports } from '@ui/dialog';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { SUPPLIERS } from '@core/mock-data';
+import { salesOrders, salesQuotations } from '@apps/sales/sales-state';
 import {
   COMPROBANTE_KIND_LABEL,
   Invoice,
@@ -95,6 +96,45 @@ export class InvoiceDetail {
     if (!to) return;
     this.state.sendInvoiceExpedient(invoice.id, to);
     toast.success('Expediente enviado', { description: `Factura ${invoice.number} y documentos asociados enviados a ${to}` });
+  }
+
+
+  protected downloadUrl(invoice: SalesInvoice, kind: 'pdf' | 'xml' | 'cdr'): string {
+    const existing = kind === 'pdf' ? invoice.pdfUrl : kind === 'xml' ? invoice.xmlUrl : invoice.cdrUrl;
+    if (existing) return existing;
+    if (kind === 'pdf') {
+      const pdf = '%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Count 0/Kids[]>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF';
+      return 'data:application/pdf;base64,' + btoa(pdf);
+    }
+    const xml = kind === 'xml'
+      ? `<?xml version="1.0" encoding="UTF-8"?><Invoice><ID>${invoice.number}</ID><Customer>${invoice.customerName}</Customer><Total currencyID="${invoice.currency}">${invoice.total.toFixed(2)}</Total></Invoice>`
+      : `<?xml version="1.0" encoding="UTF-8"?><ApplicationResponse><ID>${invoice.number}</ID><ResponseCode>0</ResponseCode><Description>La factura ha sido aceptada</Description></ApplicationResponse>`;
+    return 'data:application/xml;charset=utf-8,' + encodeURIComponent(xml);
+  }
+
+  protected downloadName(invoice: SalesInvoice, kind: 'pdf' | 'xml' | 'cdr'): string {
+    return kind === 'pdf' ? `${invoice.number}.pdf` : kind === 'xml' ? `${invoice.number}.xml` : `R-${invoice.customerTaxId ?? '20549546626'}-${invoice.number}.xml`;
+  }
+
+
+  protected documentRoute(invoice: SalesInvoice, type: string): string[] | null {
+    switch (type) {
+      case 'pedido':
+        return invoice.salesOrderId ? ['/apps/sales/orders', invoice.salesOrderId] : null;
+      case 'cotizacion': {
+        const order = invoice.salesOrderId ? salesOrders().find((o) => o.id === invoice.salesOrderId) : null;
+        const quotationId = order?.quotationId ?? salesQuotations().find((q) => q.number === invoice.quotationCode)?.id;
+        return quotationId ? ['/apps/sales/quotations', quotationId] : null;
+      }
+      case 'hoja_trabajo': {
+        const order = invoice.salesOrderId ? salesOrders().find((o) => o.id === invoice.salesOrderId) : null;
+        return order?.workSheetId ? ['/apps/production/work-sheets', order.workSheetId] : null;
+      }
+      case 'guia':
+        return invoice.dispatchGuideId ? ['/apps/finance/guides'] : null;
+      default:
+        return null;
+    }
   }
 
   protected supplierName(supplierId: string): string {

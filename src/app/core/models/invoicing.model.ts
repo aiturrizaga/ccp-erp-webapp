@@ -167,7 +167,7 @@ export interface SunatTotals {
 
 export interface InvoiceRelatedDocument {
   id: string;
-  type: 'orden_compra' | 'pedido' | 'guia' | 'rin' | 'garantia' | 'factura' | 'xml' | 'cdr' | 'otro';
+  type: 'orden_compra' | 'pedido' | 'cotizacion' | 'hoja_trabajo' | 'guia' | 'rin' | 'garantia' | 'factura' | 'xml' | 'cdr' | 'otro';
   label: string;
   number?: string;
   fileName?: string;
@@ -223,6 +223,10 @@ export interface SalesInvoice extends InvoiceBase {
   digitalFolderPath?: string;
   emailStatus?: InvoiceEmailStatus;
   emailSentAt?: string;
+  /** Archivos digitales generados por el comprobante (mockup). */
+  pdfUrl?: string;
+  xmlUrl?: string;
+  cdrUrl?: string;
 }
 
 export type Invoice = PurchaseInvoice | SalesInvoice;

@@ -209,7 +209,21 @@
       @if (p.documentType === 'sales') {
         <div hlmCard class="p-4">
           <div class="mb-3 flex items-center justify-between gap-2"><div><h3 class="text-sm font-semibold">Expediente de facturación</h3><p class="text-muted-foreground text-xs">Documentos que acompañan al comprobante.</p></div><span class="text-muted-foreground text-xs">{{ relatedDocuments().length }} docs</span></div>
-          <div class="flex flex-col divide-y">@for (d of relatedDocuments(); track d.id) {<div class="flex items-center justify-between gap-3 py-2 text-sm"><div><p class="font-medium">{{ d.label }}</p><p class="text-muted-foreground text-xs">{{ d.number ?? d.fileName ?? 'Documento asociado' }}</p></div>@if (d.fileName) {<span class="text-muted-foreground text-xs">Adjunto</span>}</div>} @empty {<p class="text-muted-foreground text-xs">Sin documentos asociados.</p>}</div>
+          <div class="flex flex-col divide-y">@for (d of relatedDocuments(); track d.id) {<div class="flex items-center justify-between gap-3 py-2 text-sm"><div class="min-w-0"><p class="font-medium">{{ d.label }}</p><p class="text-muted-foreground text-xs truncate">{{ d.number ?? d.fileName ?? 'Documento asociado' }}</p></div>@if (d.url) {<a hlmBtn variant="ghost" size="sm" [href]="d.url" target="_blank" rel="noopener"><ng-icon name="tablerEye" class="mr-1" size="15" /> Ver</a>} @else if (documentRoute(p, d.type); as route) {<a hlmBtn variant="ghost" size="sm" [routerLink]="route"><ng-icon name="tablerEye" class="mr-1" size="15" /> Ver</a>} @else {<span class="text-muted-foreground text-xs">Enlazado</span>}</div>} @empty {<p class="text-muted-foreground text-xs">Sin documentos asociados.</p>}</div>
+        </div>
+      }
+
+      @if (p.documentType === 'sales') {
+        <div hlmCard class="p-4">
+          <div class="mb-3 flex items-center justify-between gap-2">
+            <div><h3 class="text-sm font-semibold">Archivos del comprobante</h3><p class="text-muted-foreground text-xs">Descarga los archivos digitales generados para esta factura.</p></div>
+            <ng-icon name="tablerDownload" size="18" class="text-muted-foreground" />
+          </div>
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <a hlmBtn variant="outline" size="sm" [href]="downloadUrl(p, 'pdf')" [download]="downloadName(p, 'pdf')"><ng-icon name="tablerFileTypePdf" class="mr-1.5" /> Descargar PDF</a>
+            <a hlmBtn variant="outline" size="sm" [href]="downloadUrl(p, 'xml')" [download]="downloadName(p, 'xml')"><ng-icon name="tablerFileCode" class="mr-1.5" /> Descargar XML</a>
+            <a hlmBtn variant="outline" size="sm" [href]="downloadUrl(p, 'cdr')" [download]="downloadName(p, 'cdr')"><ng-icon name="tablerFileCheck" class="mr-1.5" /> Descargar CDR</a>
+          </div>
         </div>
       }
 

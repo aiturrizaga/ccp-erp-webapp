@@ -1,0 +1,35 @@
+<div class="flex flex-col gap-5">
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <h1 class="text-xl font-semibold tracking-tight">Órdenes de venta por facturar</h1>
+      <p class="text-muted-foreground text-sm">Selecciona una orden ya despachada para preparar la factura sin volver a registrar sus datos.</p>
+    </div>
+    <div class="rounded-lg border bg-muted/30 px-4 py-2 text-right">
+      <p class="text-muted-foreground text-xs">Pendientes</p>
+      <p class="text-lg font-semibold">{{ invoiceableCount() }}</p>
+    </div>
+  </div>
+
+  <app-list-toolbar [(search)]="search" searchPlaceholder="Buscar por pedido, cliente u OC del cliente..." />
+
+  <div hlmCard class="overflow-hidden p-0">
+    <div class="border-b px-4 py-3">
+      <h2 class="text-sm font-semibold">Órdenes listas para facturar</h2>
+      <p class="text-muted-foreground text-xs">El ERP precarga cliente, contacto, OC, guía, productos, cantidades y condición de pago.</p>
+    </div>
+    <app-data-table [columns]="columns" [rows]="rows()" [rowClickable]="true" (rowClick)="openOrder($event)" [cellTemplate]="cellTpl" emptyMessage="No hay órdenes de venta pendientes de facturación." />
+  </div>
+</div>
+
+<ng-template #cellTpl let-row let-key="key">
+  @switch (key) {
+    @case ('number') { <span class="font-mono text-xs">{{ row.number }}</span> }
+    @case ('customerOrder') { <span class="font-mono text-xs">{{ customerOrder(row) }}</span> }
+    @case ('guide') { <span class="font-mono text-xs">{{ guideNumber(row) }}</span> }
+    @case ('total') { {{ row.currency }} {{ row.total | number:'1.2-2' }} }
+    @case ('status') { <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" /> }
+    @case ('action') {
+      <button hlmBtn size="sm" (click)="$event.stopPropagation(); invoice(row)"><ng-icon name="tablerFileInvoice" class="mr-1.5" /> Facturar</button>
+    }
+  }
+</ng-template>

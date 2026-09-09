@@ -13,7 +13,7 @@ import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { ProductPicker } from '@shared/components/product-picker/product-picker';
 import { toast } from '@shared/toast';
 
-import { salesCustomers, salesOrders, salesProducts, salesContacts } from '@apps/sales/sales-state';
+import { salesCustomers, salesOrders, salesProducts, salesContacts, salesQuotations } from '@apps/sales/sales-state';
 import { InvoicingState } from '../../invoicing-state';
 import {
   COMPROBANTE_KIND_LABEL,
@@ -106,6 +106,7 @@ export class InvoiceCreate {
   protected readonly contacts = salesContacts;
   protected readonly products = salesProducts;
   protected readonly orders = computed(() => salesOrders().filter((o) => o.status !== 'cancelled'));
+  protected readonly salesQuotations = salesQuotations;
   protected readonly salesInvoices = computed(() => this.state.invoices().filter((i): i is SalesInvoice => i.documentType === 'sales' && i.status !== 'voided'));
   protected readonly kindOptions = (['factura', 'boleta', 'nota_credito', 'nota_debito'] as ComprobanteKind[]).map((value) => ({ value, label: COMPROBANTE_KIND_LABEL[value] }));
 
@@ -175,9 +176,14 @@ export class InvoiceCreate {
 
   constructor() {
     const guideId = this.route.snapshot.queryParamMap.get('guideId');
+    const orderId = this.route.snapshot.queryParamMap.get('orderId');
     if (guideId) {
       this.guideId.set(guideId);
       this.loadFromGuide(guideId);
+    } else if (orderId) {
+      this.orderId.set(orderId);
+      this.onOrderChange(orderId);
+      this.validateRuc();
     }
     effect(() => {
       if (!this.isNote()) return;
@@ -271,7 +277,11 @@ export class InvoiceCreate {
     this.currency.set(order.currency);
     this.glosa.set(order.glosa ?? '');
     this.paymentCondition.set(cust?.paymentMode === 'cash' ? 'contado' : 'credito');
-    this.lines.set(order.lines.map((l) => ({ description: l.description, salesProductId: l.salesProductId ?? '', quantity: l.quantity, unitPrice: l.unitPrice })));
+    const deliveredGuide = this.state.guides().find((g) => g.salesOrderId === order.id && g.status === 'delivered');
+    if (deliveredGuide) this.guideId.set(deliveredGuide.id);
+    this.lines.set(order.lines
+      .map((l) => ({ description: l.description, salesProductId: l.salesProductId ?? '', quantity: l.dispatchedQuantity ?? l.quantity, unitPrice: l.unitPrice }))
+      .filter((l) => l.quantity > 0));
     // If the pedido came with an advance voucher, carry it over as the payment voucher.
     const v = order.paymentGate?.advanceVoucher;
     if (v) this.voucher.set({ name: v.name, mimeType: 'image/jpeg', url: '/vouchers/comprobante_de_pago.jpeg', uploadedAt: v.uploadedAt });
@@ -370,7 +380,12 @@ export class InvoiceCreate {
     const guide = this.guideId() ? this.state.guides().find((g) => g.id === this.guideId()) : undefined;
     const order = this.orderId() ? this.orders().find((o) => o.id === this.orderId()) : undefined;
     if (order?.customerOrderDocumentNumber) docs.push({ id: `OC-${order.id}`, type: 'orden_compra', label: 'Orden de compra del cliente', number: order.customerOrderDocumentNumber, fileName: order.customerOrderDocument?.name });
+    if (order?.quotationId) {
+      const quotation = this.salesQuotations().find((q) => q.id === order.quotationId);
+      docs.push({ id: `COT-${order.quotationId}`, type: 'cotizacion', label: 'Cotización', number: quotation?.number ?? order.quotationId });
+    }
     if (order) docs.push({ id: `PED-${order.id}`, type: 'pedido', label: 'Pedido de venta', number: order.number });
+    if (order?.workSheetId) docs.push({ id: `HT-${order.workSheetId}`, type: 'hoja_trabajo', label: 'Hoja de trabajo (HT)', number: order.workSheetId });
     if (guide) docs.push({ id: guide.id, type: 'guia', label: 'Guía de remisión', number: guide.number });
     if (order?.guaranteeLetter) docs.push({ id: `GAR-${order.id}`, type: 'garantia', label: 'Carta de garantía', fileName: order.guaranteeLetter.name });
     docs.push({ id: `RIN-${this.orderId() || '001'}`, type: 'rin', label: 'RIN / documento de almacén', fileName: 'RIN.pdf' });
