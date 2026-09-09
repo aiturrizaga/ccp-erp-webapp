@@ -89,6 +89,7 @@
       }
     </div>
 
+    @if (!isAdvanceInvoice()) {
     <div hlmCard class="relative z-10 overflow-visible! flex flex-col gap-2 p-4">
       <div class="flex items-center justify-between">
         <h3 class="text-sm font-semibold">Detalle</h3>
@@ -129,6 +130,27 @@
       </div>
     </div>
 
+    } @else {
+      <div hlmCard class="flex flex-col gap-3 p-4">
+        <div>
+          <h3 class="text-sm font-semibold">Datos del anticipo</h3>
+          <p class="text-muted-foreground mt-1 text-xs">
+            Este comprobante corresponde íntegramente a un pago anticipado. No se registran líneas de productos ni cantidades del pedido.
+          </p>
+        </div>
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div class="flex flex-col gap-1.5">
+            <label hlmLabel for="advanceAmount">Importe del anticipo (incluye IGV)</label>
+            <input hlmInput id="advanceAmount" type="number" min="0" step="0.01" placeholder="0.00" [ngModel]="advanceAmount()" (ngModelChange)="advanceAmount.set(+$event)" />
+          </div>
+          <div class="rounded-md border bg-muted/30 p-3 text-xs">
+            <div class="flex justify-between"><span class="text-muted-foreground">Base imponible</span><span>{{ currency() }} {{ subtotal() | number: '1.2-2' }}</span></div>
+            <div class="mt-1 flex justify-between"><span class="text-muted-foreground">IGV 18%</span><span>{{ currency() }} {{ igv() | number: '1.2-2' }}</span></div>
+            <div class="mt-1 flex justify-between border-t pt-1 font-semibold"><span>Total anticipo</span><span>{{ currency() }} {{ total() | number: '1.2-2' }}</span></div>
+          </div>
+        </div>
+      </div>
+    }
     @if (showInstallments()) {
       <div hlmCard class="flex flex-col gap-3 p-4">
         <div class="flex items-center justify-between">
@@ -161,68 +183,60 @@
     @if (showAdvances()) {
       <div hlmCard class="relative z-0 overflow-visible! flex flex-col gap-3 p-4">
         <div class="flex items-center justify-between">
-          <h3 class="text-sm font-semibold">Anticipos recibidos</h3>
-          <button hlmBtn size="sm" variant="outline" (click)="addAdvance()"><ng-icon name="tablerPlus" class="mr-1.5" /> Anticipo</button>
+          <div>
+            <h3 class="text-sm font-semibold">Anticipos recibidos</h3>
+            <p class="text-muted-foreground mt-0.5 text-xs">Busca anticipos ya emitidos para el cliente y el pedido seleccionado.</p>
+          </div>
         </div>
-        <p class="text-muted-foreground text-xs">
-          SUNAT: la factura/boleta por el total de la operación consigna el valor total y <b>deduce</b> los anticipos ya facturados,
-          referenciando serie y número de cada comprobante de anticipo. El neto a pagar = importe total − anticipos aplicados
-          (Catálogo 53, código <span class="font-mono">04</span> — anticipos gravados con IGV).
-        </p>
-        @if (advances().length === 0) {
-          <p class="text-muted-foreground rounded-md border border-dashed px-3 py-4 text-center text-xs">Sin anticipos aplicados.</p>
-        }
-        @for (a of advances(); track $index) {
-          <div class="flex flex-col gap-2 rounded-md border p-2.5">
-            <div class="grid grid-cols-2 gap-2">
-              <div class="flex flex-col gap-0.5">
-                <label class="text-muted-foreground text-[11px]">Comprobante de anticipo</label>
-                <hlm-select class="block w-full" [value]="a.sourceInvoiceId" (valueChange)="onAdvanceInvoicePick($index, $event ?? '')" [itemToString]="advanceInvoiceToString">
-                  <hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Elegir / manual" /></hlm-select-trigger>
-                  <hlm-select-content *hlmSelectPortal>
-                    <hlm-select-item value="">Comprobante externo (manual)</hlm-select-item>
-                    @for (i of eligibleAdvances(); track i.id) { <hlm-select-item [value]="i.id">{{ i.number }} — {{ i.currency }} {{ i.total | number: '1.2-2' }}</hlm-select-item> }
-                  </hlm-select-content>
-                </hlm-select>
+
+        @if (!customerId()) {
+          <p class="rounded-md border border-dashed px-3 py-3 text-xs text-muted-foreground">Selecciona primero el cliente para consultar sus anticipos.</p>
+        } @else {
+          <div class="flex flex-col gap-1.5">
+            <label hlmLabel for="advanceSearch">Buscar anticipo</label>
+            <input hlmInput id="advanceSearch" type="text" placeholder="Serie-número, pedido o cliente…" [ngModel]="advanceSearch()" (ngModelChange)="advanceSearch.set($event)" />
+          </div>
+          @if (!orderId()) {
+            <p class="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">Selecciona un pedido para limitar la búsqueda de anticipos al pedido correspondiente.</p>
+          }
+          <div class="divide-y rounded-md border">
+            @for (i of eligibleAdvances(); track i.id) {
+              <div class="flex items-center justify-between gap-3 px-3 py-2.5">
+                <div class="min-w-0">
+                  <p class="font-medium text-xs">{{ i.number }}</p>
+                  <p class="text-muted-foreground truncate text-[11px]">
+                    {{ i.salesOrderId ? (orderToString(i.salesOrderId)) : 'Sin pedido' }} · {{ i.issuedAt }}
+                  </p>
+                </div>
+                <div class="flex items-center gap-2 whitespace-nowrap">
+                  <span class="text-xs font-medium">{{ i.currency }} {{ i.total | number: '1.2-2' }}</span>
+                  <button hlmBtn size="sm" variant="outline" [disabled]="isAdvanceApplied(i.id)" (click)="applyAdvance(i)">
+                    {{ isAdvanceApplied(i.id) ? 'Aplicado' : 'Aplicar' }}
+                  </button>
+                </div>
               </div>
-              <div class="flex flex-col gap-0.5">
-                <label class="text-muted-foreground text-[11px]">Serie-número</label>
-                <input hlmInput type="text" placeholder="F001-00000123" [ngModel]="a.reference" (ngModelChange)="setAdvance($index, { reference: $event })" />
-              </div>
-            </div>
-            <div class="grid grid-cols-[1fr_130px_140px_auto] items-end gap-2">
-              <div class="flex flex-col gap-0.5">
-                <label class="text-muted-foreground text-[11px]">Tipo</label>
-                <hlm-select class="block w-full" [value]="a.docType" (valueChange)="setAdvance($index, { docType: $any($event) })">
-                  <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
-                  <hlm-select-content *hlmSelectPortal>
-                    <hlm-select-item value="factura">Factura</hlm-select-item>
-                    <hlm-select-item value="boleta">Boleta</hlm-select-item>
-                  </hlm-select-content>
-                </hlm-select>
-              </div>
-              <div class="flex flex-col gap-0.5">
-                <label class="text-muted-foreground text-[11px]">Fecha</label>
-                <input hlmInput type="date" [ngModel]="a.issuedAt" (ngModelChange)="setAdvance($index, { issuedAt: $event })" />
-              </div>
-              <div class="flex flex-col gap-0.5">
-                <label class="text-muted-foreground text-[11px]">Monto (c/IGV)</label>
-                <input hlmInput type="number" min="0" step="0.01" [ngModel]="a.amount" (ngModelChange)="setAdvance($index, { amount: +$event })" />
-              </div>
-              <button hlmBtn size="sm" variant="ghost" (click)="removeAdvance($index)"><ng-icon name="tablerX" /></button>
-            </div>
+            } @empty {
+              <p class="text-muted-foreground px-3 py-4 text-center text-xs">No hay anticipos emitidos que coincidan con el cliente/pedido.</p>
+            }
           </div>
         }
+
         @if (advances().length > 0) {
-          <div class="flex flex-col gap-1 border-t pt-2 text-xs">
-            <div class="flex justify-between"><span class="text-muted-foreground">Base anticipos</span><span class="tabular-nums">{{ currency() }} {{ advancesBase() | number: '1.2-2' }}</span></div>
-            <div class="flex justify-between"><span class="text-muted-foreground">IGV anticipos</span><span class="tabular-nums">{{ currency() }} {{ advancesIgv() | number: '1.2-2' }}</span></div>
-            <div class="flex justify-between font-medium" [class.text-destructive]="!advancesValid()">
-              <span>Total anticipos</span>
-              <span class="tabular-nums">
-                {{ currency() }} {{ advancesTotal() | number: '1.2-2' }}
-                @if (!advancesValid()) { · no puede superar el importe total }
-              </span>
+          <div class="flex flex-col gap-2 border-t pt-3">
+            <div class="flex items-center justify-between">
+              <h4 class="text-xs font-semibold">Anticipos seleccionados</h4>
+              <span class="text-xs font-medium">{{ currency() }} {{ advancesTotal() | number: '1.2-2' }}</span>
+            </div>
+            @for (a of advances(); track a.sourceInvoiceId) {
+              <div class="flex items-center justify-between rounded-md bg-muted/30 px-3 py-2 text-xs">
+                <div><span class="font-medium">{{ a.reference }}</span><span class="text-muted-foreground ml-2">{{ a.issuedAt }}</span></div>
+                <div class="flex items-center gap-2"><span>{{ currency() }} {{ a.amount | number: '1.2-2' }}</span><button hlmBtn size="sm" variant="ghost" (click)="removeAdvance($index)"><ng-icon name="tablerX" /></button></div>
+              </div>
+            }
+            <div class="flex flex-col gap-1 border-t pt-2 text-xs">
+              <div class="flex justify-between"><span class="text-muted-foreground">Base anticipos</span><span>{{ currency() }} {{ advancesBase() | number: '1.2-2' }}</span></div>
+              <div class="flex justify-between"><span class="text-muted-foreground">IGV anticipos</span><span>{{ currency() }} {{ advancesIgv() | number: '1.2-2' }}</span></div>
+              <div class="flex justify-between font-medium" [class.text-destructive]="!advancesValid()"><span>Total anticipos</span><span>{{ currency() }} {{ advancesTotal() | number: '1.2-2' }} @if (!advancesValid()) { · no puede superar el importe total }</span></div>
             </div>
           </div>
         }
