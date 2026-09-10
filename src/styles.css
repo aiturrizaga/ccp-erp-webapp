@@ -6,6 +6,7 @@
 @import '@spartan-ng/brain/hlm-tailwind-preset.css';
 /* You can add global styles to this file, and also import other style files */
 
+/* CCP corporate palette derived from the official logo. */
 :root {
   color-scheme: light;
 
@@ -15,63 +16,68 @@
     'Noto Color Emoji';
 
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.141 0.005 285.823);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.141 0.005 285.823);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.141 0.005 285.823);
-  --primary: oklch(0.21 0.006 285.885);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.967 0.001 286.375);
-  --secondary-foreground: oklch(0.21 0.006 285.885);
-  --muted: oklch(0.967 0.001 286.375);
-  --muted-foreground: oklch(0.552 0.016 285.938);
-  --accent: oklch(0.967 0.001 286.375);
-  --accent-foreground: oklch(0.21 0.006 285.885);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.92 0.004 286.32);
-  --input: oklch(0.92 0.004 286.32);
-  --ring: oklch(0.705 0.015 286.067);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.141 0.005 285.823);
-  --sidebar-primary: oklch(0.21 0.006 285.885);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.967 0.001 286.375);
-  --sidebar-accent-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-border: oklch(0.92 0.004 286.32);
-  --sidebar-ring: oklch(0.705 0.015 286.067);
+  --background: #f6f9f9;
+  --foreground: #172326;
+  --card: #ffffff;
+  --card-foreground: #172326;
+  --popover: #ffffff;
+  --popover-foreground: #172326;
+  --primary: #00788a;
+  --primary-foreground: #ffffff;
+  --secondary: #e7f3f4;
+  --secondary-foreground: #075d69;
+  --muted: #edf3f3;
+  --muted-foreground: #607277;
+  --accent: #d9eef0;
+  --accent-foreground: #075d69;
+  --destructive: #c83c45;
+  --border: #d5e2e3;
+  --input: #cbdadc;
+  --ring: #0094a6;
+  --sidebar: #f8fbfb;
+  --sidebar-foreground: #1c3034;
+  --sidebar-primary: #00788a;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #dceff1;
+  --sidebar-accent-foreground: #075d69;
+  --sidebar-border: #d2e2e4;
+  --sidebar-ring: #0094a6;
+
+  --ccp-teal-950: #003f49;
+  --ccp-teal-800: #005c6a;
+  --ccp-teal-700: #00788a;
+  --ccp-teal-500: #0094a6;
+  --ccp-teal-100: #d9eef0;
 }
 
 :root.dark {
   color-scheme: dark;
-
-  --background: oklch(0.141 0.005 285.823);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.21 0.006 285.885);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.21 0.006 285.885);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.92 0.004 286.32);
-  --primary-foreground: oklch(0.21 0.006 285.885);
-  --secondary: oklch(0.274 0.006 286.033);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.274 0.006 286.033);
-  --muted-foreground: oklch(0.705 0.015 286.067);
-  --accent: oklch(0.274 0.006 286.033);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.552 0.016 285.938);
-  --sidebar: oklch(0.21 0.006 285.885);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.985 0 0);
-  --sidebar-primary-foreground: oklch(0.21 0.006 285.885);
-  --sidebar-accent: oklch(0.274 0.006 286.033);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.552 0.016 285.938);
+  --background: #0b171a;
+  --foreground: #edf7f7;
+  --card: #102126;
+  --card-foreground: #edf7f7;
+  --popover: #102126;
+  --popover-foreground: #edf7f7;
+  --primary: #27a8b7;
+  --primary-foreground: #061316;
+  --secondary: #183238;
+  --secondary-foreground: #d9f2f4;
+  --muted: #183238;
+  --muted-foreground: #9bb0b4;
+  --accent: #17434b;
+  --accent-foreground: #e8f8f9;
+  --destructive: #e0666d;
+  --border: #284248;
+  --input: #345159;
+  --ring: #27a8b7;
+  --sidebar: #0d2025;
+  --sidebar-foreground: #edf7f7;
+  --sidebar-primary: #27a8b7;
+  --sidebar-primary-foreground: #061316;
+  --sidebar-accent: #17434b;
+  --sidebar-accent-foreground: #e8f8f9;
+  --sidebar-border: #284248;
+  --sidebar-ring: #27a8b7;
 }
 
 @layer base {
@@ -146,5 +152,130 @@
   app-work-sheet-detail,
   app-work-sheet-list {
     display: block;
+  }
+}
+
+
+@layer components {
+  .ccp-logo {
+    object-fit: contain;
+    object-position: left center;
+  }
+
+  .ccp-topbar {
+    background: color-mix(in srgb, var(--card) 94%, var(--ccp-teal-100));
+    border-color: var(--sidebar-border);
+  }
+}
+
+@layer components {
+  .ccp-appbar {
+    background: var(--card);
+    border-color: var(--sidebar-border);
+  }
+
+  .ccp-brand {
+    border-color: var(--sidebar-border);
+    background: #fff;
+  }
+
+  /* El logo se muestra completo, sin recortes ni contenedores estrechos. */
+  .ccp-logo-full {
+    display: block;
+    width: 190px;
+    height: 46px;
+    max-width: 100%;
+    object-fit: contain;
+    object-position: left center;
+  }
+
+  .ccp-module-nav {
+    scrollbar-width: thin;
+    scrollbar-color: var(--sidebar-border) transparent;
+  }
+
+  .ccp-module-link {
+    color: var(--muted-foreground);
+    border-color: var(--sidebar-border);
+    background: var(--card);
+    white-space: nowrap;
+  }
+
+  .ccp-module-link:hover {
+    color: var(--ccp-teal-800);
+    background: var(--ccp-teal-100);
+  }
+
+  .ccp-module-link.is-active {
+    color: #fff;
+    background: var(--ccp-teal-700);
+    box-shadow: inset 0 -3px 0 var(--ccp-teal-950);
+  }
+
+  @media (max-width: 900px) {
+    .ccp-brand { width: 170px; }
+    .ccp-logo-full { width: 150px; }
+    .ccp-module-link { min-width: 92px; padding-inline: 0.75rem; }
+  }
+}
+
+
+/* ===== CCP UX System 2026 =================================================
+   Identidad: petróleo/teal del isotipo + neutros claros. El color corporativo
+   identifica navegación y acciones; el contenido conserva alto contraste. */
+@layer base {
+  body { background: #f4f8f8; }
+  input, textarea, select { transition: border-color .18s ease, box-shadow .18s ease, background .18s ease; }
+  input:focus, textarea:focus, select:focus { border-color: var(--ccp-teal-500); }
+}
+
+@layer components {
+  .ccp-login-shell {
+    background:
+      radial-gradient(circle at 10% 15%, rgb(0 148 166 / .12), transparent 30rem),
+      linear-gradient(135deg, #f7fbfb 0%, #edf5f5 100%);
+  }
+  .ccp-login-card { border-color: rgb(0 120 138 / .16); box-shadow: 0 28px 80px rgb(0 63 73 / .13); }
+  .ccp-login-brand-panel {
+    background: linear-gradient(145deg, #003f49 0%, #005c6a 48%, #00788a 100%);
+    position: relative; isolation: isolate;
+  }
+  .ccp-login-brand-panel::after {
+    content: ''; position: absolute; inset: 0; z-index: -1; opacity: .22;
+    background: radial-gradient(circle at 85% 18%, #4bd0dc 0 2px, transparent 3px), radial-gradient(circle at 85% 18%, transparent 0 120px, #4bd0dc 121px 122px, transparent 123px);
+  }
+  .ccp-login-logo { width: 390px; height: 112px; object-fit: contain; object-position: left center; filter: drop-shadow(0 4px 12px rgb(0 0 0 / .08)); background: white; border-radius: 16px; padding: 10px 14px; }
+  .ccp-login-logo-mobile { width: 290px; height: 82px; object-fit: contain; object-position: left center; }
+  .ccp-eyebrow { font-size: 11px; font-weight: 750; letter-spacing: .18em; }
+  .ccp-cert-panel { border: 1px solid rgb(255 255 255 / .16); background: rgb(255 255 255 / .96); border-radius: 18px; padding: 14px 16px 12px; }
+  .ccp-cert-panel p { color: #456064; }
+  .ccp-primary-action { background: linear-gradient(90deg, var(--ccp-teal-800), var(--ccp-teal-700)); box-shadow: 0 7px 18px rgb(0 120 138 / .20); }
+  .ccp-primary-action:hover { filter: brightness(.95); }
+
+  .ccp-sidebar-cert { border-top: 1px solid var(--sidebar-border); padding-top: .65rem; }
+  .ccp-sidebar-cert-label { display:block; margin-bottom:.3rem; color:var(--muted-foreground); font-size:9px; font-weight:700; letter-spacing:.11em; text-transform:uppercase; }
+  .ccp-sidebar-cert img { width:100%; height:42px; object-fit:contain; object-position:left center; }
+
+  /* Chrome: barra superior compacta, módulos siempre visibles y jerarquía clara. */
+  .ccp-topbar { position: sticky; top: 0; z-index: 30; box-shadow: 0 1px 0 rgb(0 63 73 / .04); }
+  .ccp-appbar { height: 58px; }
+  .ccp-brand { width: 235px; padding-inline: 16px; }
+  .ccp-logo-full { width: 202px; height: 50px; }
+  .ccp-module-link { position: relative; min-width: 112px; font-weight: 600; }
+  .ccp-module-link.is-active { box-shadow: inset 0 -3px 0 #003f49; }
+  .ccp-module-link.is-active::after { content:''; position:absolute; left:16px; right:16px; bottom:0; height:3px; border-radius:3px 3px 0 0; background:#63d2db; }
+
+  /* Lenguaje visual común para páginas existentes sin reescribir cada módulo. */
+  [hlmCard] { border-color: #d7e5e6; box-shadow: 0 1px 2px rgb(0 63 73 / .035); }
+  table { border-color: #d9e6e7; }
+  thead { background: #f1f7f7; color: #40575b; }
+  tbody tr { transition: background-color .14s ease; }
+  tbody tr:hover { background: rgb(217 238 240 / .32); }
+  [hlmSidebarMenuButton][data-active='true'], [hlmSidebarMenuButton].bg-sidebar-accent { font-weight: 650; }
+
+  @media (max-width: 900px) {
+    .ccp-brand { width: 175px; padding-inline: 10px; }
+    .ccp-logo-full { width: 154px; height: 46px; }
+    .ccp-module-link { min-width: 94px; font-size: 12px; }
   }
 }

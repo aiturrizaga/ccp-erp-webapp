@@ -4,11 +4,9 @@
     <ul hlmSidebarMenu>
       <li hlmSidebarMenuItem>
         <button hlmSidebarMenuButton size="lg" [hlmDropdownMenuTrigger]="companyMenu" tooltip="Cambiar de empresa">
-          <div class="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-            <ng-icon name="tablerBuilding" class="text-base" />
-          </div>
+          <div class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">CCP</div>
           <div class="grid flex-1 text-left text-sm leading-tight">
-            <span class="truncate font-medium">{{ activeCompany().name }}</span>
+            <span class="truncate font-semibold">{{ activeCompany().name }}</span>
             <span class="truncate text-xs">{{ activeCompany().description }}</span>
           </div>
           <ng-icon name="tablerChevronDown" class="ms-auto" />
@@ -41,11 +39,15 @@
   </hlm-sidebar-content>
 
   <hlm-sidebar-footer>
+    <div class="ccp-sidebar-cert mb-2 px-2 group-data-[collapsible=icon]:hidden">
+      <span class="ccp-sidebar-cert-label">Certificaciones CCP</span>
+      <img src="/ccp_certificaciones.png" alt="Certificaciones ISO e INACAL de CCP" />
+    </div>
     <ul hlmSidebarMenu>
       <li hlmSidebarMenuItem>
         <button hlmSidebarMenuButton size="lg" [hlmDropdownMenuTrigger]="profileMenu" side="top" align="start">
           <hlm-avatar class="rounded-lg" size="sm">
-            <span hlmAvatarFallback class="rounded-lg bg-[#FD005B] text-white">{{ auth.currentUser()?.name?.charAt(0) ?? '?' }}</span>
+            <span hlmAvatarFallback class="rounded-lg bg-primary text-primary-foreground">{{ auth.currentUser()?.name?.charAt(0) ?? '?' }}</span>
           </hlm-avatar>
           <div class="grid flex-1 text-left text-sm leading-tight">
             <span class="truncate font-medium">{{ auth.currentUser()?.name ?? 'Invitado' }}</span>

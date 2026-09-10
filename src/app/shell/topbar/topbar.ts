@@ -11,9 +11,8 @@ import { HlmSidebarImports } from '@ui/sidebar';
 import { APPROVALS } from '@core/mock-data';
 import { ActiveApp } from '../active-app';
 import { AuthState } from '../auth-state';
-import { AppLauncherState } from '../app-launcher-state';
-import { AppLauncher } from '../app-launcher/app-launcher';
 import { NavItem } from '../nav-item.model';
+import { APP_CATALOG } from '../app-catalog';
 import { PURCHASING_NAV } from '@apps/purchasing/purchasing-nav';
 import { INVENTORY_NAV } from '@apps/inventory/inventory-nav';
 import { PRODUCTION_NAV } from '@apps/production/production-nav';
@@ -31,14 +30,13 @@ const NAV_BY_APP: Record<string, NavItem[]> = {
 /** Inset main's header: sidebar trigger, breadcrumb, global search, notifications and approvals bell. */
 @Component({
   selector: 'app-topbar',
-  imports: [RouterLink, NgIcon, ...HlmButtonImports, ...HlmBadgeImports, ...HlmSeparatorImports, ...HlmBreadcrumbImports, ...HlmSidebarImports, AppLauncher],
+  imports: [RouterLink, NgIcon, ...HlmButtonImports, ...HlmBadgeImports, ...HlmSeparatorImports, ...HlmBreadcrumbImports, ...HlmSidebarImports],
   templateUrl: './topbar.html',
 })
 export class Topbar {
   private readonly router = inject(Router);
   private readonly activeApp = inject(ActiveApp);
   private readonly auth = inject(AuthState);
-  protected readonly appLauncher = inject(AppLauncherState);
 
   private readonly url = toSignal(
     this.router.events.pipe(
@@ -50,6 +48,14 @@ export class Topbar {
   );
 
   protected readonly appName = computed(() => this.activeApp.descriptor()?.name ?? 'CCP ERP');
+
+  protected readonly activeAppId = computed(() => this.activeApp.id());
+
+  protected readonly apps = computed(() => {
+    const role = this.auth.currentUser()?.role;
+    if (role === 'admin') return APP_CATALOG.filter((app) => app.implemented);
+    return APP_CATALOG.filter((app) => app.implemented && (!app.roles || (role != null && app.roles.includes(role))));
+  });
 
   protected readonly pageLabel = computed(() => {
     const role = this.auth.currentUser()?.role;

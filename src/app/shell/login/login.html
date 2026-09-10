@@ -1,38 +1,40 @@
-<div class="bg-muted/30 flex min-h-svh items-center justify-center p-4">
-  <div hlmCard class="w-full max-w-sm p-6">
-    <div class="mb-6 flex flex-col items-center gap-2 text-center">
-      <div class="bg-sidebar-primary text-sidebar-primary-foreground flex size-10 items-center justify-center rounded-lg font-semibold">CCP</div>
+<div class="ccp-login-shell flex min-h-svh items-center justify-center p-4 lg:p-8">
+  <div class="ccp-login-card grid w-full max-w-5xl overflow-hidden rounded-3xl border bg-card shadow-xl lg:grid-cols-[1.12fr_.88fr]">
+    <section class="ccp-login-brand-panel hidden min-h-[620px] flex-col justify-between p-10 lg:flex">
       <div>
-        <h1 class="text-lg font-semibold">CCP ERP</h1>
-        <p class="text-muted-foreground text-sm">Ingresa con tu cuenta para continuar</p>
+        <img src="/logo_ccp.png" alt="CCP - Concreto Centrifugado Perú" class="ccp-login-logo" />
+        <div class="mt-10 max-w-lg">
+          <span class="ccp-eyebrow">PLATAFORMA CORPORATIVA</span>
+          <h1 class="mt-4 text-4xl font-semibold tracking-tight text-white">Gestión integrada CCP</h1>
+          <p class="mt-4 max-w-md text-base leading-7 text-white/80">Un solo entorno para producción, logística, almacén, ventas y finanzas, manteniendo la identidad de Concreto Centrifugado Perú.</p>
+        </div>
       </div>
-    </div>
-
-    <form class="flex flex-col gap-3" (submit)="$event.preventDefault(); submit()">
-      <div class="flex flex-col gap-1.5">
-        <label hlmLabel for="email">Correo</label>
-        <input hlmInput id="email" type="email" autocomplete="username" placeholder="nombre@ccp.pe" [ngModel]="email()" (ngModelChange)="email.set($event)" name="email" />
+      <div class="ccp-cert-panel">
+        <p class="mb-3 text-xs font-semibold uppercase tracking-[.18em] text-white/65">Empresa certificada</p>
+        <img src="/ccp_certificaciones.png" alt="Certificaciones ISO e INACAL de CCP" class="w-full object-contain" />
       </div>
-      <div class="flex flex-col gap-1.5">
-        <label hlmLabel for="password">Contraseña</label>
-        <input hlmInput id="password" type="password" autocomplete="current-password" [ngModel]="password()" (ngModelChange)="password.set($event)" name="password" />
+    </section>
+
+    <section class="flex items-center p-7 sm:p-10 lg:p-12">
+      <div class="mx-auto w-full max-w-sm">
+        <img src="/logo_ccp.png" alt="CCP" class="ccp-login-logo-mobile mb-8 lg:hidden" />
+        <div class="mb-7">
+          <span class="ccp-eyebrow text-primary">ERP CORPORATIVO</span>
+          <h2 class="mt-2 text-2xl font-semibold tracking-tight">Bienvenido</h2>
+          <p class="text-muted-foreground mt-2 text-sm">Ingresa con tu cuenta corporativa para continuar.</p>
+        </div>
+        <form class="flex flex-col gap-4" (submit)="$event.preventDefault(); submit()">
+          <div class="flex flex-col gap-1.5"><label hlmLabel for="email">Correo corporativo</label><input hlmInput id="email" type="email" autocomplete="username" placeholder="nombre@ccp.pe" [ngModel]="email()" (ngModelChange)="email.set($event)" name="email" /></div>
+          <div class="flex flex-col gap-1.5"><label hlmLabel for="password">Contraseña</label><input hlmInput id="password" type="password" autocomplete="current-password" [ngModel]="password()" (ngModelChange)="password.set($event)" name="password" /></div>
+          @if (error()) { <p class="text-destructive text-sm">Correo o contraseña incorrectos.</p> }
+          <button hlmBtn type="submit" class="ccp-primary-action mt-2 h-10">Ingresar al sistema</button>
+        </form>
+        <div class="text-muted-foreground mt-7 rounded-xl border bg-muted/35 p-3 text-xs">
+          <p class="mb-1 font-semibold text-foreground">Acceso de demostración</p>
+          <p>admin&#64;ccp.pe — Todas las apps · Contraseña: prueb&#64;s</p>
+        </div>
+        <img src="/ccp_certificaciones.png" alt="Certificaciones CCP" class="mt-7 w-full object-contain opacity-90 lg:hidden" />
       </div>
-
-      @if (error()) {
-        <p class="text-destructive text-sm">Correo o contraseña incorrectos.</p>
-      }
-
-      <button hlmBtn type="submit" class="mt-1">Ingresar</button>
-    </form>
-
-    <div class="text-muted-foreground mt-6 rounded-lg border border-dashed p-3 text-xs">
-      <p class="mb-1 font-medium">Cuentas de prueba</p>
-      <p>mvillarreal&#64;ccp.pe — Almacén</p>
-      <p>conie&#64;ccp.pe — Logística</p>
-      <p>ana&#64;ccp.pe — Ventas</p>
-      <p>margot&#64;ccp.pe — Finanzas</p>
-      <p>admin&#64;ccp.pe — Todas las apps (demo)</p>
-      <p class="mt-1">Contraseña: prueb&#64;s</p>
-    </div>
+    </section>
   </div>
 </div>
