@@ -62,6 +62,22 @@
   <button hlmSidebarRail></button>
 </hlm-sidebar>
 <ng-content />
+
+<!-- Acceso rápido móvil: mantiene visibles los submódulos del módulo activo.
+     El botón de la cabecera sigue abriendo el menú lateral completo. -->
+<nav class="ccp-mobile-quick-rail" aria-label="Accesos rápidos del módulo">
+  @for (item of navItems(); track item.route) {
+    <a
+      class="ccp-mobile-quick-link"
+      [routerLink]="item.route"
+      [attr.aria-label]="item.label"
+      [attr.title]="item.label"
+      routerLinkActive="is-active"
+    >
+      <ng-icon [name]="item.icon" />
+    </a>
+  }
+</nav>
 </div>
 
 <ng-template #companyMenu>

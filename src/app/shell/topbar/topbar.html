@@ -5,7 +5,8 @@
       <img src="/logo_ccp.png" alt="CCP - Concreto Centrifugado Perú" class="ccp-logo-full" />
     </div>
 
-    <nav class="ccp-module-nav flex min-w-0 flex-1 items-stretch overflow-x-auto" aria-label="Módulos del sistema">
+    <!-- Desktop/tablet horizontal: accesos directos -->
+    <nav class="ccp-module-nav ccp-module-nav-desktop flex min-w-0 flex-1 items-stretch overflow-x-auto" aria-label="Módulos del sistema">
       @for (app of apps(); track app.id) {
         <a
           [routerLink]="app.route"
@@ -19,7 +20,32 @@
       }
     </nav>
 
-    <div class="flex shrink-0 items-center gap-1 px-2">
+    <!-- Tablet vertical / móvil: selector de módulos alineado a la derecha -->
+    <details class="ccp-module-picker">
+      <summary class="ccp-module-picker-trigger" aria-label="Cambiar módulo">
+        <span class="ccp-module-picker-icon">▦</span>
+        <span class="ccp-module-picker-copy">
+          <small>MÓDULO</small>
+          <strong>{{ appName() }}</strong>
+        </span>
+        <span class="ccp-module-picker-chevron">⌄</span>
+      </summary>
+      <div class="ccp-module-picker-panel">
+        @for (app of apps(); track app.id) {
+          <a
+            [routerLink]="app.route"
+            class="ccp-module-picker-item"
+            [class.is-active]="activeAppId() === app.id"
+            [attr.title]="app.description"
+          >
+            <span class="ccp-module-picker-item-icon">{{ app.icon }}</span>
+            <span>{{ app.name }}</span>
+          </a>
+        }
+      </div>
+    </details>
+
+    <div class="ccp-top-actions flex shrink-0 items-center gap-1 px-2">
       <a routerLink="/approvals" class="relative cursor-pointer">
         <button hlmBtn variant="ghost" size="icon" aria-label="Aprobaciones pendientes" class="cursor-pointer">
           <ng-icon name="tablerClipboardCheck" class="text-lg" />
