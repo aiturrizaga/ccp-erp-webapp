@@ -1,4 +1,4 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -14,8 +14,8 @@ import { ListPagination } from '@shared/components/list-pagination/list-paginati
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { SelectFilterOption } from '@shared/components/select-filter/select-filter';
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
-import { salesContacts, salesQuotations } from '../../sales-state';
-import { Currency, SalesQuotation, SalesQuotationStatus, SALES_QUOTATION_STATUS_LABEL, SALES_QUOTATION_STATUS_TONE, Tone } from '@core/models';
+import { salesContacts, salesCustomers, salesQuotations } from '../../sales-state';
+import { Currency, Customer, SalesQuotation, SalesQuotationStatus, SALES_QUOTATION_STATUS_LABEL, SALES_QUOTATION_STATUS_TONE, Tone } from '@core/models';
 
 const STATUS_OPTIONS: { value: SalesQuotationStatus; label: string }[] = (Object.keys(SALES_QUOTATION_STATUS_LABEL) as SalesQuotationStatus[]).map((value) => ({
   value,
@@ -37,9 +37,11 @@ const GROUP_BY_OPTIONS: SelectFilterOption[] = [
   selector: 'app-quotation-list',
   imports: [FormsModule, NgIcon, ...HlmButtonImports, ...HlmInputImports, ...HlmCheckboxImports, DataTable, DataGrid, DataKanban, ListToolbar, ListPagination, StatusBadge, DecimalPipe],
   templateUrl: './quotation-list.html',
+  host: { '(document:click)': 'onDocumentClick($event)' },
 })
 export class QuotationList {
   private readonly router = inject(Router);
+  private readonly customerField = viewChild<ElementRef<HTMLElement>>('customerField');
 
   protected readonly search = signal('');
   protected readonly view = signal<'list' | 'grid' | 'kanban'>('list');
@@ -51,11 +53,22 @@ export class QuotationList {
   protected readonly currencyFilter = signal<Set<Currency>>(new Set());
   protected readonly dateFrom = signal('');
   protected readonly dateTo = signal('');
+  protected readonly customerIdFilter = signal('');
+  protected readonly customerSearch = signal('');
+  protected readonly customerOpen = signal(false);
 
   protected readonly views: ListViewOption[] = [LIST_VIEW_OPTIONS.list, LIST_VIEW_OPTIONS.grid, LIST_VIEW_OPTIONS.kanban];
   protected readonly groupByOptions = GROUP_BY_OPTIONS;
   protected readonly statusOptions = STATUS_OPTIONS;
   protected readonly currencyOptions = CURRENCY_OPTIONS;
+  protected readonly customers = salesCustomers;
+  protected readonly customer = computed(() => this.customers().find((c) => c.id === this.customerIdFilter()));
+  protected readonly customerOptions = computed(() => {
+    const q = this.customerSearch().trim().toLowerCase();
+    return this.customers()
+      .filter((c) => !q || `${c.legalName} ${c.taxId}`.toLowerCase().includes(q))
+      .slice(0, 10);
+  });
 
   protected readonly statusColumns: KanbanColumn[] = STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label, tone: SALES_QUOTATION_STATUS_TONE[o.value] }));
   protected readonly statusKey = (row: SalesQuotation): string => row.status;
@@ -82,9 +95,10 @@ export class QuotationList {
       .filter((q) => {
         const matchesSearch = !term || q.number.toLowerCase().includes(term) || q.customerName.toLowerCase().includes(term);
         const matchesCurrency = currencies.size === 0 || currencies.has(q.currency);
+        const matchesCustomer = !this.customerIdFilter() || q.customerId === this.customerIdFilter();
         const matchesFrom = !from || q.issuedAt >= from;
         const matchesTo = !to || q.issuedAt <= to;
-        return matchesSearch && matchesCurrency && matchesFrom && matchesTo;
+        return matchesSearch && matchesCurrency && matchesCustomer && matchesFrom && matchesTo;
       })
       .reverse();
   });
@@ -104,7 +118,7 @@ export class QuotationList {
   protected count = (status: string): number => this.statusCounts()[status] ?? 0;
 
   protected readonly filterCount = computed(
-    () => this.statusFilter().size + this.currencyFilter().size + (this.dateFrom() ? 1 : 0) + (this.dateTo() ? 1 : 0),
+    () => this.statusFilter().size + this.currencyFilter().size + (this.customerIdFilter() ? 1 : 0) + (this.dateFrom() ? 1 : 0) + (this.dateTo() ? 1 : 0),
   );
 
   protected readonly groupedSections = computed<{ label: string; rows: SalesQuotation[] }[] | null>(() => {
@@ -154,8 +168,43 @@ export class QuotationList {
   protected clearFilters(): void {
     this.statusFilter.set(new Set());
     this.currencyFilter.set(new Set());
+    this.customerIdFilter.set('');
+    this.customerSearch.set('');
+    this.customerOpen.set(false);
     this.dateFrom.set('');
     this.dateTo.set('');
+    this.page.set(1);
+  }
+
+  protected chooseCustomer(customer: Customer): void {
+    this.customerIdFilter.set(customer.id);
+    this.customerSearch.set(customer.legalName);
+    this.customerOpen.set(false);
+    this.page.set(1);
+  }
+
+  protected onCustomerSearch(value: string): void {
+    this.customerSearch.set(value);
+    this.customerOpen.set(true);
+    if (this.customerIdFilter() && value !== this.customer()?.legalName) {
+      this.customerIdFilter.set('');
+    }
+    this.page.set(1);
+  }
+
+  protected onCustomerFocus(): void {
+    this.customerOpen.set(true);
+  }
+
+  protected clearCustomerFilter(): void {
+    this.customerIdFilter.set('');
+    this.customerSearch.set('');
+    this.customerOpen.set(false);
+    this.page.set(1);
+  }
+
+  protected onDocumentClick(event: MouseEvent): void {
+    if (!this.customerField()?.nativeElement.contains(event.target as Node)) this.customerOpen.set(false);
   }
 
   private toggled<T>(set: Set<T>, value: T): Set<T> {

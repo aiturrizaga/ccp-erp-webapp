@@ -74,7 +74,7 @@ type CategoryFilter = 'all' | SalesCategory;
               >
                 <span class="text-sm font-medium">{{ fullName(p) }}</span>
                 <span class="text-muted-foreground text-[11px]">
-                  {{ categoryLabel(p.category) }} · {{ p.legacyCode }} · banda s/IGV {{ p.currency }} {{ p.costBand.min | number: '1.2-2' }}–{{ p.costBand.max | number: '1.2-2' }}
+                  {{ categoryLabel(p.category) }} · {{ p.legacyCode }} · @if (p.costBand) { banda s/IGV {{ p.currency }} {{ p.costBand.min | number: '1.2-2' }}–{{ p.costBand.max | number: '1.2-2' }} } @else { <span class="text-amber-600">Pendiente de costeo</span> }
                 </span>
               </button>
             </li>

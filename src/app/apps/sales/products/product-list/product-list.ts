@@ -49,7 +49,7 @@ export class ProductList {
     { key: 'category', header: 'Categoría', width: '120px' },
     { key: 'legacyCode', header: 'Código', width: '110px' },
     { key: 'unitOfMeasure', header: 'U.M.', width: '70px' },
-    { key: 'costBand', header: 'Banda viable (s/IGV)', width: '170px', align: 'end' },
+    { key: 'costBand', header: 'Costo', width: '150px', align: 'end' },
     { key: 'status', header: 'Estado', width: '120px' },
   ];
 

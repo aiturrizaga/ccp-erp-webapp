@@ -39,19 +39,26 @@
 
       <div hlmCard class="p-4">
         <h3 class="mb-3 text-sm font-semibold">Costos <span class="text-muted-foreground font-normal">— sin IGV</span></h3>
-        <dl class="grid grid-cols-[180px_1fr] gap-y-2 text-sm">
-          <dt class="text-muted-foreground">Costo de producción</dt>
-          <dd class="tabular-nums">{{ p.currency }} {{ p.productionUnitCost | number: '1.2-2' }} <span class="text-muted-foreground text-xs">(origen: Producción)</span></dd>
-          <dt class="text-muted-foreground">Costo viable mínimo</dt>
-          <dd class="tabular-nums font-medium">{{ p.currency }} {{ p.costBand.min | number: '1.2-2' }}</dd>
-          <dt class="text-muted-foreground">Costo viable máximo</dt>
-          <dd class="tabular-nums font-medium">{{ p.currency }} {{ p.costBand.max | number: '1.2-2' }}</dd>
-          @if (margin(); as m) {
-            <dt class="text-muted-foreground">Margen en la banda</dt>
-            <dd class="tabular-nums">{{ m.atMin | percent: '1.0-1' }} → {{ m.atMax | percent: '1.0-1' }}</dd>
-          }
-        </dl>
-        <p class="text-muted-foreground mt-3 text-xs">La negociación de venta no puede cerrar por debajo del costo viable mínimo sin visto bueno de Gerencia.</p>
+        @if (p.costBand; as band) {
+          <dl class="grid grid-cols-[180px_1fr] gap-y-2 text-sm">
+            <dt class="text-muted-foreground">Costo de producción</dt>
+            <dd class="tabular-nums">{{ p.currency }} {{ (p.productionUnitCost ?? 0) | number: '1.2-2' }} <span class="text-muted-foreground text-xs">(origen: Producción)</span></dd>
+            <dt class="text-muted-foreground">Precio sugerido mínimo</dt>
+            <dd class="tabular-nums font-medium">{{ p.currency }} {{ band.min | number: '1.2-2' }}</dd>
+            <dt class="text-muted-foreground">Precio sugerido máximo</dt>
+            <dd class="tabular-nums font-medium">{{ p.currency }} {{ band.max | number: '1.2-2' }}</dd>
+            @if (margin(); as m) {
+              <dt class="text-muted-foreground">Margen en la banda</dt>
+              <dd class="tabular-nums">{{ m.atMin | percent: '1.0-1' }} → {{ m.atMax | percent: '1.0-1' }}</dd>
+            }
+          </dl>
+          <p class="text-muted-foreground mt-3 text-xs">La negociación de venta no puede cerrar por debajo del precio mínimo sin visto bueno de Gerencia.</p>
+        } @else {
+          <div class="rounded-md border border-dashed bg-muted/20 px-3 py-4 text-sm">
+            <p class="font-medium">Pendiente de costeo</p>
+            <p class="text-muted-foreground mt-1 text-xs">Producción todavía no ha registrado el costo de este producto.</p>
+          </div>
+        }
       </div>
     </div>
 

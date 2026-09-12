@@ -121,9 +121,9 @@ export interface SalesProduct {
   unitOfMeasure: string;
   currency: Currency;
   /** Viable price band sin IGV, from Producción's costing. */
-  costBand: CostBand;
+  costBand?: CostBand;
   /** Latest unit cost from Producción (sin IGV), used to compute margin during negotiation. */
-  productionUnitCost: number;
+  productionUnitCost?: number;
   status: SalesProductStatus;
   plmProductId?: string;
   itemId?: string;

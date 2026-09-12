@@ -60,7 +60,7 @@
       {{ categoryLabel(row.category) }}
     }
     @case ('costBand') {
-      <span class="tabular-nums">{{ row.costBand.min | number: '1.2-2' }} – {{ row.costBand.max | number: '1.2-2' }}</span>
+      @if (row.costBand) { <span class="tabular-nums">{{ row.costBand.min | number: '1.2-2' }} – {{ row.costBand.max | number: '1.2-2' }}</span> } @else { <span class="text-amber-600">Pendiente</span> }
     }
     @case ('status') {
       <app-status-badge [label]="statusLabel(row.status)" [tone]="statusTone(row.status)" />
@@ -78,6 +78,6 @@
   </div>
   <p class="text-muted-foreground mt-1 text-xs">{{ categoryLabel(row.category) }} · {{ row.legacyCode }}</p>
   <p class="text-muted-foreground mt-2 text-xs">
-    Banda viable s/IGV: <span class="tabular-nums">{{ row.currency }} {{ row.costBand.min | number: '1.2-2' }} – {{ row.costBand.max | number: '1.2-2' }}</span>
+    Costo: @if (row.costBand) { <span class="tabular-nums">{{ row.currency }} {{ row.costBand.min | number: '1.2-2' }} – {{ row.costBand.max | number: '1.2-2' }}</span> } @else { <span class="text-amber-600">Pendiente de costeo</span> }
   </p>
 </ng-template>

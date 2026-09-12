@@ -70,7 +70,7 @@ export class OrderCreate {
     const rule = salesDecisionRules().find((r) => r.active);
     if (!rule) return null;
     const viableMin: Record<string, number> = {};
-    for (const p of salesProducts()) viableMin[p.id] = p.costBand.min;
+    for (const p of salesProducts()) if (p.costBand) viableMin[p.id] = p.costBand.min;
     return evaluateSalesOrder({ total: this.total(), lines: this.lines() }, rule, viableMin);
   });
 
@@ -137,8 +137,8 @@ export class OrderCreate {
           description: formatSalesProductName(p),
           quantity: 1,
           unitOfMeasure: p.unitOfMeasure,
-          unitCost: p.productionUnitCost,
-          unitPrice: p.costBand.max,
+          unitCost: p.productionUnitCost ?? 0,
+          unitPrice: p.costBand?.max ?? 0,
         },
       ];
     });
@@ -156,7 +156,7 @@ export class OrderCreate {
   }
   protected belowMin(l: DraftLine): boolean {
     const p = salesProducts().find((x) => x.id === l.salesProductId);
-    return !!p && l.unitPrice > 0 && l.unitPrice < p.costBand.min;
+    return !!p?.costBand && l.unitPrice > 0 && l.unitPrice < p.costBand.min;
   }
 
   protected readonly submitPopover = signal<'open' | 'closed'>('closed');

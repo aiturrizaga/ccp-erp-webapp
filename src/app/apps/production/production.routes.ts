@@ -7,6 +7,7 @@ export const PRODUCTION_ROUTES: Routes = [
   { path: 'work-sheets/:id', loadComponent: () => import('./work-sheets/work-sheet-detail/work-sheet-detail').then((m) => m.WorkSheetDetail) },
   { path: 'planning', loadComponent: () => import('./planning/planning').then((m) => m.Planning) },
   { path: 'products', loadComponent: () => import('./products/product-list/product-list').then((m) => m.ProductList) },
+  { path: 'products/pending-cost/:id', loadComponent: () => import('./products/pending-product-cost/pending-product-cost').then((m) => m.PendingProductCost) },
   { path: 'products/new', loadComponent: () => import('./products/product-create/product-create').then((m) => m.ProductCreate) },
   { path: 'products/:id', loadComponent: () => import('./products/product-detail/product-detail').then((m) => m.ProductDetail) },
   { path: 'products/:id/edit', loadComponent: () => import('./products/product-create/product-create').then((m) => m.ProductCreate) },

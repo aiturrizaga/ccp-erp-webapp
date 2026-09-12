@@ -46,10 +46,10 @@ export class ProductDetail {
 
   protected readonly margin = computed(() => {
     const p = this.product();
-    if (!p || !p.costBand.min) return null;
+    if (!p?.costBand?.min) return null;
     return {
-      atMin: (p.costBand.min - p.productionUnitCost) / p.costBand.min,
-      atMax: (p.costBand.max - p.productionUnitCost) / p.costBand.max,
+      atMin: p.costBand ? (p.costBand.min - (p.productionUnitCost ?? 0)) / p.costBand.min : 0,
+      atMax: p.costBand ? (p.costBand.max - (p.productionUnitCost ?? 0)) / p.costBand.max : 0,
     };
   });
 

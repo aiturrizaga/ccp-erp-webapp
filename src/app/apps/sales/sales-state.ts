@@ -268,7 +268,7 @@ export function createSalesOrder(input: {
 
   const rule = salesDecisionRules().find((r) => r.active);
   const viableMin: Record<string, number> = {};
-  for (const p of salesProducts()) viableMin[p.id] = p.costBand.min;
+  for (const p of salesProducts()) if (p.costBand) viableMin[p.id] = p.costBand.min;
   const evalResult = rule ? evaluateSalesOrder({ total, lines: input.lines }, rule, viableMin) : undefined;
 
   const order: SalesOrder = {

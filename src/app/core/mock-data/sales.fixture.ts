@@ -3,7 +3,7 @@ import { SalesOrder, SalesQuotation } from '@core/models';
 export const SALES_QUOTATIONS: SalesQuotation[] = [
   {
     id: 'SQ-001',
-    number: 'COT-2026-0301',
+    number: 'CT-2026-0301',
     customerId: 'CUST-001',
     customerName: 'Constructora Andina S.A.C.',
     status: 'accepted',
@@ -19,7 +19,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-002',
-    number: 'COT-2026-0302',
+    number: 'CT-2026-0302',
     customerId: 'CUST-002',
     customerName: 'Electro Sur Distribución S.A.',
     status: 'sent',
@@ -35,7 +35,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-003',
-    number: 'COT-2026-0303',
+    number: 'CT-2026-0303',
     customerId: 'CUST-003',
     customerName: 'Municipalidad Provincial de Cañete',
     status: 'draft',
@@ -47,7 +47,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-004',
-    number: 'COT-2026-0304',
+    number: 'CT-2026-0304',
     customerId: 'CUST-004',
     customerName: 'Inversiones Vial Norte E.I.R.L.',
     status: 'expired',
@@ -59,7 +59,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-005',
-    number: 'COT-2026-0305',
+    number: 'CT-2026-0305',
     customerId: 'CUST-005',
     customerName: 'Hidrandina Distribución Eléctrica S.A.',
     status: 'rejected',
@@ -74,7 +74,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-006',
-    number: 'COT-2026-0306',
+    number: 'CT-2026-0306',
     customerId: 'CUST-006',
     customerName: 'Constructora Los Álamos S.R.L.',
     status: 'accepted',
@@ -91,7 +91,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-007',
-    number: 'COT-2026-0307',
+    number: 'CT-2026-0307',
     customerId: 'CUST-007',
     customerName: 'Municipalidad Distrital de Pativilca',
     status: 'sent',
@@ -103,7 +103,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-008',
-    number: 'COT-2026-0308',
+    number: 'CT-2026-0308',
     customerId: 'CUST-008',
     customerName: 'Distribuidora Eléctrica del Centro S.A.C.',
     status: 'draft',
@@ -118,7 +118,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-009',
-    number: 'COT-2026-0309',
+    number: 'CT-2026-0309',
     customerId: 'CUST-009',
     customerName: 'Consorcio Vial Chincha S.A.',
     status: 'accepted',

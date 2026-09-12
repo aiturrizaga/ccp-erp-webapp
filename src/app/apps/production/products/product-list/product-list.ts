@@ -20,10 +20,13 @@ import {
   ProductStatus,
   PRODUCT_STATUS_LABEL,
   Tone,
+  SalesProduct,
+  formatSalesProductName,
 } from '@core/models';
 
 import { ITEMS } from '@core/mock-data';
 import { ProductionState } from '../../production-state';
+import { salesProducts } from '../../../sales/sales-state';
 
 const STATUS_TONE: Record<ProductStatus, Tone> = {
   draft: 'neutral',
@@ -59,6 +62,7 @@ export class ProductList {
   private readonly productionState = inject(ProductionState);
 
   protected readonly search = signal('');
+  protected readonly section = signal<'catalog' | 'pending-cost'>('catalog');
   protected readonly view = signal<'list' | 'grid'>('list');
   protected readonly page = signal(1);
   protected readonly pageSize = signal(10);
@@ -71,6 +75,17 @@ export class ProductList {
   ];
 
   protected readonly statusOptions = STATUS_OPTIONS;
+
+  protected readonly pendingProducts = computed(() => {
+    const term = this.search().trim().toLowerCase();
+    return salesProducts().filter((p) => {
+      const hasCost = !!p.costBand && (p.productionUnitCost ?? 0) > 0 && p.costBand.min > 0 && p.costBand.max >= p.costBand.min;
+      const text = `${formatSalesProductName(p)} ${p.legacyCode}`.toLowerCase();
+      return !hasCost && (!term || text.includes(term));
+    });
+  });
+
+  protected readonly pendingCount = computed(() => salesProducts().filter((p) => !p.costBand || !(p.productionUnitCost ?? 0) || p.costBand.min <= 0 || p.costBand.max < p.costBand.min).length);
 
   protected readonly columns: DataTableColumn[] = [
     { key: 'code', header: 'Código', width: '140px' },
@@ -132,6 +147,20 @@ export class ProductList {
 
   protected openDetail(product: Product): void {
     this.router.navigate(['/apps/production/products', product.id]);
+  }
+
+  protected pendingName(product: SalesProduct): string {
+    return formatSalesProductName(product);
+  }
+
+  protected openPendingDetail(product: SalesProduct): void {
+    this.router.navigate(['/apps/production/products/pending-cost', product.id]);
+  }
+
+  protected setSection(section: 'catalog' | 'pending-cost'): void {
+    this.section.set(section);
+    this.search.set('');
+    this.page.set(1);
   }
 
   protected productBom(product: Product) {

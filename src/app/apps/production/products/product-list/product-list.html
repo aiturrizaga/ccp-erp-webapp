@@ -1,3 +1,14 @@
+<div class="mb-4 flex items-center gap-1 border-b">
+  <button type="button" class="border-b-2 px-3 py-2 text-sm font-medium" [class.border-primary]="section() === 'catalog'" [class.text-primary]="section() === 'catalog'" [class.border-transparent]="section() !== 'catalog'" [class.text-muted-foreground]="section() !== 'catalog'" (click)="setSection('catalog')">
+    Productos
+  </button>
+  <button type="button" class="flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium" [class.border-primary]="section() === 'pending-cost'" [class.text-primary]="section() === 'pending-cost'" [class.border-transparent]="section() !== 'pending-cost'" [class.text-muted-foreground]="section() !== 'pending-cost'" (click)="setSection('pending-cost')">
+    Nuevos por costear
+    @if (pendingCount() > 0) { <span class="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">{{ pendingCount() }}</span> }
+  </button>
+</div>
+
+@if (section() === 'catalog') {
 <app-list-toolbar
   [(search)]="search"
   searchPlaceholder="Buscar por código o nombre de producto..."
@@ -57,6 +68,60 @@
   [(page)]="page"
   [(pageSize)]="pageSize"
 />
+} @else {
+  <div class="mb-4 flex items-center gap-3">
+    <div class="relative flex-1 max-w-xl">
+      <ng-icon name="tablerSearch" size="16" class="text-muted-foreground pointer-events-none absolute start-3 top-1/2 -translate-y-1/2" />
+      <input hlmInput class="w-full ps-9" placeholder="Buscar producto nuevo por nombre o código..." [value]="search()" (input)="search.set($any($event.target).value)" />
+    </div>
+  </div>
+
+  <div class="mb-4 rounded-lg border bg-muted/20 px-4 py-3">
+    <div class="flex items-start gap-3">
+      <div class="mt-0.5 rounded-md border bg-background p-2">
+        <ng-icon name="tablerCash" size="18" />
+      </div>
+      <div>
+        <h2 class="text-sm font-semibold">Productos nuevos pendientes de costeo</h2>
+        <p class="text-muted-foreground mt-0.5 text-xs">Estos productos fueron registrados desde Ventas. Producción debe completar su costo antes de utilizarlos como referencia comercial.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="overflow-hidden rounded-lg border">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="text-muted-foreground border-b bg-muted/20 text-xs">
+          <tr>
+            <th class="px-4 py-3 text-start font-medium">Producto</th>
+            <th class="px-4 py-3 text-start font-medium">Código</th>
+            <th class="px-4 py-3 text-start font-medium">Categoría</th>
+            <th class="px-4 py-3 text-start font-medium">U.M.</th>
+            <th class="px-4 py-3 text-end font-medium">Estado de costo</th>
+            <th class="px-4 py-3 text-end font-medium"></th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          @for (product of pendingProducts(); track product.id) {
+            <tr class="hover:bg-muted/30">
+              <td class="px-4 py-3">
+                <button type="button" class="text-start font-medium hover:underline" (click)="openPendingDetail(product)">{{ pendingName(product) }}</button>
+                <p class="text-muted-foreground mt-0.5 text-xs">{{ product.brand }}</p>
+              </td>
+              <td class="px-4 py-3 font-mono text-xs">{{ product.legacyCode }}</td>
+              <td class="px-4 py-3">{{ product.category }}</td>
+              <td class="px-4 py-3">{{ product.unitOfMeasure }}</td>
+              <td class="px-4 py-3 text-end"><span class="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-700">Pendiente</span></td>
+              <td class="px-4 py-3 text-end"><button hlmBtn size="sm" (click)="openPendingDetail(product)">Registrar costos</button></td>
+            </tr>
+          } @empty {
+            <tr><td colspan="6" class="text-muted-foreground px-4 py-12 text-center">No hay productos pendientes de costeo.</td></tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+}
 
 <ng-template #cellTpl let-row let-key="key">
   @switch (key) {

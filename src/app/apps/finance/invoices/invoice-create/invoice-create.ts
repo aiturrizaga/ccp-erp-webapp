@@ -302,7 +302,7 @@ export class InvoiceCreate {
   // --- Líneas -----------------------------------------------------------------
 
   protected onLinePicked(i: number, p: SalesProduct): void {
-    this.setLine(i, { description: formatSalesProductName(p), salesProductId: p.id, unitPrice: this.lines()[i].unitPrice || p.costBand.max });
+    this.setLine(i, { description: formatSalesProductName(p), salesProductId: p.id, unitPrice: this.lines()[i].unitPrice || p.costBand?.max || 0 });
   }
   protected onLineFreeText(i: number, text: string): void {
     this.setLine(i, { description: text, salesProductId: '' });

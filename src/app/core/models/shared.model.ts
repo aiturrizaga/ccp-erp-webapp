@@ -29,7 +29,7 @@ export interface Signature {
 /**
  * Document number prefixes, one per document type, kept in a single place so each area's documents
  * stay visually distinct — Ventas' quotations must not be confused with Logística's, and so on.
- * The full number is `${prefix}-${year}-${seq}` (e.g. `CV-2026-0007`), except SUNAT comprobantes,
+ * The full number is `${prefix}-${year}-${seq}` (e.g. `CT-2026-0007`), except SUNAT comprobantes,
  * which follow the `serie-correlativo` shape SUNAT imposes (see Facturación).
  */
 export type DocPrefixKey =
@@ -41,7 +41,7 @@ export type DocPrefixKey =
   | 'purchase_requirement';
 
 export const DOC_PREFIX: Record<DocPrefixKey, string> = {
-  sales_quotation: 'CV',
+  sales_quotation: 'CT',
   logistics_quotation: 'CL',
   sales_order: 'PV',
   sales_claim: 'REC',

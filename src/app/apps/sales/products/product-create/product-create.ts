@@ -1,5 +1,4 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
-import { PercentPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { HlmButtonImports } from '@ui/button';
@@ -33,7 +32,7 @@ const UOM_OPTIONS = ['UND', 'MT', 'KG', 'M2', 'M3'].map((value) => ({ value, lab
 
 @Component({
   selector: 'app-product-create',
-  imports: [FormsModule, PercentPipe, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, ...HlmPopoverImports, EntityHeader],
+  imports: [FormsModule, ...HlmButtonImports, ...HlmCardImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, ...HlmPopoverImports, EntityHeader],
   templateUrl: './product-create.html',
 })
 export class ProductCreate {
@@ -51,9 +50,6 @@ export class ProductCreate {
   protected readonly currency = signal<string>('PEN');
   protected readonly status = signal<string>('draft');
   protected readonly legacyCode = signal('');
-  protected readonly productionUnitCost = signal(0);
-  protected readonly costMin = signal(0);
-  protected readonly costMax = signal(0);
   protected readonly notes = signal('');
 
   protected readonly categoryOptions = CATEGORY_OPTIONS;
@@ -65,11 +61,7 @@ export class ProductCreate {
   protected readonly account = computed(() => SALES_CATEGORY_ACCOUNT[this.category() as SalesCategory]);
   protected readonly preview = computed(() => formatSalesProductName({ name: this.name(), dimension: this.dimension(), spec: this.spec() }));
   protected readonly dimensionSegments = computed(() => parseDimension(this.dimension(), this.category() as SalesCategory));
-  protected readonly canSubmit = computed(() => this.name().trim().length > 0 && this.costMin() > 0 && this.costMax() >= this.costMin());
-
-  /** Porcentaje de ganancia (margen sobre el costo) para el precio sugerido mínimo y máximo. */
-  protected readonly profitMin = computed(() => (this.productionUnitCost() > 0 ? (this.costMin() - this.productionUnitCost()) / this.productionUnitCost() : 0));
-  protected readonly profitMax = computed(() => (this.productionUnitCost() > 0 ? (this.costMax() - this.productionUnitCost()) / this.productionUnitCost() : 0));
+  protected readonly canSubmit = computed(() => this.name().trim().length > 0);
 
   protected categoryToString = (v: string): string => SALES_CATEGORY_LABEL[v as SalesCategory] ?? v;
   protected statusToString = (v: string): string => SALES_PRODUCT_STATUS_LABEL[v as SalesProductStatus] ?? v;
@@ -91,9 +83,6 @@ export class ProductCreate {
       this.currency.set(p.currency);
       this.status.set(p.status);
       this.legacyCode.set(p.legacyCode);
-      this.productionUnitCost.set(p.productionUnitCost);
-      this.costMin.set(p.costBand.min);
-      this.costMax.set(p.costBand.max);
       this.notes.set(p.notes ?? '');
     });
   }
@@ -112,8 +101,6 @@ export class ProductCreate {
       brand: this.brand().trim() || CCP_BRAND,
       unitOfMeasure: this.unitOfMeasure(),
       currency: this.currency() as Currency,
-      productionUnitCost: this.productionUnitCost(),
-      costBand: { min: this.costMin(), max: this.costMax() },
       status: this.status() as SalesProductStatus,
       notes: this.notes().trim() || undefined,
     };

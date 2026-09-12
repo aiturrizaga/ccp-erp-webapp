@@ -1,0 +1,88 @@
+@if (product(); as p) {
+  <app-entity-header
+    [title]="fullName()"
+    [subtitle]="p.legacyCode + ' · Producto registrado desde Ventas'"
+    [crumbs]="[{ label: 'Productos', link: '/apps/production/products' }, { label: 'Nuevos por costear', link: '/apps/production/products' }, { label: fullName() }]"
+  />
+
+  <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 xl:grid-cols-[1.35fr_1fr]">
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-semibold">Detalle del producto</h3>
+            <p class="text-muted-foreground mt-0.5 text-xs">Información registrada por Ventas.</p>
+          </div>
+          <span class="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-medium text-amber-700">Pendiente de costeo</span>
+        </div>
+        <dl class="grid grid-cols-[150px_1fr] gap-y-2 text-sm">
+          <dt class="text-muted-foreground">Nombre</dt><dd class="font-medium">{{ p.name }}</dd>
+          <dt class="text-muted-foreground">Nombre completo</dt><dd>{{ fullName() }}</dd>
+          <dt class="text-muted-foreground">Código sistema</dt><dd class="font-mono">{{ p.legacyCode }}</dd>
+          <dt class="text-muted-foreground">Categoría</dt><dd>{{ categoryLabel(p.category) }}</dd>
+          <dt class="text-muted-foreground">Unidad de medida</dt><dd>{{ p.unitOfMeasure }}</dd>
+          <dt class="text-muted-foreground">Moneda</dt><dd>{{ p.currency }}</dd>
+          <dt class="text-muted-foreground">Marca / fabricante</dt><dd>{{ p.brand }}</dd>
+        </dl>
+        @if (dimensionSegments().length) {
+          <div class="mt-4 border-t pt-3">
+            <p class="text-muted-foreground mb-2 text-xs font-medium">Dimensión</p>
+            <div class="flex flex-wrap gap-2">
+              @for (seg of dimensionSegments(); track seg.label) {
+                <span class="rounded-md border bg-muted/30 px-2 py-1 text-xs">{{ seg.label }}: <b>{{ seg.value }}{{ seg.unit ? ' ' + seg.unit : '' }}</b></span>
+              }
+            </div>
+          </div>
+        }
+        @if (p.notes) {
+          <div class="mt-4 rounded-md border bg-muted/20 p-3">
+            <p class="text-muted-foreground text-[11px] uppercase tracking-wide">Observaciones de Ventas</p>
+            <p class="mt-1 text-sm">{{ p.notes }}</p>
+          </div>
+        }
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <h3 class="text-sm font-semibold">Registrar costos</h3>
+        <p class="text-muted-foreground mt-1 text-xs">Completa los valores de costo y el rango de precio viable. Esta información será utilizada posteriormente por Ventas.</p>
+
+        <div class="mt-4 flex flex-col gap-4">
+          <div class="flex flex-col gap-1.5">
+            <label hlmLabel for="productionCost">Costo de producción unitario</label>
+            <div class="flex items-center gap-2">
+              <span class="text-muted-foreground text-sm">{{ p.currency }}</span>
+              <input hlmInput id="productionCost" class="flex-1" type="number" min="0" step="0.01" [ngModel]="productionUnitCost()" (ngModelChange)="productionUnitCost.set(+$event)" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1.5">
+              <label hlmLabel for="costMin">Precio sugerido mínimo</label>
+              <input hlmInput id="costMin" type="number" min="0" step="0.01" [ngModel]="costMin()" (ngModelChange)="costMin.set(+$event)" />
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label hlmLabel for="costMax">Precio sugerido máximo</label>
+              <input hlmInput id="costMax" type="number" min="0" step="0.01" [ngModel]="costMax()" (ngModelChange)="costMax.set(+$event)" />
+            </div>
+          </div>
+
+          @if (productionUnitCost() > 0 && costMin() > 0 && costMax() >= costMin()) {
+            <div class="rounded-md border bg-muted/30 p-3 text-xs">
+              <div class="flex items-center justify-between"><span class="text-muted-foreground">Costo unitario</span><b>{{ p.currency }} {{ productionUnitCost() | number: '1.2-2' }}</b></div>
+              <div class="mt-1 flex items-center justify-between"><span class="text-muted-foreground">Rango viable</span><b>{{ p.currency }} {{ costMin() | number: '1.2-2' }} — {{ costMax() | number: '1.2-2' }}</b></div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button hlmBtn variant="ghost" size="sm" (click)="cancel()">Cancelar</button>
+        <button hlmBtn size="sm" [disabled]="!canSave() || saving()" (click)="save()">Guardar costos</button>
+      </div>
+    </div>
+  </div>
+} @else {
+  <app-empty-state icon="tablerPackage" title="Producto no encontrado" description="El producto pendiente de costeo ya no está disponible." />
+}
