@@ -64,6 +64,106 @@ export interface QualityInspection {
   evidenceRefs?: string[];
   overallResult: QualityInspectionResult;
   notes?: string;
+  // ===== Formato CCP (F-053…F-058) — opcional: solo lo llenan las inspecciones por formato.
+  // ===== Las inspecciones legacy por protocolo (protocolId 'QP-xxx') no usan estos campos. =====
+  formatId?: string;
+  /** Denormalizado para el listado/detalle sin lookup del formato maestro. */
+  formatCode?: string;
+  formatName?: string;
+  /** Productos de la HT incluidos en esta inspección (multi-producto). */
+  productIds?: string[];
+  /** Respuestas capturadas del formulario — presente solo en inspecciones por formato. */
+  formResponse?: InspectionFormResponse;
+}
+
+// ---------------------------------------------------------------------------
+// Formatos de inspección CCP (F-053, F-054, F-056, F-057, F-058)
+// ---------------------------------------------------------------------------
+// A form is a template of ordered sections rendered dynamically by `kind`. Sections are items
+// (checklist con opciones CUMPLE/NO CUMPLE/NO APLICA…), fields (inputs libres) or tables (filas
+// dinámicas editables). El resultado general es SIEMPRE manual (Conforme/No conforme/Pendiente) —
+// `satisfies` en las opciones es solo informativo, nunca auto-evalúa.
+
+export interface InspectionCheckOption {
+  value: string; // 'cumple' | 'no_cumple' | 'no_aplica' | 'bueno' | 'defectuoso' | 'aceptable' | 'inaceptable'
+  label: string; // 'CUMPLE' | 'NO CUMPLE' | 'NO APLICA' | …
+  /** true = conforme, false = no conforme, undefined = neutro. Informativo — el resultado es manual. */
+  satisfies?: boolean;
+}
+
+export interface InspectionSectionItem {
+  id: string; // 'A1'…'A13', 'B1'…'B9', …
+  label: string;
+  hint?: string;
+}
+
+export interface InspectionSectionField {
+  id: string;
+  label: string;
+  control: 'text' | 'number' | 'select' | 'textarea';
+  options?: string[]; // para 'select'
+  required?: boolean;
+  unit?: string; // para number
+  placeholder?: string;
+}
+
+export interface InspectionTableColumn {
+  id: string;
+  label: string;
+  control: 'text' | 'number' | 'select';
+  options?: string[]; // para 'select' (p.ej. Resultado Aceptable/Inaceptable)
+  /** 'sequence' → la celda se auto-cuenta (ITEM 01, ITEM 02…) · 'prefill' → consume `prefill` por fila generada. */
+  auto?: 'sequence' | 'prefill';
+  prefill?: string[]; // p.ej. '% Carga': ['10%','20%',…,'100%','ROTURA']
+  width?: string;
+}
+
+export interface InspectionSectionTable {
+  dynamic: boolean; // false → tabla de solo lectura/estática
+  columns: InspectionTableColumn[];
+  defaultRows?: number; // filas iniciales para tablas dinámicas
+}
+
+/** Unión discriminada por `kind` — el render dinámico hace @switch por sección. */
+export type InspectionSection =
+  | { kind: 'items'; id: string; title: string; options: InspectionCheckOption[]; items: InspectionSectionItem[] }
+  | { kind: 'fields'; id: string; title: string; fields: InspectionSectionField[] }
+  | { kind: 'table'; id: string; title: string; table: InspectionSectionTable };
+
+export interface InspectionFormatHeaderField {
+  id: string;
+  label: string;
+  control: 'text' | 'number' | 'date' | 'select';
+  options?: string[];
+  /** Unidad mostrada junto a la etiqueta para inputs numéricos del encabezado. */
+  unit?: string;
+  /** 'auto' → no editable, se deriva al llenar desde la HT/productos/fecha. */
+  auto?: 'workSheetNumber' | 'customerName' | 'plant' | 'currentDate' | 'products';
+}
+
+export interface InspectionFormat {
+  id: string; // 'F-053'
+  code: string; // 'F-053'
+  name: string;
+  description?: string;
+  headerFields: InspectionFormatHeaderField[];
+  sections: InspectionSection[];
+  signatureCount: number; // 1 (F-056/F-057), 2 (F-053/F-058), 3 (F-054)
+  notesPlaceholder?: string;
+  /** Texto fijo renderizado bajo el formulario (p.ej. norma NTP en F-056). */
+  note?: string;
+}
+
+export interface InspectionFormRow {
+  cells: Record<string, string>; // columnId → valor (el _uid local se descarta al guardar)
+}
+
+export interface InspectionFormResponse {
+  header: Record<string, string>; // headerField.id → valor (autos resueltos + editados)
+  items: Record<string, string>; // itemId → valor de la opción elegida
+  fields: Record<string, string>; // fieldId → valor
+  tables: Record<string, InspectionFormRow[]>; // tableId → filas
+  notes?: string;
 }
 
 export type NonConformityDisposition = 'reproceso' | 'scrap' | 'cuarentena';

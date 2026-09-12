@@ -295,6 +295,8 @@ create table if not exists quality_inspections (
   updated_at timestamptz not null default now()
 );
 
+alter table if exists quality_inspections add column if not exists format_code text;
+
 create table if not exists non_conformities (
   id text primary key,
   work_sheet_id text,

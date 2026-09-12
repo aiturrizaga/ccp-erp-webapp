@@ -18,6 +18,7 @@ import { ITEMS } from '@core/mock-data';
 import {
   Item,
   ManufacturingRun,
+  QualityInspection,
   RunMaterialConsumption,
   RunStatus,
   RUN_STATUS_LABEL,
@@ -124,6 +125,19 @@ export class WorkSheetDetail {
 
   protected readonly nonConformities = computed(() => this.productionState.nonConformities().filter((n) => n.workSheetId === this.id()));
   protected readonly inspections = computed(() => this.productionState.qualityInspections().filter((q) => q.workSheetId === this.id()));
+
+  /** Título de la inspección: formato CCP (p. ej. "F-053 · Verificación…") o nombre de la operación legacy. */
+  protected inspectionTitle(inspection: QualityInspection): string {
+    if (inspection.formatCode) return `${inspection.formatCode} · ${inspection.formatName ?? inspection.operationName}`;
+    return inspection.operationName;
+  }
+
+  /** Productos incluidos en la inspección (fallback "—" para legacy sin productIds). */
+  protected inspectionProducts(inspection: QualityInspection): string {
+    const ids = inspection.productIds ?? [];
+    if (!ids.length) return '—';
+    return ids.map((id) => this.productName(id)).join(', ');
+  }
 
   protected readonly items: Item[] = ITEMS;
 

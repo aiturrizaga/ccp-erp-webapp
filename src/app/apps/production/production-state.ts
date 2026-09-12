@@ -2,6 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import {
   BillOfMaterials,
   BomStatus,
+  InspectionFormat,
   Machine,
   ManufacturingRun,
   Mold,
@@ -15,6 +16,7 @@ import {
 } from '@core/models';
 import {
   BILLS_OF_MATERIALS,
+  INSPECTION_FORMATS,
   MACHINES,
   MOLDS,
   NON_CONFORMITIES,
@@ -62,6 +64,8 @@ export class ProductionState {
   readonly machines = signal<Machine[]>([...MACHINES]);
   readonly molds = signal<Mold[]>([...MOLDS]);
   readonly qualityProtocols = signal<QualityProtocol[]>([...QUALITY_PROTOCOLS]);
+  /** Formatos CCP (F-053…F-058) — dato maestro fixture-only, como qualityProtocols. */
+  readonly inspectionFormats = signal<InspectionFormat[]>([...INSPECTION_FORMATS]);
   readonly qualityInspections = signal<QualityInspection[]>([...QUALITY_INSPECTIONS]);
   readonly nonConformities = signal<NonConformity[]>([...NON_CONFORMITIES]);
 
@@ -212,7 +216,11 @@ export class ProductionState {
   addInspection(input: Omit<QualityInspection, 'id'>): QualityInspection {
     const inspection: QualityInspection = { ...input, id: `QI-${String(this.nextInspectionSeq++).padStart(3, '0')}` };
     this.qualityInspections.update((rows) => [...rows, inspection]);
-    this.inspectionsStore.upsert(inspection, (i) => ({ work_sheet_id: i.workSheetId, overall_result: i.overallResult }));
+    this.inspectionsStore.upsert(inspection, (i) => ({
+      work_sheet_id: i.workSheetId,
+      overall_result: i.overallResult,
+      format_code: i.formatCode ?? null,
+    }));
     return inspection;
   }
 

@@ -1,11 +1,26 @@
-<app-list-toolbar [(search)]="search" searchPlaceholder="Buscar por HT u operación..." actionLabel="Registrar inspección" (action)="onNew()" />
+<app-list-toolbar
+  [(search)]="search"
+  searchPlaceholder="Buscar por HT, formato o producto..."
+  actionLabel="Nueva inspección"
+  (action)="onNew()"
+/>
 
-<app-data-table [columns]="columns" [rows]="rows()" [rowClickable]="true" (rowClick)="openDetail($event)" emptyMessage="No se encontraron inspecciones." [cellTemplate]="cellTpl" />
+<app-data-table
+  [columns]="columns"
+  [rows]="rows()"
+  [rowClickable]="true"
+  (rowClick)="openDetail($event)"
+  emptyMessage="No se encontraron inspecciones."
+  [cellTemplate]="cellTpl"
+/>
 
 <ng-template #cellTpl let-row let-key="key">
   @switch (key) {
-    @case ('protocol') {
-      {{ protocolName(row) }}
+    @case ('format') {
+      {{ formatName(row) }}
+    }
+    @case ('products') {
+      <span class="text-xs">{{ productNames(row) }}</span>
     }
     @case ('overallResult') {
       <app-status-badge [label]="resultLabel(row)" [tone]="resultTone(row)" />

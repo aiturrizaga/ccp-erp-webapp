@@ -30,6 +30,7 @@ import {
   OPERATORS,
   PURCHASE_ORDERS,
   PURCHASE_REQUIREMENTS,
+  QUALITY_INSPECTIONS,
   QUOTATIONS,
   REPLENISHMENT_SUGGESTIONS,
   SALES_CLAIMS,
@@ -41,6 +42,7 @@ import {
   STOCK_LOTS,
   SUPPLIERS,
   WORK_CENTERS,
+  WORK_SHEETS,
 } from '../src/app/core/mock-data';
 
 if (!environment.supabaseUrl || !environment.supabaseAnonKey) {
@@ -132,6 +134,12 @@ async function main() {
   await seed('production_operators', OPERATORS, (o) => ({ active: o.active }));
   await seed('production_machines', MACHINES, (m) => ({ plant: m.plant, status: m.status }));
   await seed('production_molds', MOLDS, (m) => ({ plant: m.plant, estado: m.estado }));
+  await seed('production_work_sheets', WORK_SHEETS, (w) => ({ number: w.number, status: w.status }));
+  await seed('quality_inspections', QUALITY_INSPECTIONS, (i) => ({
+    work_sheet_id: i.workSheetId,
+    overall_result: i.overallResult,
+    format_code: i.formatCode ?? null,
+  }));
 
   console.log('Done.');
 }

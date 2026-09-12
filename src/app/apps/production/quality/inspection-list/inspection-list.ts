@@ -26,9 +26,9 @@ export class InspectionList {
   protected readonly search = signal('');
 
   protected readonly columns: DataTableColumn[] = [
+    { key: 'format', header: 'Formato', width: '220px' },
     { key: 'workSheetId', header: 'HT', width: '140px' },
-    { key: 'operationName', header: 'Operación' },
-    { key: 'protocol', header: 'Protocolo' },
+    { key: 'products', header: 'Producto(s)', width: '200px' },
     { key: 'inspectedBy', header: 'Inspeccionado por' },
     { key: 'inspectedAt', header: 'Fecha', width: '160px' },
     { key: 'overallResult', header: 'Resultado', width: '120px' },
@@ -36,12 +36,32 @@ export class InspectionList {
 
   protected readonly rows = computed(() => {
     const term = this.search().trim().toLowerCase();
-    const list = this.productionState.qualityInspections().filter((i) => !term || i.workSheetId.toLowerCase().includes(term) || i.operationName.toLowerCase().includes(term));
+    const list = this.productionState.qualityInspections().filter(
+      (i) =>
+        !term ||
+        i.workSheetId.toLowerCase().includes(term) ||
+        this.formatName(i).toLowerCase().includes(term) ||
+        this.productNames(i).toLowerCase().includes(term),
+    );
     return newestFirst(list, (i) => i.inspectedAt);
   });
 
+  /** Nombre del formato o fallback al nombre del protocolo legacy. */
+  protected formatName(inspection: QualityInspection): string {
+    if (inspection.formatName) return inspection.formatCode ? `${inspection.formatCode} · ${inspection.formatName}` : inspection.formatName;
+    return this.protocolName(inspection);
+  }
+
+  /** Protocolo legacy para inspecciones sin formato. */
   protected protocolName(inspection: QualityInspection): string {
     return this.productionState.qualityProtocols().find((p) => p.id === inspection.protocolId)?.name ?? inspection.protocolId;
+  }
+
+  /** Nombres de productos de la inspección (multi-producto o fallback "—"). */
+  protected productNames(inspection: QualityInspection): string {
+    const ids = inspection.productIds ?? [];
+    if (!ids.length) return '—';
+    return ids.map((id) => this.productionState.products().find((p) => p.id === id)?.name ?? id).join(', ');
   }
 
   protected resultLabel(inspection: QualityInspection): string {

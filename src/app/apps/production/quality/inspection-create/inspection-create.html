@@ -3,135 +3,373 @@
   [crumbs]="[{ label: 'Inspecciones', link: '/apps/production/quality/inspections' }, { label: 'Nueva' }]"
 />
 
+<!-- Stepper -->
+<div class="mb-4 grid grid-cols-4 gap-2">
+  @for (s of steps; track s) {
+    <button
+      type="button"
+      class="flex h-12 flex-col items-center justify-center rounded-md border text-xs transition-colors"
+      [class.cursor-pointer]="s < step()"
+      [class.border-primary]="step() === s"
+      [class.bg-accent]="step() === s"
+      [class.text-muted-foreground]="step() !== s"
+      (click)="goToStep(s)"
+    >
+      <span class="font-semibold">{{ s }}. {{ stepLabel[s] }}</span>
+      <span class="opacity-70">
+        @if (s === 1) { Hoja de trabajo } @else if (s === 2) { Productos } @else if (s === 3) { Formato } @else { Completar }
+      </span>
+    </button>
+  }
+</div>
+
 <div class="grid grid-cols-1 gap-4 [&>*]:min-w-0 lg:grid-cols-[1.4fr_1fr]">
   <div class="flex flex-col gap-4">
-    <div hlmCard class="flex flex-col gap-4 p-4">
-      <h3 class="text-sm font-semibold">Dónde se inspecciona</h3>
-      <div class="flex flex-col gap-1.5">
-        <label hlmLabel>Hoja de trabajo</label>
-        <hlm-select class="block w-full" [value]="workSheetId()" (valueChange)="onWorkSheetChange($any($event))" [itemToString]="workSheetToString">
-          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
-          <hlm-select-content *hlmSelectPortal>
-            @for (ws of productionState.workSheets(); track ws.id) { <hlm-select-item [value]="ws.id">{{ ws.number }}</hlm-select-item> }
-          </hlm-select-content>
-        </hlm-select>
-      </div>
-      @if (workSheet()) {
-        <div class="grid grid-cols-2 gap-3">
-          <div class="flex flex-col gap-1.5">
-            <label hlmLabel>Línea</label>
-            <hlm-select class="block w-full" [value]="lineId()" (valueChange)="onLineChange($any($event))" [itemToString]="lineToString">
-              <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
-              <hlm-select-content *hlmSelectPortal>
-                @for (line of lines(); track line.id) { <hlm-select-item [value]="line.id">{{ lineToString(line.id) }}</hlm-select-item> }
-              </hlm-select-content>
-            </hlm-select>
+    @switch (step()) {
+      @case (1) {
+        <div hlmCard class="flex flex-col gap-4 p-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold">1 · Hoja de trabajo</h3>
+            <button hlmBtn size="sm" (click)="next()" [disabled]="!canGoNext()">Siguiente</button>
           </div>
           <div class="flex flex-col gap-1.5">
-            <label hlmLabel>Corrida</label>
-            <select class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="runId()" (ngModelChange)="runId.set($event)">
-              <option value="">Selecciona…</option>
-              @for (run of runs(); track run.id) { <option [value]="run.id">{{ run.id }} — {{ run.operatorName }}</option> }
-            </select>
+            <label hlmLabel>Selecciona la HT cuyos productos pasarán inspección</label>
+            <hlm-combobox [(value)]="workSheetId" [itemToString]="workSheetToString">
+              <hlm-combobox-input inputmode="search" placeholder="Buscar por número o cliente…" />
+              <hlm-combobox-content *hlmComboboxPortal class="w-auto">
+                <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+                <div hlmComboboxList class="max-h-64 overflow-y-auto">
+                  @for (ws of productionState.workSheets(); track ws.id) {
+                    <hlm-combobox-item [value]="ws.id">{{ ws.number }} · {{ ws.customerName }}</hlm-combobox-item>
+                  }
+                </div>
+              </hlm-combobox-content>
+            </hlm-combobox>
+          </div>
+          @if (workSheet(); as ws) {
+            <dl class="text-sm">
+              <div class="flex justify-between py-0.5"><dt class="text-muted-foreground">Cliente</dt><dd>{{ ws.customerName }}</dd></div>
+              <div class="flex justify-between py-0.5"><dt class="text-muted-foreground">Fecha compromiso</dt><dd>{{ ws.committedDate }}</dd></div>
+              <div class="flex justify-between py-0.5"><dt class="text-muted-foreground">Líneas</dt><dd>{{ ws.lines.length }}</dd></div>
+            </dl>
+          }
+        </div>
+      }
+
+      @case (2) {
+        <div hlmCard class="flex flex-col gap-4 p-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold">2 · Productos que pasarán inspección</h3>
+            <button hlmBtn size="sm" (click)="next()" [disabled]="!canGoNext()">Siguiente</button>
+          </div>
+          @if (productOptions().length === 0) {
+            <p class="text-muted-foreground text-sm">Selecciona primero una hoja de trabajo.</p>
+          } @else {
+            <div class="flex flex-col gap-2">
+              @for (p of productOptions(); track p.lineId) {
+                <label class="flex cursor-pointer items-center gap-3 rounded-md border p-3 text-sm transition-colors hover:bg-accent">
+                  <hlm-checkbox [checked]="selectedLineIds().includes(p.lineId)" (checkedChange)="toggleLine(p.lineId)" />
+                  <span class="min-w-0 flex-1">
+                    <span class="block truncate font-medium">{{ p.name }}</span>
+                    <span class="text-muted-foreground block text-xs">{{ p.quantity }} {{ p.unit }}</span>
+                  </span>
+                  <ng-icon name="tablerChevronRight" class="text-muted-foreground" />
+                </label>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      @case (3) {
+        <div hlmCard class="flex flex-col gap-4 p-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-semibold">3 · Formato de la inspección</h3>
+            <button hlmBtn size="sm" (click)="next()" [disabled]="!canGoNext()">Siguiente</button>
+          </div>
+          <div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            @for (fmt of productionState.inspectionFormats(); track fmt.id) {
+              <button
+                type="button"
+                class="flex flex-col items-start gap-1 rounded-md border p-3 text-start transition-colors hover:bg-accent"
+                [class.border-primary]="formatId() === fmt.id"
+                (click)="onSelectFormat(fmt.id)"
+              >
+                <span class="flex items-center gap-2">
+                  <span class="text-primary font-mono text-xs font-semibold">{{ fmt.code }}</span>
+                  @if (formatId() === fmt.id) { <ng-icon name="tablerCircleCheckFilled" class="text-primary" /> }
+                </span>
+                <span class="text-sm font-medium">{{ fmt.name }}</span>
+                <span class="text-muted-foreground text-xs">{{ fmt.sections.length }} secciones · {{ fmt.signatureCount }} firma(s)</span>
+              </button>
+            }
           </div>
         </div>
       }
-      <div class="flex flex-col gap-1.5">
-        <label hlmLabel>Protocolo</label>
-        <hlm-select class="block w-full" [value]="protocolId()" (valueChange)="onProtocolChange($any($event))" [itemToString]="protocolToString">
-          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value /></hlm-select-trigger>
-          <hlm-select-content *hlmSelectPortal>
-            @for (p of productionState.qualityProtocols(); track p.id) { <hlm-select-item [value]="p.id">{{ p.name }}</hlm-select-item> }
-          </hlm-select-content>
-        </hlm-select>
-      </div>
-      <div class="grid grid-cols-2 gap-3">
-        <div class="flex flex-col gap-1.5">
-          <label hlmLabel for="opname">Operación</label>
-          <input hlmInput id="opname" type="text" [ngModel]="operationName()" (ngModelChange)="operationName.set($event)" />
-        </div>
-        <div class="flex flex-col gap-1.5">
-          <label hlmLabel for="inspBy">Inspeccionado por</label>
-          <input hlmInput id="inspBy" type="text" [ngModel]="inspectedBy()" (ngModelChange)="inspectedBy.set($event)" />
-        </div>
-      </div>
-    </div>
 
-    @if (fieldDrafts().length) {
-      <div hlmCard class="flex flex-col gap-4 p-4">
-        <h3 class="text-sm font-semibold">Resultados por campo</h3>
-        @for (d of fieldDrafts(); track d.field.id; let i = $index) {
-          <div class="rounded-md border p-3">
-            <div class="mb-2 flex items-center justify-between gap-2">
-              <p class="text-sm font-medium">{{ d.field.label }} @if (d.field.unit) { <span class="text-muted-foreground font-normal">({{ d.field.unit }})</span> }</p>
-              <span class="text-xs" [class.text-emerald-600]="computedPass(d)" [class.text-destructive]="!computedPass(d)">{{ computedPass(d) ? 'Conforme' : 'No conforme' }}</span>
+      @default {
+        @if (format(); as fmt) {
+          <!-- Encabezado -->
+          <div hlmCard class="flex flex-col gap-4 p-4">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold">4 · {{ fmt.code }} — {{ fmt.name }}</h3>
+              <button hlmBtn size="sm" (click)="next()" [disabled]="!canGoNext()">Siguiente</button>
             </div>
-            @if (d.field.dataType === 'boolean') {
-              <select class="border-input h-9 w-full rounded-md border bg-transparent px-2 text-sm" [ngModel]="d.value" (ngModelChange)="setFieldValue(i, $event)">
-                <option value="">Selecciona…</option>
-                <option value="true">Sí</option>
-                <option value="false">No</option>
-              </select>
-            } @else {
-              <input
-                hlmInput
-                [type]="d.field.dataType === 'number' ? 'number' : 'text'"
-                class="w-full"
-                [placeholder]="d.field.minRange != null || d.field.maxRange != null ? 'Rango: ' + (d.field.minRange ?? '—') + ' – ' + (d.field.maxRange ?? '—') : d.field.expectedValue ?? ''"
-                [ngModel]="d.value"
-                (ngModelChange)="setFieldValue(i, $event)"
-              />
-            }
-            <div class="mt-2 flex items-center gap-3 text-xs">
-              <button type="button" class="text-primary hover:underline" (click)="setFieldPassOverride(i, true)">Marcar conforme</button>
-              <button type="button" class="text-destructive hover:underline" (click)="setFieldPassOverride(i, false)">Marcar no conforme</button>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              @for (hf of fmt.headerFields; track hf.id) {
+                <div class="flex flex-col gap-1.5">
+                  <label hlmLabel>
+                    {{ hf.label }}
+                    @if (hf.auto) { <span class="text-muted-foreground font-normal italic">(automático)</span> }
+                  </label>
+                  @if (hf.control === 'select') {
+                    <select
+                      class="border-input h-9 rounded-md border bg-transparent px-2 text-sm"
+                      [ngModel]="headerDrafts()[hf.id] ?? ''"
+                      (ngModelChange)="setHeader(hf.id, $event)"
+                    >
+                      <option value="">Selecciona…</option>
+                      @for (opt of hf.options; track opt) { <option [value]="opt">{{ opt }}</option> }
+                    </select>
+                  } @else {
+                    <input
+                      hlmInput
+                      [type]="hf.control === 'date' ? 'date' : hf.control === 'number' ? 'number' : 'text'"
+                      [ngModel]="headerValue(hf.id)"
+                      [disabled]="!!hf.auto"
+                      (ngModelChange)="setHeader(hf.id, $event)"
+                    />
+                  }
+                </div>
+              }
+            </div>
+          </div>
+
+          <!-- Secciones del formato -->
+          @for (section of fmt.sections; track section.id) {
+            <div hlmCard class="flex flex-col gap-3 p-4">
+              <h3 class="text-sm font-semibold">{{ section.title }}</h3>
+
+              <!-- Checklist de ítems -->
+              @if (section.kind === 'items') {
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead class="text-muted-foreground border-b text-xs">
+                      <tr>
+                        <th class="py-1.5 text-start font-medium">N°</th>
+                        <th class="py-1.5 text-start font-medium">Descripción</th>
+                        @for (opt of section.options; track opt.value) {
+                          <th class="py-1.5 text-center font-medium">{{ opt.label }}</th>
+                        }
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                      @for (item of section.items; track item.id) {
+                        <tr>
+                          <td class="text-muted-foreground py-2 align-top font-mono text-xs">{{ item.id }}</td>
+                          <td class="py-2 align-top">
+                            {{ item.label }}
+                            @if (item.hint) { <span class="text-muted-foreground block text-xs">{{ item.hint }}</span> }
+                          </td>
+                          @for (opt of section.options; track opt.value) {
+                            <td class="py-2 text-center">
+                              <input
+                                type="radio"
+                                class="accent-primary"
+                                [name]="section.id + '-' + item.id"
+                                [checked]="itemDrafts()[item.id] === opt.value"
+                                (change)="setItem(item.id, opt.value)"
+                              />
+                            </td>
+                          }
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              }
+
+              <!-- Campos libres / selects / textareas -->
+              @if (section.kind === 'fields') {
+                <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  @for (fld of section.fields; track fld.id) {
+                    <div class="flex flex-col gap-1.5">
+                      <label hlmLabel>
+                        {{ fld.label }}
+                        @if (fld.unit) { <span class="text-muted-foreground font-normal">({{ fld.unit }})</span> }
+                        @if (fld.required) { <span class="text-destructive">*</span> }
+                      </label>
+                      @if (fld.control === 'select') {
+                        <select
+                          class="border-input h-9 rounded-md border bg-transparent px-2 text-sm"
+                          [ngModel]="fieldDrafts()[fld.id] ?? ''"
+                          (ngModelChange)="setField(fld.id, $event)"
+                        >
+                          <option value="">Selecciona…</option>
+                          @for (opt of fld.options; track opt) { <option [value]="opt">{{ opt }}</option> }
+                        </select>
+                      } @else if (fld.control === 'textarea') {
+                        <textarea
+                          class="border-input min-h-20 rounded-md border bg-transparent px-3 py-2 text-sm"
+                          [placeholder]="fld.placeholder"
+                          [ngModel]="fieldDrafts()[fld.id] ?? ''"
+                          (ngModelChange)="setField(fld.id, $event)"
+                        ></textarea>
+                      } @else {
+                        <input
+                          hlmInput
+                          [type]="fld.control === 'number' ? 'number' : 'text'"
+                          [placeholder]="fld.placeholder"
+                          [ngModel]="fieldDrafts()[fld.id] ?? ''"
+                          (ngModelChange)="setField(fld.id, $event)"
+                        />
+                      }
+                    </div>
+                  }
+                </div>
+              }
+
+              <!-- Tabla dinámica -->
+              @if (section.kind === 'table') {
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead class="text-muted-foreground border-b text-xs">
+                      <tr>
+                        @for (col of section.table.columns; track col.id) {
+                          <th class="py-1.5 text-start font-medium" [style.width]="col.width">{{ col.label }}</th>
+                        }
+                        @if (section.table.dynamic) { <th class="w-8"></th> }
+                      </tr>
+                    </thead>
+                    <tbody class="divide-y">
+                      @for (row of tableRows(section.id); track row._uid; let i = $index) {
+                        <tr>
+                          @for (col of section.table.columns; track col.id) {
+                            <td class="py-1">
+                              @if (col.control === 'select') {
+                                <select
+                                  class="border-input h-8 rounded-md border bg-transparent px-1 text-sm"
+                                  [ngModel]="row.cells[col.id] ?? ''"
+                                  (ngModelChange)="setCell(section.id, i, col.id, $event)"
+                                >
+                                  <option value="">—</option>
+                                  @for (opt of col.options; track opt) { <option [value]="opt">{{ opt }}</option> }
+                                </select>
+                              } @else {
+                                <input
+                                  hlmInput
+                                  class="h-8 w-full"
+                                  [type]="col.control === 'number' ? 'number' : 'text'"
+                                  [readonly]="isAutoCell(col)"
+                                  [class.bg-muted]="isAutoCell(col)"
+                                  [ngModel]="row.cells[col.id] ?? ''"
+                                  (ngModelChange)="setCell(section.id, i, col.id, $event)"
+                                />
+                              }
+                            </td>
+                          }
+                          @if (section.table.dynamic) {
+                            <td class="text-center">
+                              <button type="button" class="text-muted-foreground hover:text-destructive" (click)="removeRow(section.id, i)" title="Quitar fila">
+                                <ng-icon name="tablerX" />
+                              </button>
+                            </td>
+                          }
+                        </tr>
+                      } @empty {
+                        <tr>
+                          <td class="text-muted-foreground py-3 text-center" [attr.colspan]="section.table.columns.length + 1">Sin filas registradas.</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+                @if (section.table.dynamic) {
+                  <button hlmBtn variant="outline" size="sm" class="self-start" (click)="addRow(section.id)">
+                    <ng-icon name="tablerPlus" class="mr-1" /> Agregar fila
+                  </button>
+                }
+              }
+            </div>
+          }
+
+          @if (fmt.note) {
+            <p class="text-muted-foreground rounded-md bg-muted/50 px-3 py-2 text-xs italic">{{ fmt.note }}</p>
+          }
+
+          <!-- Inspeccionado por / Observaciones -->
+          <div hlmCard class="flex flex-col gap-3 p-4">
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <div class="flex flex-col gap-1.5">
+                <label hlmLabel for="inspBy">Inspeccionado por</label>
+                <input hlmInput id="inspBy" type="text" [ngModel]="inspectedBy()" (ngModelChange)="inspectedBy.set($event)" placeholder="Nombre del responsable" />
+              </div>
+              <div class="flex flex-col gap-1.5">
+                <label hlmLabel for="inspAt">Fecha de inspección</label>
+                <input hlmInput id="inspAt" type="date" [ngModel]="inspectedAt()" (ngModelChange)="inspectedAt.set($event)" />
+              </div>
+            </div>
+            <div class="flex flex-col gap-1.5">
+              <label hlmLabel for="notes">Observaciones</label>
+              <textarea
+                id="notes"
+                class="border-input min-h-16 rounded-md border bg-transparent px-3 py-2 text-sm"
+                [placeholder]="fmt.notesPlaceholder"
+                [ngModel]="notes()"
+                (ngModelChange)="notes.set($event)"
+              ></textarea>
             </div>
           </div>
         }
-      </div>
-    }
-
-    <div hlmCard class="flex flex-col gap-3 p-4">
-      <div class="flex flex-col gap-1.5">
-        <label hlmLabel for="evidence">Evidencia (referencias separadas por coma, opcional)</label>
-        <input hlmInput id="evidence" type="text" [ngModel]="evidenceRefs()" (ngModelChange)="evidenceRefs.set($event)" />
-      </div>
-      <div class="flex flex-col gap-1.5">
-        <label hlmLabel for="notes">Observaciones</label>
-        <textarea id="notes" class="border-input min-h-16 rounded-md border bg-transparent px-3 py-2 text-sm" [ngModel]="notes()" (ngModelChange)="notes.set($event)"></textarea>
-      </div>
-    </div>
-  </div>
-
-  <div class="flex flex-col gap-4">
-    <div hlmCard class="p-4">
-      <h3 class="mb-2 text-sm font-semibold">Resultado general</h3>
-      <p class="text-lg font-semibold" [class.text-emerald-600]="overallResult() === 'pass'" [class.text-destructive]="overallResult() === 'fail'">
-        {{ overallResult() === 'pass' ? 'Conforme' : overallResult() === 'fail' ? 'No conforme' : 'Sin evaluar' }}
-      </p>
-      @if (overallResult() === 'fail') {
-        <label class="mt-3 flex cursor-pointer items-center gap-2 text-sm">
-          <hlm-checkbox [checked]="generateNonConformity()" (checkedChange)="generateNonConformity.set($event)" />
-          Generar no conformidad (reproceso)
-        </label>
       }
-    </div>
-
-    <div class="flex gap-2">
-      <hlm-popover [state]="submitPopover()" (stateChanged)="submitPopover.set($event)">
-        <button hlmPopoverTrigger hlmBtn size="sm" [disabled]="!canSubmit()">Registrar inspección</button>
-        <hlm-popover-content *hlmPopoverPortal class="w-80">
-          <hlm-popover-header>
-            <h3 hlmPopoverTitle>¿Registrar la inspección?</h3>
-            <p hlmPopoverDescription>Resultado general: {{ overallResult() === 'pass' ? 'Conforme' : 'No conforme' }}.</p>
-          </hlm-popover-header>
-          <div class="mt-3 flex justify-end gap-2">
-            <button hlmBtn variant="outline" size="sm" (click)="submitPopover.set('closed')">Cancelar</button>
-            <button hlmBtn size="sm" (click)="submit()">Confirmar</button>
-          </div>
-        </hlm-popover-content>
-      </hlm-popover>
-      <button hlmBtn size="sm" variant="ghost" (click)="cancel()">Cancelar</button>
-    </div>
+    }
   </div>
+
+  @if (step() === 4) {
+    <div class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <h3 class="mb-2 text-sm font-semibold">Resultado general</h3>
+        <p class="text-lg font-semibold" [class.text-emerald-600]="manualResult() === 'pass'" [class.text-destructive]="manualResult() === 'fail'">{{ resultLabel() }}</p>
+        <label class="mt-2 flex flex-col gap-1.5 text-xs">
+          <span class="text-muted-foreground">Decisión (manual)</span>
+          <select
+            class="border-input h-9 rounded-md border bg-transparent px-2 text-sm"
+            [ngModel]="manualResult()"
+            (ngModelChange)="manualResult.set($event)"
+          >
+            <option value="pass">Conforme</option>
+            <option value="fail">No conforme</option>
+            <option value="pending">Pendiente</option>
+          </select>
+        </label>
+        @if (manualResult() === 'fail') {
+          <label class="mt-3 flex cursor-pointer items-center gap-2 text-sm">
+            <hlm-checkbox [checked]="generateNonConformity()" (checkedChange)="generateNonConformity.set($event)" />
+            Generar no conformidad (reproceso)
+          </label>
+        }
+        @if (selectedProductNames().length) {
+          <p class="text-muted-foreground mt-3 text-xs">Productos: {{ selectedProductNames().join(', ') }}</p>
+        }
+      </div>
+
+      <div class="flex flex-wrap gap-2">
+        <hlm-popover [state]="submitPopover()" (stateChanged)="submitPopover.set($event)">
+          <button hlmPopoverTrigger hlmBtn size="sm" [disabled]="!canSubmit()">Registrar inspección</button>
+          <hlm-popover-content *hlmPopoverPortal class="w-80">
+            <hlm-popover-header>
+              <h3 hlmPopoverTitle>¿Registrar la inspección?</h3>
+              <p hlmPopoverDescription>Resultado general: {{ resultLabel() }}.</p>
+            </hlm-popover-header>
+            <div class="mt-3 flex justify-end gap-2">
+              <button hlmBtn variant="outline" size="sm" (click)="submitPopover.set('closed')">Cancelar</button>
+              <button hlmBtn size="sm" (click)="submit()">Confirmar</button>
+            </div>
+          </hlm-popover-content>
+        </hlm-popover>
+        <button hlmBtn size="sm" variant="ghost" (click)="back()">Atrás</button>
+        <button hlmBtn size="sm" variant="ghost" class="text-destructive" (click)="cancel()">Cancelar</button>
+      </div>
+    </div>
+  }
 </div>

@@ -374,8 +374,9 @@
           @for (i of inspections(); track i.id) {
             <li class="flex items-center justify-between py-2">
               <div>
-                <a [routerLink]="['/apps/production/quality/inspections', i.id]" class="text-primary hover:underline">{{ i.operationName }}</a>
+                <a [routerLink]="['/apps/production/quality/inspections', i.id]" class="text-primary hover:underline">{{ inspectionTitle(i) }}</a>
                 <p class="text-muted-foreground text-xs">{{ i.inspectedBy }} · {{ i.inspectedAt }}</p>
+                <p class="text-muted-foreground text-xs">{{ inspectionProducts(i) }}</p>
               </div>
               <app-status-badge [label]="i.overallResult === 'pass' ? 'Conforme' : i.overallResult === 'fail' ? 'No conforme' : 'Pendiente'" [tone]="i.overallResult === 'pass' ? 'success' : i.overallResult === 'fail' ? 'danger' : 'neutral'" />
             </li>
