@@ -8,7 +8,6 @@
   [hasFilters]="true"
   [filterCount]="filterCount()"
   [hasSecondaryActions]="true"
-  actionLabel="Nueva orden de venta"
   (action)="onNew()"
 >
   <div filters class="flex flex-col gap-3">
@@ -90,6 +89,20 @@
 
 <ng-template #cellTpl let-row let-key="key">
   @switch (key) {
+    @case ('paymentCondition') {
+      @if (isCashOrder(row)) {
+        <app-status-badge label="Contado" tone="warning" />
+      } @else {
+        <app-status-badge label="Crédito" tone="info" />
+      }
+    }
+    @case ('workSheetStatus') {
+      @if (hasWorkSheet(row)) {
+        <app-status-badge label="Con HT" tone="success" />
+      } @else {
+        <app-status-badge label="Sin HT" tone="neutral" />
+      }
+    }
     @case ('committedDeliveryDate') {
       <span [class.text-destructive]="isLate(row)" [class.font-medium]="isLate(row)">
         {{ row.committedDeliveryDate }}
@@ -115,6 +128,18 @@
   </div>
   <p class="text-muted-foreground mt-1 text-xs">{{ row.customerName }}</p>
   @if (row.customerOrderDocumentNumber) { <p class="mt-1 text-xs">Ref. cliente: <span class="font-medium">{{ row.customerOrderDocumentNumber }}</span></p> }
+  <div class="mt-2 flex flex-wrap items-center gap-1.5">
+    @if (isCashOrder(row)) {
+      <app-status-badge label="Contado" tone="warning" />
+    } @else {
+      <app-status-badge label="Crédito" tone="info" />
+    }
+    @if (hasWorkSheet(row)) {
+      <app-status-badge label="Con HT" tone="success" />
+    } @else {
+      <app-status-badge label="Sin HT" tone="neutral" />
+    }
+  </div>
   <p class="mt-2 text-xs" [class.text-destructive]="isLate(row)" [class.font-medium]="isLate(row)">
     Entrega {{ row.committedDeliveryDate }}
     @if (isLate(row)) { · atrasada }

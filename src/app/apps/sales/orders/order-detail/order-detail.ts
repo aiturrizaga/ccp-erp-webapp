@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { NgIcon } from '@ng-icons/core';
 import { HlmButtonImports } from '@ui/button';
 import { HlmCardImports } from '@ui/card';
-import { HlmPopoverImports } from '@ui/popover';
+import { HlmDialogImports } from '@ui/dialog';
 import { HlmInputImports } from '@ui/input';
 import { HlmLabelImports } from '@ui/label';
 import { HlmSelectImports } from '@ui/select';
@@ -20,7 +20,7 @@ import { InvoicingState } from '../../../finance/invoicing-state';
 
 @Component({
   selector: 'app-order-detail',
-  imports: [FormsModule, RouterLink, DecimalPipe, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmPopoverImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, EntityHeader, EmptyState, StatusBadge],
+  imports: [FormsModule, RouterLink, DecimalPipe, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmDialogImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, EntityHeader, EmptyState, StatusBadge],
   templateUrl: './order-detail.html',
 })
 export class OrderDetail {
@@ -42,7 +42,7 @@ export class OrderDetail {
   protected readonly internalNotes = signal('');
   protected readonly workSheetType = signal<SalesOrderWorkSheetType>('regular');
   protected readonly workSheetTypeOptions = (Object.keys(SALES_ORDER_WORK_SHEET_TYPE_LABEL) as SalesOrderWorkSheetType[]).map((value) => ({ value, label: SALES_ORDER_WORK_SHEET_TYPE_LABEL[value] }));
-  protected readonly workSheetPopover = signal<'open' | 'closed'>('closed');
+  protected readonly workSheetModal = signal<'open' | 'closed'>('closed');
   protected readonly advanceAmount = signal(0);
   protected readonly advanceDate = signal('2026-09-01');
   protected readonly advanceMethod = signal<PaymentMethod>('transfer');
@@ -164,7 +164,7 @@ export class OrderDetail {
       { id: `DOC-${order.id}-HT-${ws.id}`, type: 'hoja_trabajo' as const, label: SALES_ORDER_WORK_SHEET_TYPE_LABEL[this.workSheetType()], number: ws.number, date: new Date().toISOString().slice(0, 10) },
     ];
     saveOrder({ ...order, workSheetId: order.workSheetId ?? ws.id, workSheetIds, relatedDocuments, internalNotes: this.internalNotes().trim() || order.internalNotes });
-    this.workSheetPopover.set('closed');
+    this.workSheetModal.set('closed');
     toast.success(`${ws.number} creada`, { description: `${SALES_ORDER_WORK_SHEET_TYPE_LABEL[this.workSheetType()]} · vinculada a ${order.number}` });
     this.router.navigate(['/apps/production/work-sheets', ws.id]);
   }

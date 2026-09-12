@@ -4,10 +4,10 @@
 <label class="text-muted-foreground flex items-center gap-2 text-xs">Estado
 <hlm-select class="block w-48" [disabled]="!canManageFlow()" [value]="o.status" [itemToString]="statusToString" (valueChange)="changeStatus($event)"><hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Selecciona estado" /></hlm-select-trigger><hlm-select-content *hlmSelectPortal>@for(option of statusOptions;track option.value){<hlm-select-item [value]="option.value">{{option.label}}</hlm-select-item>}</hlm-select-content></hlm-select>
 </label>
-<hlm-popover class="inline-flex shrink-0" [state]="workSheetPopover()" (stateChanged)="workSheetPopover.set($event)">
-<button hlmPopoverTrigger hlmBtn size="sm" class="whitespace-nowrap" [disabled]="!canCreateWorkSheet()"><ng-icon name="tablerFilePlus" class="mr-1.5"/>Crear HT</button>
-<hlm-popover-content *hlmPopoverPortal class="w-80">
-<hlm-popover-header><h3 hlmPopoverTitle>Crear hoja de trabajo</h3><p hlmPopoverDescription>Selecciona el tipo de HT que se generará para {{o.number}}.</p></hlm-popover-header>
+<hlm-dialog [state]="workSheetModal()" (stateChanged)="workSheetModal.set($event)">
+<button hlmDialogTrigger hlmBtn size="sm" class="whitespace-nowrap" [disabled]="!canCreateWorkSheet()"><ng-icon name="tablerFilePlus" class="mr-1.5"/>Crear HT</button>
+<hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-md">
+<hlm-dialog-header><h3 hlmDialogTitle>Crear hoja de trabajo</h3><p hlmDialogDescription>Selecciona el tipo de HT que se generará para {{o.number}}.</p></hlm-dialog-header>
 <div class="mt-3 flex flex-col gap-3">
 <div class="flex flex-col gap-1.5"><label hlmLabel>Tipo de HT</label>
 <hlm-select class="block w-full" [value]="workSheetType()" [itemToString]="workSheetTypeToString" (valueChange)="workSheetType.set($event === 'replacement' ? 'replacement' : $event === 'claim' ? 'claim' : 'regular')">
@@ -15,9 +15,9 @@
 <hlm-select-content *hlmSelectPortal>@for(option of workSheetTypeOptions;track option.value){<hlm-select-item [value]="option.value">{{option.label}}</hlm-select-item>}</hlm-select-content>
 </hlm-select></div>
 <div class="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">La HT se creará con las líneas del pedido y las instrucciones de Notas internas.</div>
-<div class="flex justify-end gap-2"><button hlmBtn variant="outline" size="sm" (click)="workSheetPopover.set('closed')">Cancelar</button><button hlmBtn size="sm" (click)="createWorkSheet()">Crear HT</button></div>
+<hlm-dialog-footer><button hlmBtn variant="outline" size="sm" hlmDialogClose>Cancelar</button><button hlmBtn size="sm" (click)="createWorkSheet()">Crear HT</button></hlm-dialog-footer>
 </div>
-</hlm-popover-content></hlm-popover>
+</hlm-dialog-content></hlm-dialog>
 @if(canAccept()){<button hlmBtn size="sm" (click)="acceptProduction()"><ng-icon name="tablerPlayerPlay" class="mr-1.5"/>Aceptar HT</button>}
 @if(o.status==='preparing'){<button hlmBtn size="sm" variant="outline" (click)="notifyReady()">Producción lista</button>}
 @if(canVerify()){<button hlmBtn size="sm" (click)="verify()">Verificar y listo para despacho</button>}

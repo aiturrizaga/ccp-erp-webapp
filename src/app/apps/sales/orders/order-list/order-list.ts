@@ -40,7 +40,7 @@ export class OrderList {
   private readonly router = inject(Router);
 
   protected readonly search = signal('');
-  protected readonly view = signal<'list' | 'grid' | 'kanban'>('kanban');
+  protected readonly view = signal<'list' | 'grid' | 'kanban'>('list');
   protected readonly groupBy = signal('none');
   protected readonly page = signal(1);
   protected readonly pageSize = signal(10);
@@ -60,6 +60,8 @@ export class OrderList {
     { key: 'number', header: 'Orden de venta', width: '150px' },
     { key: 'customerName', header: 'Cliente' },
     { key: 'customerOrderDocumentNumber', header: 'Ref. cliente', width: '150px' },
+    { key: 'paymentCondition', header: 'Condición', width: '120px' },
+    { key: 'workSheetStatus', header: 'Hoja de trabajo', width: '130px' },
     { key: 'committedDeliveryDate', header: 'Entrega comprometida', width: '180px' },
     { key: 'currency', header: 'Moneda', width: '90px' },
     { key: 'total', header: 'Total', width: '110px', align: 'end' },
@@ -122,6 +124,14 @@ export class OrderList {
   protected isLate(order: SalesOrder): boolean {
     const notDelivered = !['dispatched', 'invoiced', 'cancelled'].includes(order.status);
     return notDelivered && new Date(order.committedDeliveryDate) < new Date('2026-08-23');
+  }
+
+  protected isCashOrder(order: SalesOrder): boolean {
+    return !!order.paymentGate && order.paymentGate.status !== 'not_required';
+  }
+
+  protected hasWorkSheet(order: SalesOrder): boolean {
+    return !!order.workSheetId || (order.workSheetIds?.length ?? 0) > 0;
   }
 
   protected statusLabel(status: SalesOrderStatus): string {
