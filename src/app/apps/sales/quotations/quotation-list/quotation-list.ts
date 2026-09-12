@@ -17,6 +17,7 @@ import { SelectFilterOption } from '@shared/components/select-filter/select-filt
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
 import { salesContacts, salesQuotations } from '../../sales-state';
 import { Currency, SalesQuotation, SalesQuotationStatus, SALES_QUOTATION_STATUS_LABEL, SALES_QUOTATION_STATUS_TONE, Tone } from '@core/models';
+import { newestFirst } from '@core/utils/sort';
 
 const STATUS_OPTIONS: { value: SalesQuotationStatus; label: string }[] = (Object.keys(SALES_QUOTATION_STATUS_LABEL) as SalesQuotationStatus[]).map((value) => ({
   value,
@@ -128,7 +129,7 @@ export class QuotationList {
     const currencies = this.currencyFilter();
     const from = this.dateFrom();
     const to = this.dateTo();
-    return salesQuotations()
+    const list = salesQuotations()
       .map((q) => ({ ...q, contactName: salesContacts().find((c) => c.id === q.contactId)?.name ?? 'Sin contacto asociado' }))
       .filter((q) => {
         let matchesSearch = true;
@@ -142,8 +143,8 @@ export class QuotationList {
         const matchesFrom = !from || q.issuedAt >= from;
         const matchesTo = !to || q.issuedAt <= to;
         return matchesSearch && matchesCurrency && matchesFrom && matchesTo;
-      })
-      .reverse();
+      });
+    return newestFirst(list);
   });
 
   protected readonly filteredRows = computed(() => {

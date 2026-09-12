@@ -361,7 +361,7 @@ export class PurchasingState {
 
     const quotation: Quotation = {
       id: `QT-${String(seq).padStart(3, '0')}`,
-      number: `COT-2026-${String(100 + seq).padStart(4, '0')}`,
+      number: `CT-CP-2026-${String(100 + seq).padStart(4, '0')}`,
       requirementId: requirement.id,
       status: 'draft',
       createdAt: TODAY,

@@ -13,6 +13,7 @@ import { SelectFilterOption } from '@shared/components/select-filter/select-filt
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
 import { OUTPUT_BUNDLES, WAREHOUSES } from '@core/mock-data';
 import { OutputBundle, OutputBundleStatus, OUTPUT_BUNDLE_STATUS_LABEL, Tone } from '@core/models';
+import { newestFirst } from '@core/utils/sort';
 
 const STATUS_TONE: Record<OutputBundleStatus, Tone> = {
   preparing: 'neutral',
@@ -76,12 +77,13 @@ export class OutputBundleList {
     const term = this.search().trim().toLowerCase();
     const statuses = this.statusFilter();
     const plants = this.plantFilter();
-    return OUTPUT_BUNDLES.filter((b) => {
+    const list = OUTPUT_BUNDLES.filter((b) => {
       const matchesSearch = !term || b.number.toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(b.status);
       const matchesPlant = plants.size === 0 || plants.has(b.plant);
       return matchesSearch && matchesStatus && matchesPlant;
-    }).reverse();
+    });
+    return newestFirst(list);
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.plantFilter().size);

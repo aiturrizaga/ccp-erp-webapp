@@ -10,6 +10,7 @@ import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.mode
 import { ITEMS, WAREHOUSES } from '@core/mock-data';
 import { STOCK_LEDGER_MOVEMENT_LABEL, StockLedgerMovementType, Tone } from '@core/models';
 import { WarehouseOpsState } from '../../warehouse-ops-state';
+import { newestFirst } from '@core/utils/sort';
 
 const TYPE_TONE: Record<StockLedgerMovementType, Tone> = {
   inbound: 'success',
@@ -53,11 +54,12 @@ export class StockLedgerList {
   protected readonly filteredRows = computed(() => {
     const term = this.search().trim().toLowerCase();
     const types = this.typeFilter();
-    return this.warehouseOpsState.stockLedger().filter((m) => {
+    const list = this.warehouseOpsState.stockLedger().filter((m) => {
       const matchesType = types.size === 0 || types.has(m.type);
       const matchesSearch = !term || m.documentNumber.toLowerCase().includes(term) || this.itemLabel(m.itemId).toLowerCase().includes(term);
       return matchesType && matchesSearch;
-    }).reverse();
+    });
+    return newestFirst(list);
   });
 
   protected readonly filterCount = computed(() => this.typeFilter().size);

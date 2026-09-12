@@ -15,7 +15,7 @@ export const DOC_SERIES: DocSeries[] = [
 export const DISPATCH_GUIDES: DispatchGuide[] = [
   {
     id: 'DG-001', kind: 'sunat', series: 'T001', correlativo: '00006287', number: 'T001-00006287',
-    salesOrderId: 'SO-001', salesOrderNumber: 'PV-2026-0501',
+    salesOrderId: 'SO-001', salesOrderNumber: 'OP-2026-0501',
     customerName: 'CONSTRUCTORA ANDINA S.A.C.', customerTaxId: '20486185296',
     glosa: 'traslado', motivoTraslado: 'Venta', transportista: 'TRANSPORTES CARGA PESADA S.A.C. — RUC 20601122334',
     originAddress: 'URB. LAS DALMACIAS LOTE 17, PUENTE PIEDRA - LIMA', destinationAddress: 'Km 45 Carretera Panamericana Sur, Cañete, Lima',
@@ -28,7 +28,7 @@ export const DISPATCH_GUIDES: DispatchGuide[] = [
   },
   {
     id: 'DG-002', kind: 'sunat', series: 'T001', correlativo: '00006301', number: 'T001-00006301',
-    salesOrderId: 'SO-002', salesOrderNumber: 'PV-2026-0502',
+    salesOrderId: 'SO-002', salesOrderNumber: 'OP-2026-0502',
     customerName: 'CONSORCIO VIAL RUTAS DEL SUR S.A.', customerTaxId: '20548672190',
     glosa: 'entrega_parcial', motivoTraslado: 'Venta con entrega parcial', transportista: 'FLOTA PROPIA CCP',
     originAddress: 'URB. LAS DALMACIAS LOTE 17, PUENTE PIEDRA - LIMA', destinationAddress: 'Av. Industrial 890, Chincha Alta, Ica',
@@ -37,7 +37,7 @@ export const DISPATCH_GUIDES: DispatchGuide[] = [
   },
   {
     id: 'DG-003', kind: 'interna', series: 'G900', correlativo: '00002190', number: 'G900-00002190',
-    salesOrderId: 'SO-003', salesOrderNumber: 'PV-2026-0503',
+    salesOrderId: 'SO-003', salesOrderNumber: 'OP-2026-0503',
     customerName: 'CONSORCIO VIAL CHINCHA S.A.', customerTaxId: '20548001234',
     glosa: 'guia_custodia', motivoTraslado: 'Traslado a patio de custodia — pendiente de retiro por el cliente', transportista: 'FLOTA PROPIA CCP',
     originAddress: 'PLANTA 2 — PUENTE PIEDRA', destinationAddress: 'PATIO DE CUSTODIA CCP — PLANTA 1',
@@ -46,7 +46,7 @@ export const DISPATCH_GUIDES: DispatchGuide[] = [
   },
   {
     id: 'DG-004', kind: 'sunat', series: 'T001', correlativo: '00006315', number: 'T001-00006315',
-    salesOrderId: 'SO-003', salesOrderNumber: 'PV-2026-0503',
+    salesOrderId: 'SO-003', salesOrderNumber: 'OP-2026-0503',
     customerName: 'CONSORCIO VIAL CHINCHA S.A.', customerTaxId: '20548001234',
     glosa: 'traslado', motivoTraslado: 'Venta', transportista: 'FLOTA PROPIA CCP',
     originAddress: 'URB. LAS DALMACIAS LOTE 17, PUENTE PIEDRA - LIMA', destinationAddress: 'Ca. Los Pinos 234, Chincha Baja, Ica',

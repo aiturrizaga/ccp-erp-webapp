@@ -5,6 +5,7 @@ import { DataTable, DataTableColumn } from '@shared/components/data-table/data-t
 import { ListToolbar } from '@shared/components/list-toolbar/list-toolbar';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { InvoicingState } from '@apps/finance/invoicing-state';
+import { newestFirst } from '@core/utils/sort';
 import { CREDIT_AGREEMENT_STATUS_LABEL, CREDIT_AGREEMENT_STATUS_TONE, CreditAgreement, CreditAgreementStatus, Tone } from '@core/models';
 
 @Component({
@@ -28,7 +29,8 @@ export class AgreementList {
 
   protected readonly rows = computed(() => {
     const term = this.search().trim().toLowerCase();
-    return this.state.agreements().filter((a) => !term || a.number.toLowerCase().includes(term) || a.customerName.toLowerCase().includes(term));
+    const list = this.state.agreements().filter((a) => !term || a.number.toLowerCase().includes(term) || a.customerName.toLowerCase().includes(term));
+    return newestFirst(list);
   });
 
   protected statusLabel = (s: CreditAgreementStatus) => CREDIT_AGREEMENT_STATUS_LABEL[s];

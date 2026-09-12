@@ -9,6 +9,7 @@ import { ListPagination } from '@shared/components/list-pagination/list-paginati
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { BillOfMaterials, BomStatus, BOM_STATUS_LABEL, Tone } from '@core/models';
 import { ProductionState } from '../../production-state';
+import { newestFirst } from '@core/utils/sort';
 
 const STATUS_TONE: Record<BomStatus, Tone> = {
   active: 'success',
@@ -47,11 +48,12 @@ export class BomList {
   protected readonly filteredRows = computed(() => {
     const term = this.search().trim().toLowerCase();
     const statuses = this.statusFilter();
-    return this.rows().filter((r) => {
+    const list = this.rows().filter((r) => {
       const matchesSearch = !term || r.productName.toLowerCase().includes(term) || r.bom.version.toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(r.bom.status);
       return matchesSearch && matchesStatus;
     });
+    return newestFirst(list, (r) => r.bom.effectiveFrom);
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size);

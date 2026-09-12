@@ -6,6 +6,7 @@ import { ListToolbar } from '@shared/components/list-toolbar/list-toolbar';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { Machine, MachineStatus, MACHINE_STATUS_LABEL, Tone } from '@core/models';
 import { ProductionState } from '../../production-state';
+import { newestFirst } from '@core/utils/sort';
 
 const STATUS_TONE: Record<MachineStatus, Tone> = {
   operativa: 'success',
@@ -34,7 +35,8 @@ export class MachineList {
 
   protected readonly rows = computed(() => {
     const term = this.search().trim().toLowerCase();
-    return this.productionState.machines().filter((m) => !term || m.name.toLowerCase().includes(term) || m.code.toLowerCase().includes(term));
+    const list = this.productionState.machines().filter((m) => !term || m.name.toLowerCase().includes(term) || m.code.toLowerCase().includes(term));
+    return newestFirst(list);
   });
 
   protected workCenterName(machine: Machine): string {

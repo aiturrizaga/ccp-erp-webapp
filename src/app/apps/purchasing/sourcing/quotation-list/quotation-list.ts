@@ -14,6 +14,7 @@ import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.mode
 import { SUPPLIERS } from '@core/mock-data';
 import { Quotation, QuotationStatus, QUOTATION_STATUS_LABEL, Tone } from '@core/models';
 import { PurchasingState } from '../../purchasing-state';
+import { newestFirst } from '@core/utils/sort';
 
 const STATUS_TONE: Record<QuotationStatus, Tone> = {
   draft: 'neutral',
@@ -70,11 +71,12 @@ export class QuotationList {
   protected readonly filteredRows = computed(() => {
     const term = this.search().trim().toLowerCase();
     const statuses = this.statusFilter();
-    return this.purchasingState.quotations().filter((q) => {
+    const list = this.purchasingState.quotations().filter((q) => {
       const matchesSearch = !term || q.number.toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(q.status);
       return matchesSearch && matchesStatus;
-    }).reverse();
+    });
+    return newestFirst(list);
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size);

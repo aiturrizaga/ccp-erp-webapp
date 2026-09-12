@@ -5,6 +5,7 @@ import { DataTable, DataTableColumn } from '@shared/components/data-table/data-t
 import { ListToolbar } from '@shared/components/list-toolbar/list-toolbar';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { InvoicingState } from '../../invoicing-state';
+import { newestFirst } from '@core/utils/sort';
 import {
   DISPATCH_GUIDE_STATUS_LABEL,
   DISPATCH_GUIDE_STATUS_TONE,
@@ -35,7 +36,8 @@ export class GuideList {
 
   protected readonly rows = computed(() => {
     const term = this.search().trim().toLowerCase();
-    return this.state.guides().filter((g) => !term || g.number.toLowerCase().includes(term) || g.customerName.toLowerCase().includes(term));
+    const list = this.state.guides().filter((g) => !term || g.number.toLowerCase().includes(term) || g.customerName.toLowerCase().includes(term));
+    return newestFirst(list);
   });
 
   protected glosaLabel = (g: DispatchGuide['glosa']) => GUIDE_GLOSA_LABEL[g];

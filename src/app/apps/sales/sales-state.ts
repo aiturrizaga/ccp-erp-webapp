@@ -12,6 +12,7 @@ import {
   SalesQuotationDelivery,
   evaluateSalesOrder,
   PaymentMethod,
+  SalesDispatchRelease,
 } from '@core/models';
 import {
   CONTACTS,
@@ -39,6 +40,7 @@ export const salesCustomers = signal<Customer[]>([...CUSTOMERS]);
 export const salesContacts = signal<Contact[]>([...CONTACTS]);
 export const salesClaims = signal<SalesClaim[]>([...SALES_CLAIMS]);
 export const salesDecisionRules = signal<SalesDecisionRule[]>([...SALES_DECISION_RULES]);
+export const salesDispatchReleases = signal<SalesDispatchRelease[]>([]);
 
 const productsStore = new TableStore<SalesProduct>('sales_products');
 const quotationsStore = new TableStore<SalesQuotation>('sales_quotations');
@@ -46,6 +48,7 @@ const ordersStore = new TableStore<SalesOrder>('sales_orders');
 const customersStore = new TableStore<Customer>('customers');
 const contactsStore = new TableStore<Contact>('customer_contacts');
 const claimsStore = new TableStore<SalesClaim>('sales_claims');
+const dispatchReleasesStore = new TableStore<SalesDispatchRelease>('sales_dispatch_releases');
 
 let nextOrderSeq = SALES_ORDERS.length + 1;
 let nextQuotationSeq = SALES_QUOTATIONS.length + 1;
@@ -61,6 +64,7 @@ function hydrate(): void {
   customersStore.fetchAll().then((r) => r?.length && (salesCustomers.set(r), (nextCustomerSeq = r.length + 1)));
   contactsStore.fetchAll().then((r) => r?.length && (salesContacts.set(r), (nextContactSeq = r.length + 1)));
   claimsStore.fetchAll().then((r) => r?.length && (salesClaims.set(r), (nextClaimSeq = r.length + 1)));
+  dispatchReleasesStore.fetchAll().then((r) => r?.length && salesDispatchReleases.set(r));
 }
 hydrate();
 
@@ -343,6 +347,22 @@ export function updateClaim(id: string, patch: Partial<Omit<SalesClaim, 'id'>>):
   if (patched) claimsStore.upsert(patched, (c) => ({ status: c.status, sales_order_id: c.salesOrderId }));
 }
 
+
+export function createDispatchRelease(input: Omit<SalesDispatchRelease, 'id' | 'releasedAt'>): SalesDispatchRelease | undefined {
+  const uniqueIds = [...new Set(input.workSheetIds)];
+  if (!uniqueIds.length) return undefined;
+  const release: SalesDispatchRelease = {
+    ...input,
+    id: `DR-${Date.now().toString().slice(-10)}`,
+    workSheetIds: uniqueIds,
+    releasedAt: TODAY,
+  };
+  salesDispatchReleases.update((rows) => [...rows, release]);
+  dispatchReleasesStore.upsert(release, (r) => ({ sales_order_id: r.salesOrderId, customer_id: r.customerId }));
+  const order = salesOrders().find((o) => o.id === input.salesOrderId);
+  if (order) saveOrder({ ...order, status: 'ready_for_dispatch', readyForDispatch: true, readyForDispatchAt: TODAY });
+  return release;
+}
 
 // --------------------------------------------------------------------------
 // Flujo pedido -> HT -> producción -> verificación -> despacho

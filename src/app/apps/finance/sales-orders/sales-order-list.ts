@@ -9,6 +9,7 @@ import { DataTable, DataTableColumn } from '@shared/components/data-table/data-t
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { salesOrders } from '@apps/sales/sales-state';
 import { InvoicingState } from '../invoicing-state';
+import { newestFirst } from '@core/utils/sort';
 import { SALES_ORDER_STATUS_LABEL, SALES_ORDER_STATUS_TONE, SalesOrder, Tone } from '@core/models';
 
 @Component({
@@ -35,13 +36,14 @@ export class FinanceSalesOrderList {
 
   protected readonly rows = computed(() => {
     const term = this.search().trim().toLowerCase();
-    return this.orders().filter((order) => {
+    const list = this.orders().filter((order) => {
       if (!this.isInvoiceable(order)) return false;
       const invoice = this.invoiceFor(order.id);
       if (invoice) return false;
       return !term || [order.number, order.customerName, order.customerOrderDocumentNumber ?? '', order.id]
         .some((v) => v.toLowerCase().includes(term));
     });
+    return newestFirst(list);
   });
 
   protected readonly invoiceableCount = computed(() => this.orders().filter((o) => this.isInvoiceable(o) && !this.invoiceFor(o.id)).length);

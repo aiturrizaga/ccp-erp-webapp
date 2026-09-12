@@ -262,3 +262,111 @@ begin
     end if;
   end loop;
 end $$;
+
+-- ===========================================================================
+-- Producción + Despacho (prototype). Same shape as above: `id` PK, a few
+-- filterable columns, full entity in `data jsonb`. Safe to re-run.
+-- The Hoja de Trabajo and Despacho flows use real writes, so these tables were
+-- missing before and their upserts silently failed — creating them here is what
+-- makes those documents actually persist.
+-- ===========================================================================
+
+create table if not exists sales_dispatch_releases (
+  id text primary key,
+  sales_order_id text,
+  customer_id text,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists production_work_sheets (
+  id text primary key,
+  plant text,
+  at_risk boolean,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists quality_inspections (
+  id text primary key,
+  work_sheet_id text,
+  overall_result text,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists non_conformities (
+  id text primary key,
+  work_sheet_id text,
+  resolved boolean,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists production_products (
+  id text primary key,
+  code text,
+  status text,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists production_boms (
+  id text primary key,
+  product_id text,
+  status text,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists production_machines (
+  id text primary key,
+  plant text,
+  status text,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists production_molds (
+  id text primary key,
+  plant text,
+  estado text,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists production_work_centers (
+  id text primary key,
+  plant text,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists quality_protocols (
+  id text primary key,
+  status text,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
+do $$
+declare
+  t text;
+begin
+  for t in select unnest(array[
+    'sales_dispatch_releases', 'production_work_sheets', 'quality_inspections', 'non_conformities',
+    'production_products', 'production_boms', 'production_machines', 'production_molds',
+    'production_work_centers', 'quality_protocols'
+  ])
+  loop
+    execute format('alter table %I enable row level security', t);
+    if not exists (select 1 from pg_policies where schemaname = 'public' and tablename = t and policyname = 'anon read/write') then
+      execute format('create policy "anon read/write" on %I for all to anon using (true) with check (true)', t);
+    end if;
+    if not exists (
+      select 1 from pg_publication_tables where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
+    ) then
+      execute format('alter publication supabase_realtime add table %I', t);
+    end if;
+  end loop;
+end $$;

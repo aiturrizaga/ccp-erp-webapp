@@ -13,6 +13,7 @@ import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.mode
 import { WORK_SHEETS } from '@core/mock-data';
 import { StockIssue, StockIssueOrigin, StockIssueStatus, STOCK_ISSUE_ORIGIN_LABEL, STOCK_ISSUE_STATUS_LABEL, Tone } from '@core/models';
 import { WarehouseOpsState } from '../../warehouse-ops-state';
+import { newestFirst } from '@core/utils/sort';
 
 const STATUS_TONE: Record<StockIssueStatus, Tone> = {
   pending: 'neutral',
@@ -75,15 +76,15 @@ export class StockIssueList {
     const term = this.search().trim().toLowerCase();
     const statuses = this.statusFilter();
     const origins = this.originFilter();
-    return this.warehouseOpsState
+    const list = this.warehouseOpsState
       .stockIssues()
       .filter((i) => {
         const matchesSearch = !term || i.number.toLowerCase().includes(term) || (i.reason ?? '').toLowerCase().includes(term);
         const matchesStatus = statuses.size === 0 || statuses.has(i.status);
         const matchesOrigin = origins.size === 0 || origins.has(i.origin);
         return matchesSearch && matchesStatus && matchesOrigin;
-      })
-      .reverse();
+      });
+    return newestFirst(list);
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.originFilter().size);

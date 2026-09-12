@@ -9,6 +9,7 @@ import { ListPagination } from '@shared/components/list-pagination/list-paginati
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
 import { WAREHOUSES } from '@core/mock-data';
 import { Warehouse } from '@core/models';
+import { newestFirst } from '@core/utils/sort';
 
 @Component({
   selector: 'app-warehouse-list',
@@ -35,13 +36,14 @@ export class WarehouseList {
 
   protected readonly filteredRows = computed(() => {
     const term = this.search().trim().toLowerCase();
-    return WAREHOUSES.filter(
+    const list = WAREHOUSES.filter(
       (w) =>
         !term ||
         w.code.toLowerCase().includes(term) ||
         w.name.toLowerCase().includes(term) ||
         w.shortName.toLowerCase().includes(term),
-    ).reverse();
+    );
+    return newestFirst(list);
   });
 
   protected readonly paginatedRows = computed(() => {

@@ -15,6 +15,7 @@ import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.mode
 import { SUPPLIERS } from '@core/mock-data';
 import { Currency, PurchaseOrder, PurchaseOrderStatus, PURCHASE_ORDER_STATUS_LABEL, Tone } from '@core/models';
 import { PurchasingState } from '../../purchasing-state';
+import { newestFirst } from '@core/utils/sort';
 
 const STATUS_TONE: Record<PurchaseOrderStatus, Tone> = {
   draft: 'neutral',
@@ -84,12 +85,13 @@ export class PurchaseOrderList {
     const term = this.search().trim().toLowerCase();
     const statuses = this.statusFilter();
     const currencies = this.currencyFilter();
-    return this.purchasingState.purchaseOrders().filter((po) => {
+    const list = this.purchasingState.purchaseOrders().filter((po) => {
       const matchesSearch = !term || po.number.toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(po.status);
       const matchesCurrency = currencies.size === 0 || currencies.has(po.currency);
       return matchesSearch && matchesStatus && matchesCurrency;
-    }).reverse();
+    });
+    return newestFirst(list);
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.currencyFilter().size);

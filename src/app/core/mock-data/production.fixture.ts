@@ -254,7 +254,7 @@ export const WORK_SHEETS: WorkSheet[] = [
   },
   {
     id: 'HT-2026-1001', number: 'HT-2026-1001', plant: 'AL01 · Planta 02',
-    salesOrderId: 'SO-001', salesOrderNumber: 'SO-2026-0001', customerName: 'Electro Sur S.A.C.',
+    salesOrderId: 'SO-001', salesOrderNumber: 'OP-2026-0001', customerName: 'Electro Sur S.A.C.',
     scheduledDate: '2026-09-02', committedDate: '2026-09-10', responsible: 'Alex Vasquez', atRisk: false,
     lines: [
       {

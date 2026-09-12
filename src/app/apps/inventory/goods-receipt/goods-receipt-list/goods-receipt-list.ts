@@ -15,6 +15,7 @@ import { SUPPLIERS, WORK_SHEETS } from '@core/mock-data';
 import { GoodsReceipt, GoodsReceiptStatus, GOODS_RECEIPT_STATUS_LABEL, Tone } from '@core/models';
 import { WarehouseOpsState } from '../../warehouse-ops-state';
 import { PurchasingState } from '../../../purchasing/purchasing-state';
+import { newestFirst } from '@core/utils/sort';
 
 const TODAY = new Date(2026, 7, 24);
 
@@ -84,15 +85,15 @@ export class GoodsReceiptList {
     const term = this.search().trim().toLowerCase();
     const statuses = this.statusFilter();
     const suppliers = this.supplierFilter();
-    return this.warehouseOpsState
+    const list = this.warehouseOpsState
       .goodsReceipts()
       .filter((r) => {
         const matchesSearch = !term || r.number.toLowerCase().includes(term);
         const matchesStatus = statuses.size === 0 || statuses.has(r.status);
         const matchesSupplier = suppliers.size === 0 || suppliers.has(r.supplierId);
         return matchesSearch && matchesStatus && matchesSupplier;
-      })
-      .sort((a, b) => `${a.expectedDate}T${a.expectedTime}`.localeCompare(`${b.expectedDate}T${b.expectedTime}`));
+      });
+    return newestFirst(list);
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.supplierFilter().size);

@@ -25,7 +25,7 @@
         </hlm-select>
       </label>
       <hlm-dialog [state]="workSheetModal()" (stateChanged)="workSheetModal.set($event)">
-        <button hlmDialogTrigger hlmBtn size="sm" class="whitespace-nowrap" [disabled]="!canCreateWorkSheet()"><ng-icon name="tablerFilePlus" class="mr-1.5"/>Crear HT</button>
+        <button hlmDialogTrigger hlmBtn size="sm" class="whitespace-nowrap" [disabled]="!canCreateWorkSheet()">Crear HT</button>
         <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-md">
           <hlm-dialog-header><h3 hlmDialogTitle>Crear hoja de trabajo</h3><p hlmDialogDescription>Selecciona el tipo de HT que se generará para {{o.number}}.</p></hlm-dialog-header>
           <div class="mt-3 flex flex-col gap-3">
@@ -40,9 +40,38 @@
           </div>
         </hlm-dialog-content>
       </hlm-dialog>
-      @if(canAccept()){<button hlmBtn size="sm" (click)="acceptProduction()"><ng-icon name="tablerPlayerPlay" class="mr-1.5"/>Aceptar HT</button>}
+      @if(canAccept()){<button hlmBtn size="sm" (click)="acceptProduction()">Aceptar HT</button>}
       @if(o.status==='preparing'){<button hlmBtn size="sm" variant="outline" (click)="notifyReady()">Producción lista</button>}
-      @if(canVerify()){<button hlmBtn size="sm" (click)="verify()">Verificar y listo para despacho</button>}
+      @if(canReleaseForDispatch()){
+        <hlm-dialog [state]="dispatchReleaseModal()" (stateChanged)="dispatchReleaseModal.set($event)">
+          <button hlmDialogTrigger hlmBtn size="sm" (click)="openDispatchReleaseDialog()"><ng-icon name="tablerTruckDelivery" class="mr-1.5"/>Listo para despacho</button>
+          <hlm-dialog-content *hlmDialogPortal="let ctx" class="w-[calc(100vw-2rem)] sm:max-w-2xl">
+            <hlm-dialog-header>
+              <h3 hlmDialogTitle>Listar HT para despacho</h3>
+              <p hlmDialogDescription>Selecciona una o más HT terminadas de {{o.number}} para liberarlas al área de Despacho.</p>
+            </hlm-dialog-header>
+            <div class="mt-4 max-h-80 overflow-y-auto rounded-lg border">
+              @for(ws of existingWorkSheets(); track ws!.id){
+                <label class="flex items-start gap-3 border-b p-3 last:border-b-0" [class.opacity-50]="!canReleaseWorkSheet(ws!)">
+                  <hlm-checkbox class="mt-0.5" [checked]="selectedWorkSheetIds().has(ws!.id)" [disabled]="!canReleaseWorkSheet(ws!)" (checkedChange)="toggleWorkSheetForDispatch(ws!.id, $event)" />
+                  <span class="min-w-0 flex-1">
+                    <span class="flex items-center justify-between gap-3"><span class="font-medium text-sm">{{ws!.number}}</span><span class="text-muted-foreground text-xs">{{workSheetStatusLabel(ws!)}}</span></span>
+                    <span class="text-muted-foreground mt-1 block text-xs">{{ws!.customerName || o.customerName}} · {{ws!.lines.length}} producto(s)</span>
+                    @if(releasedWorkSheetIds().has(ws!.id)){<span class="text-primary mt-1 block text-xs">Ya liberada para despacho</span>}
+                  </span>
+                </label>
+              } @empty {
+                <div class="text-muted-foreground p-6 text-center text-sm">No hay HT asociadas a esta orden.</div>
+              }
+            </div>
+            <div class="bg-muted/40 mt-3 rounded-md p-3 text-xs">Seleccionadas: <strong>{{selectedWorkSheetIds().size}}</strong>. La liberación solo autoriza el pase al área de Despacho; no registra el despacho físico.</div>
+            <hlm-dialog-footer>
+              <button hlmBtn variant="outline" size="sm" hlmDialogClose>Cancelar</button>
+              <button hlmBtn size="sm" [disabled]="selectedWorkSheetIds().size === 0" (click)="releaseSelectedWorkSheets()">Liberar para despacho</button>
+            </hlm-dialog-footer>
+          </hlm-dialog-content>
+        </hlm-dialog>
+      }
       @if(['ready_for_dispatch','partially_dispatched'].includes(o.status)){<a hlmBtn size="sm" variant="outline" [routerLink]="['/apps/sales/dispatch']"><ng-icon name="tablerTruckDelivery" class="mr-1.5"/>Ir a despacho</a>}
       @if(canInvoice()){<button hlmBtn size="sm" (click)="issueInvoice()">Emitir factura</button>}
     </div>
@@ -78,35 +107,23 @@
       <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-muted/40 text-muted-foreground text-xs"><tr><th class="px-3 py-2 text-start">Código</th><th class="px-3 py-2 text-start">Descripción</th><th class="px-3 py-2 text-end">Pedido</th><th class="px-3 py-2 text-end">Producido</th><th class="px-3 py-2 text-end">Despachado</th><th class="px-3 py-2 text-end">Pendiente</th></tr></thead><tbody class="divide-y">@for(line of o.lines;track line.productCode){<tr><td class="px-3 py-2 font-mono text-xs">{{line.productCode}}</td><td class="px-3 py-2"><div>{{line.description}}</div><div class="text-muted-foreground text-xs">{{line.unitOfMeasure}}</div></td><td class="px-3 py-2 text-end tabular-nums">{{line.quantity}}</td><td class="px-3 py-2 text-end tabular-nums">{{line.producedQuantity ?? 0}}</td><td class="px-3 py-2 text-end tabular-nums">{{line.dispatchedQuantity ?? 0}}</td><td class="px-3 py-2 text-end font-medium tabular-nums">{{line.quantity-(line.dispatchedQuantity ?? 0)}}</td></tr>}</tbody></table></div>
     </div>
 
-    @if(o.notes){<div hlmCard class="p-4"><h2 class="mb-2 text-sm font-semibold">Observaciones</h2><p class="text-sm leading-6">{{o.notes}}</p></div>}
-
     <div hlmCard class="p-4">
       <div class="mb-4 flex items-center justify-between">
-        <div><h2 class="text-sm font-semibold">Timeline de la orden</h2><p class="text-muted-foreground mt-0.5 text-xs">Historial de las principales actualizaciones desde la cotización hasta el cierre del pedido.</p></div>
-        <button type="button" class="text-primary text-xs hover:underline" (click)="selectTab('history')">Ver historial completo</button>
+        <div>
+          <h2 class="text-sm font-semibold">Línea de tiempo</h2>
+          <p class="text-muted-foreground mt-0.5 text-xs">Movimientos de la orden, desde la cotización hasta la entrega.</p>
+        </div>
+        <button type="button" class="text-primary whitespace-nowrap text-xs hover:underline" (click)="selectTab('history')">Ver historial</button>
       </div>
-      <ol class="relative ml-2 border-l pl-7">
-        @for(event of orderTimeline(); track event.title + (event.date ?? '')) {
-          <li class="relative pb-6 last:pb-0">
-            <span class="absolute -left-[38px] flex size-7 items-center justify-center rounded-full border bg-background text-xs" [class.bg-primary]="event.state === 'completed'" [class.text-primary-foreground]="event.state === 'completed'" [class.border-primary]="event.state !== 'pending'">
-              @if(event.state === 'completed') { <ng-icon name="tablerCheck" size="14" /> } @else if(event.state === 'current') { <span class="size-2 rounded-full bg-primary"></span> } @else { <span class="size-2 rounded-full bg-muted-foreground/40"></span> }
-            </span>
-            <div class="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-              <div><p class="text-sm font-medium" [class.text-primary]="event.state === 'current'">{{event.title}}</p><p class="text-muted-foreground mt-0.5 text-xs leading-5">{{event.detail}}</p></div>
-              @if(event.date) { <time class="text-muted-foreground shrink-0 text-xs">{{event.date}}</time> } @else { <span class="text-muted-foreground shrink-0 text-xs">Pendiente</span> }
-            </div>
-          </li>
-        }
-      </ol>
+      <app-order-timeline [events]="orderTimeline()" />
     </div>
+
+    @if(o.notes){<div hlmCard class="p-4"><h2 class="mb-2 text-sm font-semibold">Observaciones</h2><p class="text-sm leading-6">{{o.notes}}</p></div>}
   </div>
 
   <aside class="flex flex-col gap-4">
-    <div hlmCard class="p-4">
-      <div class="mb-3 flex items-center justify-between"><div><h2 class="text-sm font-semibold">Información del cliente</h2><p class="text-muted-foreground mt-0.5 text-xs">Datos de contacto y entrega asociados al pedido.</p></div><a class="text-primary text-xs hover:underline" [routerLink]="['/apps/sales/customers',o.customerId]">Ver cliente</a></div>
-      <dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm"><dt class="text-muted-foreground">Razón social</dt><dd class="font-medium">{{o.customerName}}</dd><dt class="text-muted-foreground">Contacto</dt><dd>{{contactName()}}</dd><dt class="text-muted-foreground">Moneda</dt><dd>{{o.currency}}</dd><dt class="text-muted-foreground">Entrega</dt><dd>{{o.committedDeliveryDate}}</dd></dl>
-    </div>
-    <div hlmCard class="p-4"><div class="mb-2 flex items-center justify-between"><h2 class="text-sm font-semibold">Dirección de entrega</h2><button type="button" class="text-primary text-xs">Editar</button></div><p class="text-sm leading-6">{{o.deliveryAddress}}</p></div>
+    <div hlmCard class="p-4"><div class="mb-3 flex items-center justify-between"><h2 class="text-sm font-semibold">Información del cliente</h2><a class="text-primary text-xs hover:underline" [routerLink]="['/apps/sales/customers',o.customerId]">Ver cliente</a></div><dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm"><dt class="text-muted-foreground">Razón social</dt><dd>{{o.customerName}}</dd><dt class="text-muted-foreground">Moneda</dt><dd>{{o.currency}}</dd><dt class="text-muted-foreground">Contacto</dt><dd>{{contactName(o.contactId)}}</dd><dt class="text-muted-foreground">Entrega</dt><dd>{{o.committedDeliveryDate}}</dd></dl></div>
+    <div hlmCard class="p-4"><div class="mb-2 flex items-center justify-between"><h2 class="text-sm font-semibold">Dirección de entrega</h2>@if(!editingDeliveryAddress()){<button type="button" class="text-primary text-xs hover:underline" (click)="startEditDeliveryAddress(o.deliveryAddress)">Editar</button>}</div>@if(editingDeliveryAddress()){<div class="flex flex-col gap-2"><textarea hlmInput rows="3" [ngModel]="deliveryAddressDraft()" (ngModelChange)="deliveryAddressDraft.set($event)" placeholder="Dirección de entrega del cliente…"></textarea><div class="flex justify-end gap-2"><button hlmBtn size="sm" variant="outline" type="button" (click)="cancelEditDeliveryAddress()">Cancelar</button><button hlmBtn size="sm" type="button" [disabled]="!deliveryAddressDraft().trim()" (click)="saveDeliveryAddress()">Guardar</button></div></div>}@else{<p class="text-sm leading-6">{{o.deliveryAddress || 'Sin dirección registrada.'}}</p>}</div>
     @if(o.paymentGate && o.paymentGate.status!=='not_required'){
       <div hlmCard class="p-4"><div class="flex items-start gap-3"><div class="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-full"><ng-icon name="tablerCoins" size="18"/></div><div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-2"><h2 class="text-sm font-semibold">Pago al contado</h2><app-status-badge [label]="paymentGateStatusLabel(o.paymentGate.status)" [tone]="paymentGateStatusTone(o.paymentGate.status)" /></div><p class="text-muted-foreground mt-1 text-xs">Se requiere validar el adelanto antes de continuar el flujo.</p><button type="button" class="text-primary mt-2 text-xs font-medium hover:underline" (click)="selectTab('advances')">Ver adelantos</button></div></div></div>
     }
@@ -201,21 +218,33 @@
       </div>
 
       @if(o.paymentGate?.advancePayment;as payment){
-        <div class="overflow-x-auto">
-          <table class="w-full min-w-[760px] text-sm">
-            <thead class="bg-muted/40 text-muted-foreground text-xs"><tr><th class="px-3 py-2 text-start">#</th><th class="px-3 py-2 text-start">Fecha</th><th class="px-3 py-2 text-end">Monto</th><th class="px-3 py-2 text-start">Medio</th><th class="px-3 py-2 text-start">Voucher</th><th class="px-3 py-2 text-start">Estado</th><th class="px-3 py-2 text-start">Validación</th></tr></thead>
-            <tbody>
-              <tr class="border-b">
-                <td class="px-3 py-3">1</td>
-                <td class="px-3 py-3">{{payment.date}}</td>
-                <td class="px-3 py-3 text-end font-medium tabular-nums">{{payment.amount | number:'1.2-2'}} {{o.currency}}</td>
-                <td class="px-3 py-3">{{methodLabel(payment.method)}}</td>
-                <td class="px-3 py-3 truncate">{{payment.voucher.name}}</td>
-                <td class="px-3 py-3"><app-status-badge [label]="paymentGateStatusLabel(o.paymentGate!.status)" [tone]="paymentGateStatusTone(o.paymentGate!.status)" /></td>
-                <td class="px-3 py-3 text-xs">{{payment.validatedBy ? payment.validatedBy + ' · ' + payment.validatedAt : 'Pendiente de Cobranzas'}}</td>
-              </tr>
-            </tbody>
-          </table>
+        <div class="flex flex-col gap-2">
+          <div class="flex items-start justify-between gap-3 rounded-md border p-3 hover:bg-muted/30">
+            <div class="flex min-w-0 items-start gap-3">
+              <span class="bg-primary/10 text-primary mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md"><ng-icon name="tablerCashBanknote" size="17" /></span>
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="text-sm font-medium tabular-nums">{{payment.amount | number:'1.2-2'}} {{o.currency}}</p>
+                  <app-status-badge [label]="paymentGateStatusLabel(o.paymentGate!.status)" [tone]="paymentGateStatusTone(o.paymentGate!.status)" />
+                </div>
+                <p class="text-muted-foreground mt-0.5 text-xs">{{payment.date}} · {{methodLabel(payment.method)}}</p>
+                <p class="text-muted-foreground mt-0.5 text-xs">{{payment.registeredBy ?? 'Ventas'}} @if(payment.registeredAt){· {{payment.registeredAt}}}</p>
+                <p class="text-muted-foreground mt-0.5 truncate text-xs">{{payment.validatedBy ? 'Validado por ' + payment.validatedBy + ' · ' + payment.validatedAt : 'Pendiente de validación de Cobranzas'}}</p>
+              </div>
+            </div>
+            <div class="flex shrink-0 flex-col items-end gap-1.5">
+              <button type="button" class="group relative block shrink-0" (click)="openAdvanceVoucherPreview(payment)" title="Ver voucher en grande">
+                @if(payment.voucher.url && payment.voucher.mimeType?.startsWith('image/')){
+                  <img [src]="payment.voucher.url" [alt]="payment.voucher.name" class="size-14 rounded-md border object-cover transition-opacity group-hover:opacity-80" />
+                } @else if(payment.voucher.url){
+                  <span class="border-muted-foreground/30 text-muted-foreground flex size-14 items-center justify-center rounded-md border bg-muted/40"><ng-icon name="tablerFileTypePdf" size="22" /></span>
+                } @else {
+                  <span class="border-muted-foreground/30 text-muted-foreground flex size-14 items-center justify-center rounded-md border bg-muted/40"><ng-icon name="tablerPaperclip" size="22" /></span>
+                }
+              </button>
+              <p class="max-w-[160px] truncate text-[11px] text-muted-foreground">{{payment.voucher.name}}</p>
+            </div>
+          </div>
         </div>
       } @else {
         <div class="rounded-lg border border-dashed p-8 text-center">
@@ -242,190 +271,119 @@
 }
 
 @if(activeTab()==='documents') {
-<div class="grid grid-cols-1 gap-4">
-  <div hlmCard class="p-4">
-    <div class="mb-4 flex items-start justify-between gap-3">
-      <div>
+<div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="p-4">
+      <div class="mb-4">
         <h2 class="text-sm font-semibold">Documentos relacionados</h2>
-        <p class="text-muted-foreground mt-0.5 text-xs">Documentos generados o vinculados al pedido durante su ciclo de vida.</p>
+        <p class="text-muted-foreground mt-0.5 text-xs">Documentos internos vinculados al pedido: cotizaciones, guías, reclamos y más.</p>
       </div>
-      <span class="text-muted-foreground shrink-0 text-xs">{{(o.relatedDocuments ?? []).length}} documentos</span>
-    </div>
-
-    <div class="flex flex-col divide-y">
-      @for (doc of (o.relatedDocuments ?? []); track doc.id) {
-        <div class="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex min-w-0 items-start gap-3">
-            <div class="bg-muted/50 flex size-9 shrink-0 items-center justify-center rounded-md">
-              <ng-icon name="tablerFileText" size="17" class="text-muted-foreground" />
-            </div>
-            <div class="min-w-0">
-              @if (relatedDocumentRoute(doc); as route) {
-                <a [routerLink]="route" class="text-sm font-medium text-primary hover:underline">{{doc.label}}</a>
-              } @else {
-                <p class="text-sm font-medium">{{doc.label}}</p>
-              }
-              <div class="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-                @if (doc.number) { <span>{{doc.number}}</span> }
-                @if (doc.date) { <span>· {{doc.date}}</span> }
-                @if (doc.fileName) {
-                  <span>·</span>
-                  @if (relatedDocumentRoute(doc); as route) {
-                    <a [routerLink]="route" class="truncate text-primary hover:underline">{{doc.fileName}}</a>
-                  } @else {
-                    <span class="truncate">{{doc.fileName}}</span>
-                  }
-                }
+      <div class="flex flex-col gap-2">
+        @for(doc of relatedDocRows();track doc.id){
+          <div class="flex items-start justify-between gap-3 rounded-md border p-3 hover:bg-muted/30">
+            <div class="flex min-w-0 items-start gap-3">
+              <span class="bg-primary/10 text-primary mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md"><ng-icon [name]="doc.icon" size="17" /></span>
+              <div class="min-w-0">
+                @if(doc.link){<a class="block truncate text-sm font-medium text-primary hover:underline" [routerLink]="doc.link">{{doc.label}}</a>}@else{<p class="truncate text-sm font-medium">{{doc.label}}</p>}
+                <p class="text-muted-foreground mt-0.5 truncate text-xs">{{doc.number ?? doc.description ?? 'Sin número'}} @if(doc.date){<span class="text-muted-foreground">· {{doc.date}}</span>}</p>
+                @if(doc.fileName){<p class="text-muted-foreground mt-0.5 flex items-center gap-1 truncate text-[11px]"><ng-icon name="tablerPaperclip" size="12"/> {{doc.fileName}}</p>}
               </div>
             </div>
-          </div>
-
-          <div class="flex shrink-0 items-center gap-1 sm:justify-end">
-            @if (relatedDocumentRoute(doc); as route) {
-              <a hlmBtn variant="ghost" size="sm" [routerLink]="route">
-                <ng-icon name="tablerEye" class="mr-1.5" size="15" /> Ver
-              </a>
-            }
-            @if (doc.fileName) {
-              <a hlmBtn variant="ghost" size="sm" [attr.download]="relatedDocumentDownloadName(doc)" [href]="doc.url ?? null">
-                <ng-icon name="tablerDownload" class="mr-1.5" size="15" /> Descargar
-              </a>
+            @if(doc.isQuotation || doc.fileName || doc.url){
+              <div class="flex shrink-0 items-center gap-1">
+                @if(doc.isQuotation){
+                  <a hlmBtn size="sm" variant="ghost" [routerLink]="['/apps/sales/quotations', doc.number]" title="Ver detalle de la cotización"><ng-icon name="tablerEye" size="15" /></a>
+                  <button hlmBtn size="sm" variant="ghost" (click)="downloadQuotationPdf()" title="Descargar PDF de la cotización"><ng-icon name="tablerFileTypePdf" size="15" /></button>
+                } @else {
+                  <button hlmBtn size="sm" variant="ghost" (click)="openDocViewer(relatedDocView(doc))" title="Ver documento"><ng-icon name="tablerEye" size="15" /></button>
+                  <button hlmBtn size="sm" variant="ghost" (click)="downloadDoc(doc.fileName, doc.url)" title="Descargar documento"><ng-icon name="tablerDownload" size="15" /></button>
+                }
+              </div>
             }
           </div>
-        </div>
-      } @empty {
-        <div class="rounded-lg border border-dashed p-8 text-center">
-          <ng-icon name="tablerFiles" size="26" class="mx-auto text-muted-foreground" />
-          <p class="mt-2 text-sm font-medium">No hay documentos relacionados</p>
-          <p class="text-muted-foreground mt-1 text-xs">Los documentos generados durante el proceso aparecerán aquí.</p>
-        </div>
-      }
+        } @empty {
+          <p class="text-muted-foreground px-3 py-8 text-center">No hay documentos relacionados.</p>
+        }
+      </div>
     </div>
+    @if(['ready_for_dispatch','partially_dispatched','dispatched','finished','invoiced'].includes(o.status)){<div hlmCard class="p-4"><div class="mb-3 flex items-center justify-between"><div><h2 class="text-sm font-semibold">Registrar guía</h2><p class="text-muted-foreground text-xs">Agrega una guía de remisión cuando el pedido esté listo para despacho.</p></div><button hlmBtn size="sm" variant="outline" (click)="addGuide()"><ng-icon name="tablerPlus" class="mr-1.5"/>Registrar guía</button></div></div>}
   </div>
 
   <div hlmCard class="p-4">
-    <div class="mb-4 flex items-start justify-between gap-3">
+    <div class="mb-4 flex items-center justify-between gap-3">
       <div>
         <h2 class="text-sm font-semibold">Documentos del cliente</h2>
-        <p class="text-muted-foreground mt-0.5 text-xs">Archivos entregados por el cliente para respaldar el pedido, como órdenes de compra y planos.</p>
+        <p class="text-muted-foreground mt-0.5 text-xs">Documentos enviados por el cliente: orden de compra, planos y otros.</p>
       </div>
-      <hlm-dialog [state]="customerDocumentModal()" (stateChanged)="customerDocumentModal.set($event)">
-        <button hlmDialogTrigger hlmBtn size="sm" type="button">
-          <ng-icon name="tablerPlus" class="mr-1.5" size="15" /> Adjuntar documento
-        </button>
-        <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-lg">
-          <hlm-dialog-header>
-            <h3 hlmDialogTitle>Adjuntar documento del cliente</h3>
-            <p hlmDialogDescription>Registra un documento entregado por el cliente. El código, observación y archivo son opcionales.</p>
-          </hlm-dialog-header>
-
-          <div class="mt-4 grid gap-4">
+      <hlm-dialog [state]="newCustomerDocModal()" (stateChanged)="newCustomerDocModal.set($event)">
+        <button hlmDialogTrigger hlmBtn size="sm" type="button" (click)="openNewCustomerDocDialog()"><ng-icon name="tablerPlus" class="mr-1.5"/>Agregar nuevo documento</button>
+        <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-md">
+          <hlm-dialog-header><h3 hlmDialogTitle>Agregar documento del cliente</h3><p hlmDialogDescription>Registra un documento que el cliente entregó para este pedido.</p></hlm-dialog-header>
+          <div class="mt-3 flex flex-col gap-3">
             <div class="flex flex-col gap-1.5">
-              <label hlmLabel>Tipo de documento</label>
-              <hlm-select class="block w-full" [value]="customerDocumentType()" [itemToString]="customerDocumentTypeToString" (valueChange)="setCustomerDocumentType($event)">
-                <hlm-select-trigger class="w-full"><hlm-select-value placeholder="Selecciona un tipo" /></hlm-select-trigger>
-                <hlm-select-content *hlmSelectPortal>
-                  @for (option of customerDocumentTypeOptions; track option.value) {
-                    <hlm-select-item [value]="option.value">{{option.label}}</hlm-select-item>
-                  }
-                </hlm-select-content>
+              <label hlmLabel>Tipo de documento <span class="text-destructive">*</span></label>
+              <hlm-select class="block w-full" [value]="newDocType()" [itemToString]="customerDocTypeToString" (valueChange)="newDocType.set($event === 'purchase_order' ? 'purchase_order' : $event === 'plan' ? 'plan' : 'other')">
+                <hlm-select-trigger class="w-full"><hlm-select-value placeholder="Selecciona tipo" /></hlm-select-trigger>
+                <hlm-select-content *hlmSelectPortal>@for(option of customerDocTypeOptions;track option.value){<hlm-select-item [value]="option.value">{{option.label}}</hlm-select-item>}</hlm-select-content>
               </hlm-select>
+              <p class="text-muted-foreground text-[11px]">Tipo de documento entregado por el cliente.</p>
             </div>
-
             <div class="flex flex-col gap-1.5">
-              <label hlmLabel>Código / N.º <span class="text-muted-foreground font-normal">(opcional)</span></label>
-              <input hlmInput type="text" placeholder="Ej. OC-2026-00458" [ngModel]="customerDocumentCode()" (ngModelChange)="customerDocumentCode.set($event)" />
+              <label hlmLabel for="new-doc-reference">Referencia <span class="text-destructive">*</span></label>
+              <input hlmInput id="new-doc-reference" type="text" placeholder="Ej. OC-2026-118" [ngModel]="newDocReference()" (ngModelChange)="newDocReference.set($event)" />
+              <p class="text-muted-foreground text-[11px]">Código del documento del cliente, ajeno a nuestro sistema.</p>
             </div>
-
             <div class="flex flex-col gap-1.5">
-              <label hlmLabel>Observación <span class="text-muted-foreground font-normal">(opcional)</span></label>
-              <textarea hlmInput rows="3" placeholder="Agrega una observación sobre el documento…" [ngModel]="customerDocumentObservation()" (ngModelChange)="customerDocumentObservation.set($event)"></textarea>
+              <label hlmLabel for="new-doc-description">Descripción <span class="text-muted-foreground font-normal">(opcional)</span></label>
+              <textarea hlmInput id="new-doc-description" rows="2" placeholder="Describe el contenido del documento…" [ngModel]="newDocDescription()" (ngModelChange)="newDocDescription.set($event)"></textarea>
             </div>
-
             <div class="flex flex-col gap-1.5">
-              <label hlmLabel>Adjunto <span class="text-muted-foreground font-normal">(opcional)</span></label>
-              @if (customerDocumentFile(); as file) {
-                <div class="flex items-center justify-between gap-3 rounded-md border px-3 py-2.5">
-                  <div class="flex min-w-0 items-center gap-2">
-                    <ng-icon name="tablerPaperclip" size="16" class="shrink-0 text-muted-foreground" />
-                    <span class="truncate text-sm">{{file.name}}</span>
-                  </div>
-                  <button hlmBtn variant="ghost" size="sm" type="button" (click)="clearCustomerDocumentFile()">Quitar</button>
-                </div>
+              <label hlmLabel>Archivo adjunto <span class="text-muted-foreground font-normal">(opcional)</span></label>
+              @if(newDocFile();as file){
+                <div class="flex items-center justify-between rounded-md border px-3 py-2 text-sm"><span class="truncate">{{file.name}}</span><button hlmBtn type="button" variant="ghost" size="sm" (click)="clearNewDocFile()"><ng-icon name="tablerX" size="14" /></button></div>
               } @else {
-                <label class="border-input hover:bg-muted/40 flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 py-5 text-xs">
-                  <ng-icon name="tablerPaperclip" size="16" /> Adjuntar archivo (imagen o PDF)
-                  <input type="file" accept="image/*,application/pdf" class="hidden" (change)="onCustomerDocumentFile($event)" />
-                </label>
+                <label class="border-input hover:bg-muted/40 flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 py-4 text-xs"><ng-icon name="tablerPaperclip" size="15"/>Adjuntar documento<input type="file" class="hidden" (change)="onNewDocFile($event)" /></label>
               }
             </div>
+            <hlm-dialog-footer>
+              <button hlmBtn variant="outline" size="sm" hlmDialogClose>Cancelar</button>
+              <button hlmBtn size="sm" [disabled]="!canSubmitNewCustomerDoc()" hlmDialogClose (click)="saveNewCustomerDoc()">Agregar documento</button>
+            </hlm-dialog-footer>
           </div>
-
-          <hlm-dialog-footer>
-            <button hlmBtn variant="outline" type="button" hlmDialogClose>Cancelar</button>
-            <button hlmBtn type="button" hlmDialogClose (click)="saveCustomerDocument()">Guardar documento</button>
-          </hlm-dialog-footer>
         </hlm-dialog-content>
       </hlm-dialog>
     </div>
 
-    <div class="flex flex-col divide-y">
-      @for (doc of customerDocuments(); track doc.id) {
-        <div class="flex flex-col gap-3 py-3 sm:flex-row sm:items-start sm:justify-between">
-          <div class="flex min-w-0 items-start gap-3">
-            <div class="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-md">
-              <ng-icon name="tablerFileText" size="17" />
-            </div>
-            <div class="min-w-0">
-              <p class="text-sm font-medium">{{customerDocumentLabel(doc.type)}}</p>
-              <div class="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-2 text-xs">
-                @if (doc.code) { <span>{{doc.code}}</span> }
-                @if (doc.observation) { <span>· {{doc.observation}}</span> }
+    @if(customerDocumentRows().length){
+      <div class="flex flex-col gap-2">
+        @for(doc of customerDocumentRows();track doc.id){
+          <div class="flex items-start justify-between gap-3 rounded-md border p-3 hover:bg-muted/30">
+            <div class="flex min-w-0 items-start gap-3">
+              <span class="bg-primary/10 text-primary mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-md"><ng-icon name="tablerFileText" size="17" /></span>
+              <div class="min-w-0">
+                <p class="text-sm font-medium">{{customerDocTypeLabel(doc.type)}}</p>
+                <p class="text-muted-foreground mt-0.5 truncate text-xs">{{doc.description || 'Sin descripción'}}</p>
+                @if(doc.reference){<p class="text-muted-foreground mt-0.5 truncate font-mono text-[11px]">Ref: {{doc.reference}} · {{doc.createdAt}}</p>}@else{<p class="text-muted-foreground mt-0.5 text-[11px]">{{doc.createdAt}}</p>}
+                @if(doc.file){<p class="text-muted-foreground mt-0.5 flex items-center gap-1 truncate text-[11px]"><ng-icon name="tablerPaperclip" size="12"/> {{doc.file.name}}</p>}@else{<p class="text-muted-foreground mt-0.5 text-[11px]">Sin archivo adjunto</p>}
               </div>
-              @if (doc.file; as file) {
-                <p class="mt-1 text-xs">
-                  <a [href]="file.url ?? null" target="_blank" rel="noopener" class="text-primary hover:underline">{{file.name}}</a>
-                </p>
-              } @else {
-                <p class="text-muted-foreground mt-1 text-xs">Sin archivo adjunto</p>
-              }
             </div>
-          </div>
-
-          <div class="flex shrink-0 items-center gap-1 sm:justify-end">
-            @if (doc.file?.url; as url) {
-              <a hlmBtn variant="ghost" size="sm" [href]="url" target="_blank" rel="noopener">
-                <ng-icon name="tablerEye" class="mr-1.5" size="15" /> Ver
-              </a>
-              <a hlmBtn variant="ghost" size="sm" [href]="url" [download]="doc.file?.name ?? 'documento'">
-                <ng-icon name="tablerDownload" class="mr-1.5" size="15" /> Descargar
-              </a>
+            @if(doc.file){
+              <div class="flex shrink-0 items-center gap-1">
+                <button hlmBtn size="sm" variant="ghost" (click)="openDocViewer(customerDocView(doc))" title="Ver documento"><ng-icon name="tablerEye" size="15" /></button>
+                <button hlmBtn size="sm" variant="ghost" (click)="downloadDoc(doc.file?.name, doc.file?.url)" title="Descargar documento"><ng-icon name="tablerDownload" size="15" /></button>
+              </div>
             }
           </div>
-        </div>
-      } @empty {
-        <div class="rounded-lg border border-dashed p-8 text-center">
-          <ng-icon name="tablerFilePlus" size="26" class="mx-auto text-muted-foreground" />
-          <p class="mt-2 text-sm font-medium">No hay documentos del cliente</p>
-          <p class="text-muted-foreground mt-1 text-xs">Adjunta una orden de compra, plano u otro documento cuando el cliente lo entregue.</p>
-        </div>
-      }
-    </div>
-  </div>
-
-  @if(['ready_for_dispatch','partially_dispatched','dispatched','finished','invoiced'].includes(o.status)) {
-    <div hlmCard class="p-4">
-      <div class="flex items-center justify-between gap-3">
-        <div>
-          <h2 class="text-sm font-semibold">Guías de remisión</h2>
-          <p class="text-muted-foreground mt-0.5 text-xs">Agrega una guía cuando el pedido esté listo para despacho.</p>
-        </div>
-        <button hlmBtn size="sm" variant="outline" type="button" (click)="addGuide()">
-          <ng-icon name="tablerPlus" class="mr-1.5" size="15" /> Registrar guía
-        </button>
+        }
       </div>
-    </div>
-  }
+    } @else {
+      <div class="rounded-lg border border-dashed p-8 text-center">
+        <ng-icon name="tablerPaperclip" size="26" class="text-muted-foreground mx-auto" />
+        <p class="mt-2 text-sm font-medium">No hay documentos del cliente</p>
+        <p class="text-muted-foreground mt-1 text-xs">Agrega la orden de compra u otros documentos enviados por el cliente.</p>
+      </div>
+    }
+  </div>
 </div>
 }
 
@@ -443,41 +401,7 @@
         <h2 class="text-sm font-semibold">Historial de la orden</h2>
         <p class="text-muted-foreground mt-0.5 text-xs">Seguimiento del avance de la orden y sus principales hitos.</p>
       </div>
-      <ol class="relative ml-2 border-l pl-6">
-        @for (step of flowSteps; track step; let i = $index) {
-          <li class="relative pb-7 last:pb-0">
-            <span
-              class="absolute -left-[33px] flex size-7 items-center justify-center rounded-full border bg-background text-xs"
-              [class.bg-primary]="i + 1 <= currentFlowStep()"
-              [class.text-primary-foreground]="i + 1 <= currentFlowStep()"
-              [class.border-primary]="i + 1 <= currentFlowStep()"
-            >
-              @if (i + 1 < currentFlowStep()) {
-                <ng-icon name="tablerCheck" size="14" />
-              } @else {
-                {{ i + 1 }}
-              }
-            </span>
-            <div class="flex items-start justify-between gap-4">
-              <div>
-                <p class="text-sm font-medium">{{ step }}</p>
-                <p class="text-muted-foreground mt-0.5 text-xs">
-                  @if (i + 1 < currentFlowStep()) {
-                    Completado
-                  } @else if (i + 1 === currentFlowStep()) {
-                    Estado actual
-                  } @else {
-                    Pendiente
-                  }
-                </p>
-              </div>
-              @if (i + 1 === 1) {
-                <span class="text-muted-foreground text-xs">{{ o.confirmedAt }}</span>
-              }
-            </div>
-          </li>
-        }
-      </ol>
+      <app-order-timeline [events]="orderTimeline()" />
     </div>
     <aside class="flex flex-col gap-4">
       <div hlmCard class="p-4">
@@ -498,4 +422,25 @@
     </aside>
   </div>
 }
+
+<hlm-dialog [state]="documentViewerModal()" (stateChanged)="documentViewerModal.set($event)">
+  <hlm-dialog-content *hlmDialogPortal="let ctx" class="w-[calc(100vw-2rem)] sm:max-w-3xl">
+    @if(viewerDoc();as v){
+      <hlm-dialog-header>
+        <h3 hlmDialogTitle>{{v.title}}</h3>
+        @if(v.subtitle){<p hlmDialogDescription>{{v.subtitle}}</p>}
+      </hlm-dialog-header>
+      <div class="mt-3 flex items-center justify-between gap-3 rounded-md border px-3 py-2">
+        <span class="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground"><ng-icon name="tablerPaperclip" size="14" class="shrink-0"/> <span class="truncate">{{v.name ?? 'Sin archivo adjunto'}}</span></span>
+        <button hlmBtn size="sm" variant="outline" (click)="downloadDoc(v.name, v.url)"><ng-icon name="tablerDownload" class="mr-1.5"/>Descargar</button>
+      </div>
+      <div class="mt-3 max-h-[70vh] overflow-auto rounded-md border bg-muted/20">
+        @if(v.url && v.mimeType?.startsWith('image/')){<img [src]="v.url" [alt]="v.name" class="mx-auto max-h-[65vh] w-auto object-contain" />}
+        @else if(v.url && v.mimeType === 'application/pdf'){<iframe [src]="v.url" class="h-[65vh] w-full" title="{{v.title}}"></iframe>}
+        @else{<div class="text-muted-foreground p-10 text-center text-sm">No hay una vista previa disponible para este documento.</div>}
+      </div>
+      <hlm-dialog-footer><button hlmBtn variant="outline" size="sm" hlmDialogClose (click)="viewerDoc.set(null)">Cerrar</button></hlm-dialog-footer>
+    }
+  </hlm-dialog-content>
+</hlm-dialog>
 } @else {<app-empty-state icon="tablerShoppingCart" title="Orden de venta no encontrada" />}
