@@ -1,72 +1,304 @@
 @if (order(); as o) {
-<app-entity-header [title]="o.number" [subtitle]="o.customerName" [statusLabel]="statusLabel(o.status)" [statusTone]="statusTone(o.status)" [crumbs]="[{label:'Ventas',link:'/apps/sales/orders'},{label:o.number}]">
-<div actions class="flex flex-wrap items-center justify-end gap-2">
-<label class="text-muted-foreground flex items-center gap-2 text-xs">Estado
-<hlm-select class="block w-48" [disabled]="!canManageFlow()" [value]="o.status" [itemToString]="statusToString" (valueChange)="changeStatus($event)"><hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Selecciona estado" /></hlm-select-trigger><hlm-select-content *hlmSelectPortal>@for(option of statusOptions;track option.value){<hlm-select-item [value]="option.value">{{option.label}}</hlm-select-item>}</hlm-select-content></hlm-select>
-</label>
-<hlm-dialog [state]="workSheetModal()" (stateChanged)="workSheetModal.set($event)">
-<button hlmDialogTrigger hlmBtn size="sm" class="whitespace-nowrap" [disabled]="!canCreateWorkSheet()"><ng-icon name="tablerFilePlus" class="mr-1.5"/>Crear HT</button>
-<hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-md">
-<hlm-dialog-header><h3 hlmDialogTitle>Crear hoja de trabajo</h3><p hlmDialogDescription>Selecciona el tipo de HT que se generará para {{o.number}}.</p></hlm-dialog-header>
-<div class="mt-3 flex flex-col gap-3">
-<div class="flex flex-col gap-1.5"><label hlmLabel>Tipo de HT</label>
-<hlm-select class="block w-full" [value]="workSheetType()" [itemToString]="workSheetTypeToString" (valueChange)="workSheetType.set($event === 'replacement' ? 'replacement' : $event === 'claim' ? 'claim' : 'regular')">
-<hlm-select-trigger class="w-full"><hlm-select-value placeholder="Selecciona tipo" /></hlm-select-trigger>
-<hlm-select-content *hlmSelectPortal>@for(option of workSheetTypeOptions;track option.value){<hlm-select-item [value]="option.value">{{option.label}}</hlm-select-item>}</hlm-select-content>
-</hlm-select></div>
-<div class="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">La HT se creará con las líneas del pedido y las instrucciones de Notas internas.</div>
-<hlm-dialog-footer><button hlmBtn variant="outline" size="sm" hlmDialogClose>Cancelar</button><button hlmBtn size="sm" (click)="createWorkSheet()">Crear HT</button></hlm-dialog-footer>
+<div class="mb-5 flex flex-col gap-4 border-b pb-4">
+  <nav class="text-muted-foreground flex items-center gap-1.5 text-xs">
+    <a [routerLink]="'/apps/sales/orders'" class="hover:text-foreground hover:underline">Ventas</a><span>/</span><span>Órdenes de pedidos</span><span>/</span><span class="text-foreground">{{o.number}}</span>
+  </nav>
+  <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div class="min-w-0">
+      <div class="flex flex-wrap items-center gap-2">
+        <h1 class="text-2xl font-semibold tracking-tight">{{o.number}}</h1>
+        <app-status-badge [label]="statusLabel(o.status)" [tone]="statusTone(o.status)" />
+      </div>
+      <p class="mt-1 text-base font-medium">{{o.customerName}}</p>
+      <div class="text-muted-foreground mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs">
+        <span class="inline-flex items-center gap-1.5"><ng-icon name="tablerCalendar" size="14"/>Creada {{o.confirmedAt}}</span>
+        <span class="inline-flex items-center gap-1.5"><ng-icon name="tablerTruckDelivery" size="14"/>Entrega {{o.committedDeliveryDate}}</span>
+        <span class="inline-flex items-center gap-1.5"><ng-icon name="tablerCurrencyDollar" size="14"/>{{o.currency}}</span>
+        @if(o.quotationId){<a class="text-primary inline-flex items-center gap-1.5 hover:underline" [routerLink]="['/apps/sales/quotations',o.quotationId]"><ng-icon name="tablerFileText" size="14"/>Cotización {{quotation()?.number ?? o.quotationId}}</a>}
+      </div>
+    </div>
+    <div class="flex flex-wrap items-center justify-start gap-2 lg:justify-end">
+      <label class="text-muted-foreground flex items-center gap-2 text-xs">Estado
+        <hlm-select class="block w-52" [disabled]="!canManageFlow()" [value]="o.status" [itemToString]="statusToString" (valueChange)="changeStatus($event)">
+          <hlm-select-trigger size="sm" class="w-full"><hlm-select-value placeholder="Selecciona estado" /></hlm-select-trigger>
+          <hlm-select-content *hlmSelectPortal>@for(option of statusOptions;track option.value){<hlm-select-item [value]="option.value">{{option.label}}</hlm-select-item>}</hlm-select-content>
+        </hlm-select>
+      </label>
+      <hlm-dialog [state]="workSheetModal()" (stateChanged)="workSheetModal.set($event)">
+        <button hlmDialogTrigger hlmBtn size="sm" class="whitespace-nowrap" [disabled]="!canCreateWorkSheet()"><ng-icon name="tablerFilePlus" class="mr-1.5"/>Crear HT</button>
+        <hlm-dialog-content *hlmDialogPortal="let ctx" class="sm:max-w-md">
+          <hlm-dialog-header><h3 hlmDialogTitle>Crear hoja de trabajo</h3><p hlmDialogDescription>Selecciona el tipo de HT que se generará para {{o.number}}.</p></hlm-dialog-header>
+          <div class="mt-3 flex flex-col gap-3">
+            <div class="flex flex-col gap-1.5"><label hlmLabel>Tipo de HT</label>
+              <hlm-select class="block w-full" [value]="workSheetType()" [itemToString]="workSheetTypeToString" (valueChange)="workSheetType.set($event === 'replacement' ? 'replacement' : $event === 'claim' ? 'claim' : 'regular')">
+                <hlm-select-trigger class="w-full"><hlm-select-value placeholder="Selecciona tipo" /></hlm-select-trigger>
+                <hlm-select-content *hlmSelectPortal>@for(option of workSheetTypeOptions;track option.value){<hlm-select-item [value]="option.value">{{option.label}}</hlm-select-item>}</hlm-select-content>
+              </hlm-select>
+            </div>
+            <div class="rounded-md bg-muted/40 p-2 text-xs text-muted-foreground">La HT se creará con las líneas del pedido y las instrucciones de Notas internas.</div>
+            <hlm-dialog-footer><button hlmBtn variant="outline" size="sm" hlmDialogClose>Cancelar</button><button hlmBtn size="sm" (click)="createWorkSheet()">Crear HT</button></hlm-dialog-footer>
+          </div>
+        </hlm-dialog-content>
+      </hlm-dialog>
+      @if(canAccept()){<button hlmBtn size="sm" (click)="acceptProduction()"><ng-icon name="tablerPlayerPlay" class="mr-1.5"/>Aceptar HT</button>}
+      @if(o.status==='preparing'){<button hlmBtn size="sm" variant="outline" (click)="notifyReady()">Producción lista</button>}
+      @if(canVerify()){<button hlmBtn size="sm" (click)="verify()">Verificar y listo para despacho</button>}
+      @if(['ready_for_dispatch','partially_dispatched'].includes(o.status)){<a hlmBtn size="sm" variant="outline" [routerLink]="['/apps/sales/dispatch']"><ng-icon name="tablerTruckDelivery" class="mr-1.5"/>Ir a despacho</a>}
+      @if(canInvoice()){<button hlmBtn size="sm" (click)="issueInvoice()">Emitir factura</button>}
+    </div>
+  </div>
 </div>
-</hlm-dialog-content></hlm-dialog>
-@if(canAccept()){<button hlmBtn size="sm" (click)="acceptProduction()"><ng-icon name="tablerPlayerPlay" class="mr-1.5"/>Aceptar HT</button>}
-@if(o.status==='preparing'){<button hlmBtn size="sm" variant="outline" (click)="notifyReady()">Producción lista</button>}
-@if(canVerify()){<button hlmBtn size="sm" (click)="verify()">Verificar y listo para despacho</button>}
-@if(['ready_for_dispatch','partially_dispatched'].includes(o.status)){<a hlmBtn size="sm" variant="outline" [routerLink]="['/apps/sales/dispatch']"><ng-icon name="tablerTruckDelivery" class="mr-1.5"/>Ir a despacho</a>}
-@if(canInvoice()){<button hlmBtn size="sm" (click)="issueInvoice()">Emitir factura</button>}
-</div></app-entity-header>
 
+<div class="mb-5 overflow-x-auto border-b">
+  <nav class="flex min-w-max gap-1" aria-label="Secciones de la orden">
+    <button type="button" (click)="selectTab('general')" [class.border-primary]="activeTab()==='general'" [class.text-primary]="activeTab()==='general'" class="border-b-2 border-transparent px-4 py-3 text-sm font-medium hover:text-primary"><ng-icon name="tablerLayoutDashboard" class="mr-1.5" size="15"/>Información general</button>
+    <button type="button" (click)="selectTab('products')" [class.border-primary]="activeTab()==='products'" [class.text-primary]="activeTab()==='products'" class="border-b-2 border-transparent px-4 py-3 text-sm font-medium hover:text-primary"><ng-icon name="tablerBox" class="mr-1.5" size="15"/>Productos <span class="text-muted-foreground ml-1">({{o.lines.length}})</span></button>
+    <button type="button" (click)="selectTab('advances')" [class.border-primary]="activeTab()==='advances'" [class.text-primary]="activeTab()==='advances'" class="border-b-2 border-transparent px-4 py-3 text-sm font-medium hover:text-primary"><ng-icon name="tablerCoins" class="mr-1.5" size="15"/>Adelantos <span class="text-muted-foreground ml-1">({{advanceCount()}})</span></button>
+    <button type="button" (click)="selectTab('documents')" [class.border-primary]="activeTab()==='documents'" [class.text-primary]="activeTab()==='documents'" class="border-b-2 border-transparent px-4 py-3 text-sm font-medium hover:text-primary"><ng-icon name="tablerFiles" class="mr-1.5" size="15"/>Documentos <span class="text-muted-foreground ml-1">({{documentCount()}})</span></button>
+    <button type="button" (click)="selectTab('notes')" [class.border-primary]="activeTab()==='notes'" [class.text-primary]="activeTab()==='notes'" class="border-b-2 border-transparent px-4 py-3 text-sm font-medium hover:text-primary"><ng-icon name="tablerNotes" class="mr-1.5" size="15"/>Notas <span class="text-muted-foreground ml-1">({{notesCount()}})</span></button>
+    <button type="button" (click)="selectTab('history')" [class.border-primary]="activeTab()==='history'" [class.text-primary]="activeTab()==='history'" class="border-b-2 border-transparent px-4 py-3 text-sm font-medium hover:text-primary"><ng-icon name="tablerHistory" class="mr-1.5" size="15"/>Historial</button>
+  </nav>
+</div>
+
+@if(activeTab()==='general') {
 <div class="grid grid-cols-1 gap-4 xl:grid-cols-[1.7fr_1fr]">
-<div class="flex flex-col gap-4">
-<div hlmCard class="p-4"><div class="mb-3 flex items-center justify-between gap-3"><h3 class="text-sm font-semibold">Trazabilidad de producción y despacho</h3><div class="flex flex-wrap justify-end gap-2">@for(ws of existingWorkSheets();track ws!.id){<a class="text-primary text-xs hover:underline" [routerLink]="['/apps/production/work-sheets',ws!.id]">{{ws!.number}}</a>} @if(!existingWorkSheets().length){<span class="text-muted-foreground text-xs">Sin HT</span>}</div></div>
-<table class="w-full text-sm"><thead class="text-muted-foreground border-b text-xs"><tr><th class="py-1.5 text-start">Producto</th><th class="py-1.5 text-end">Pedido</th><th class="py-1.5 text-end">Producido</th><th class="py-1.5 text-end">Despachado</th><th class="py-1.5 text-end">Pendiente</th></tr></thead><tbody class="divide-y">@for(line of o.lines;track line.productCode){<tr><td class="py-2">{{line.productCode}} — {{line.description}}<div class="text-muted-foreground text-xs">{{line.unitOfMeasure}}</div></td><td class="py-2 text-end">{{line.quantity}}</td><td class="py-2 text-end">{{line.producedQuantity ?? (o.status==='production_ready'||o.status==='ready_for_dispatch'||o.status==='partially_dispatched'||o.status==='dispatched'||o.status==='finished'||o.status==='invoiced'?line.quantity:0)}}</td><td class="py-2 text-end">{{line.dispatchedQuantity ?? 0}}</td><td class="py-2 text-end font-medium">{{line.quantity-(line.dispatchedQuantity ?? 0)}}</td></tr>}</tbody><tfoot><tr class="border-t"><td colspan="4" class="py-2 text-end font-semibold">Total</td><td class="py-2 text-end font-semibold">{{o.total|number:'1.2-2'}} {{o.currency}}</td></tr></tfoot></table></div>
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="p-4">
+      <div class="mb-3 flex items-center justify-between"><div><h2 class="text-sm font-semibold">Resumen de la orden</h2><p class="text-muted-foreground mt-0.5 text-xs">Información comercial principal del pedido.</p></div><span class="text-muted-foreground text-xs">{{o.lines.length}} productos</span></div>
+      <div class="grid grid-cols-2 overflow-hidden rounded-lg border md:grid-cols-4">
+        <div class="border-b p-3 md:border-b-0 md:border-r"><p class="text-muted-foreground text-xs">Cantidad total</p><p class="mt-1 text-lg font-semibold tabular-nums">{{totalQuantity()}} <span class="text-muted-foreground text-xs font-normal">UND</span></p></div>
+        <div class="border-b p-3 md:border-b-0 md:border-r"><p class="text-muted-foreground text-xs">Subtotal</p><p class="mt-1 text-lg font-semibold tabular-nums">{{o.total | number:'1.2-2'}} {{o.currency}}</p></div>
+        <div class="border-b p-3 md:border-b-0 md:border-r"><p class="text-muted-foreground text-xs">Adelantado</p><p class="mt-1 text-lg font-semibold tabular-nums">{{(o.paymentGate?.advancePayment?.amount ?? 0) | number:'1.2-2'}} {{o.currency}}</p></div>
+        <div class="bg-primary/5 p-3"><p class="text-muted-foreground text-xs">Saldo</p><p class="text-primary mt-1 text-lg font-semibold tabular-nums">{{(o.total - (o.paymentGate?.advancePayment?.amount ?? 0)) | number:'1.2-2'}} {{o.currency}}</p></div>
+      </div>
+    </div>
 
-@if(o.notes){<div hlmCard class="p-4"><h3 class="mb-2 text-sm font-semibold">Observaciones</h3><p class="text-sm">{{o.notes}}</p></div>}
-<div hlmCard class="flex flex-col gap-3 p-4">
-<div><h3 class="text-sm font-semibold">Notas internas</h3><p class="text-muted-foreground mt-1 text-xs">Instrucciones de Ventas para Producción. No se muestran al cliente.</p></div>
-<textarea hlmInput rows="4" placeholder="Escribe instrucciones especiales para producción…" [ngModel]="internalNotes()" (ngModelChange)="internalNotes.set($event)"></textarea>
-<div class="flex justify-end"><button hlmBtn size="sm" variant="outline" (click)="saveInternalNotes()">Guardar notas internas</button></div>
-</div>
-<div hlmCard class="flex flex-col gap-4 p-4"><div><h3 class="text-sm font-semibold">Documentación del cliente</h3><p class="text-muted-foreground mt-1 text-xs">Registra el documento externo que respalda este pedido. El adjunto es opcional.</p></div><div class="grid grid-cols-1 gap-3 md:grid-cols-2"><div class="flex flex-col gap-1.5"><label hlmLabel>Tipo de documento</label><hlm-select class="block w-full" [value]="documentType()" [itemToString]="documentTypeToString" (valueChange)="documentType.set($event === 'quotation' ? 'quotation' : 'purchase_order')"><hlm-select-trigger class="w-full"><hlm-select-value placeholder="Selecciona documento" /></hlm-select-trigger><hlm-select-content *hlmSelectPortal>@for(option of documentTypeOptions;track option.value){<hlm-select-item [value]="option.value">{{option.label}}</hlm-select-item>}</hlm-select-content></hlm-select></div><div class="flex flex-col gap-1.5"><label hlmLabel for="customer-document-number">N.º / código del cliente</label><input hlmInput id="customer-document-number" type="text" placeholder="Ej. OC-2026-00458" [ngModel]="documentNumber()" (ngModelChange)="documentNumber.set($event)" /></div></div><div class="flex flex-col gap-1.5"><label hlmLabel>Adjunto PDF <span class="text-muted-foreground font-normal">(opcional)</span></label>@if(documentFile();as file){<div class="flex items-center justify-between rounded-md border px-3 py-2 text-sm"><span class="truncate">{{file.name}}</span><button hlmBtn type="button" variant="ghost" size="sm" (click)="documentFile.set(null)">Quitar</button></div>}@else{<label class="border-input hover:bg-muted/40 flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 py-4 text-xs"><ng-icon name="tablerPaperclip" size="15"/>Adjuntar {{documentType()==='quotation' ? 'cotización' : 'orden de compra'}} (PDF)<input type="file" accept="application/pdf" class="hidden" (change)="onDocumentFile($event)" /></label>}</div><div class="flex justify-end"><button hlmBtn size="sm" (click)="saveCustomerDocument()">Guardar documentación</button></div></div>
-<div hlmCard class="p-4"><div class="mb-3 flex items-center justify-between"><div><h3 class="text-sm font-semibold">Documentos relacionados</h3><p class="text-muted-foreground text-xs">Trazabilidad documental del pedido.</p></div>@if(['ready_for_dispatch','partially_dispatched','dispatched','finished','invoiced'].includes(o.status)){<button hlmBtn size="sm" variant="outline" (click)="addGuide()"><ng-icon name="tablerPlus" class="mr-1.5"/>Registrar guía</button>}</div><div class="flex flex-col divide-y">@for(doc of (o.relatedDocuments ?? []);track doc.id){<div class="flex items-center justify-between gap-3 py-2"><div class="flex min-w-0 items-center gap-2"><ng-icon name="tablerFileText"/><div><p class="text-sm font-medium">{{doc.label}} @if(doc.number){<span class="font-mono text-xs">{{doc.number}}</span>}</p><p class="text-muted-foreground text-xs">{{doc.date ?? '—'}} @if(doc.fileName){· {{doc.fileName}}}</p></div></div><span class="text-muted-foreground text-xs capitalize">{{doc.type.replace('_',' ')}}</span></div>} @empty {<p class="text-muted-foreground py-2 text-sm">No hay documentos relacionados.</p>}</div></div>
-</div>
-<div class="flex flex-col gap-4">
-<div hlmCard class="p-4 text-sm"><h3 class="mb-3 font-semibold">Estado del flujo</h3><ol class="flex flex-col gap-2">@for(step of ['Pedido confirmado','HT aceptada por Producción','Producción terminada','Ventas verifica','Listo para despacho','Despacho','Facturación'];track step;let i=$index){<li class="flex items-center gap-2"><span class="flex size-6 items-center justify-center rounded-full border text-xs">{{i+1}}</span><span>{{step}}</span></li>}</ol></div>
-<div hlmCard class="p-4 text-sm"><dl class="grid grid-cols-2 gap-y-2"><dt class="text-muted-foreground">Cliente</dt><dd>{{o.customerName}}</dd><dt class="text-muted-foreground">Moneda</dt><dd>{{o.currency}}</dd><dt class="text-muted-foreground">Creada</dt><dd>{{o.confirmedAt}}</dd><dt class="text-muted-foreground">Entrega</dt><dd>{{o.committedDeliveryDate}}</dd>@if(o.quotationId){<dt class="text-muted-foreground">Cotización</dt><dd><a class="text-primary hover:underline" [routerLink]="['/apps/sales/quotations',o.quotationId]">{{quotation()?.number ?? o.quotationId}}</a></dd>}</dl></div>
-<div hlmCard class="p-4"><h3 class="mb-2 text-sm font-semibold">Dirección de entrega</h3><p class="text-sm">{{o.deliveryAddress}}</p></div>
-@if(o.paymentGate && o.paymentGate.status!=='not_required'){
-<div hlmCard class="flex flex-col gap-3 p-4">
-  <div class="flex items-start justify-between gap-3">
-    <div><h3 class="text-sm font-semibold">Adelanto para liberar el pedido</h3><p class="text-muted-foreground mt-1 text-xs">Este cliente trabaja al contado. Ventas debe registrar el adelanto y su voucher; Cobranzas debe validarlo antes de continuar.</p></div>
-    <app-status-badge [label]="paymentGateStatusLabel(o.paymentGate.status)" [tone]="paymentGateStatusTone(o.paymentGate.status)" />
+    <div hlmCard class="p-4">
+      <div class="mb-3 flex items-center justify-between"><div><h2 class="text-sm font-semibold">Productos</h2><p class="text-muted-foreground mt-0.5 text-xs">Resumen de cantidades y trazabilidad de producción.</p></div><button type="button" hlmBtn size="sm" variant="outline" (click)="selectTab('products')">Ver productos</button></div>
+      <div class="overflow-x-auto"><table class="w-full text-sm"><thead class="bg-muted/40 text-muted-foreground text-xs"><tr><th class="px-3 py-2 text-start">Código</th><th class="px-3 py-2 text-start">Descripción</th><th class="px-3 py-2 text-end">Pedido</th><th class="px-3 py-2 text-end">Producido</th><th class="px-3 py-2 text-end">Despachado</th><th class="px-3 py-2 text-end">Pendiente</th></tr></thead><tbody class="divide-y">@for(line of o.lines;track line.productCode){<tr><td class="px-3 py-2 font-mono text-xs">{{line.productCode}}</td><td class="px-3 py-2"><div>{{line.description}}</div><div class="text-muted-foreground text-xs">{{line.unitOfMeasure}}</div></td><td class="px-3 py-2 text-end tabular-nums">{{line.quantity}}</td><td class="px-3 py-2 text-end tabular-nums">{{line.producedQuantity ?? 0}}</td><td class="px-3 py-2 text-end tabular-nums">{{line.dispatchedQuantity ?? 0}}</td><td class="px-3 py-2 text-end font-medium tabular-nums">{{line.quantity-(line.dispatchedQuantity ?? 0)}}</td></tr>}</tbody></table></div>
+    </div>
+
+    @if(o.notes){<div hlmCard class="p-4"><h2 class="mb-2 text-sm font-semibold">Observaciones</h2><p class="text-sm leading-6">{{o.notes}}</p></div>}
   </div>
 
-  @if(['pending_docs','observed'].includes(o.paymentGate.status)) {
-    @if(o.paymentGate.status === 'observed' && o.paymentGate.comment){<div class="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs"><span class="font-medium">Observación de Cobranzas:</span> {{o.paymentGate.comment}}</div>}
-    <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-      <div class="flex flex-col gap-1.5"><label hlmLabel for="advance-amount">Monto del adelanto</label><input hlmInput id="advance-amount" type="number" min="0" step="0.01" [ngModel]="advanceAmount()" (ngModelChange)="advanceAmount.set(+$event)" /><p class="text-muted-foreground text-[11px]">Mínimo requerido: {{o.currency}} {{requiredAdvanceAmount() | number:'1.2-2'}} ({{o.paymentGate.advancePct}}%).</p></div>
-      <div class="flex flex-col gap-1.5"><label hlmLabel for="advance-date">Fecha del adelanto</label><input hlmInput id="advance-date" type="date" [ngModel]="advanceDate()" (ngModelChange)="advanceDate.set($event)" /></div>
-      <div class="flex flex-col gap-1.5"><label hlmLabel>Medio de pago</label><hlm-select class="block w-full" [value]="advanceMethod()" [itemToString]="methodLabel" (valueChange)="advanceMethod.set($event === 'cash' ? 'cash' : $event === 'check' ? 'check' : $event === 'card' ? 'card' : 'transfer')"><hlm-select-trigger class="w-full"><hlm-select-value placeholder="Selecciona medio" /></hlm-select-trigger><hlm-select-content *hlmSelectPortal>@for(option of paymentMethodOptions;track option.value){<hlm-select-item [value]="option.value">{{option.label}}</hlm-select-item>}</hlm-select-content></hlm-select></div>
-      <div class="flex flex-col gap-1.5"><label hlmLabel>Voucher</label>@if(advanceVoucherFile(); as file){<div class="flex items-center justify-between rounded-md border px-3 py-2 text-xs"><span class="truncate">{{file.name}}</span><button hlmBtn type="button" size="sm" variant="ghost" (click)="clearAdvanceVoucher()"><ng-icon name="tablerX" size="14"/></button></div>}@else{<label class="border-input hover:bg-muted/40 flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 py-4 text-xs"><ng-icon name="tablerPaperclip" size="15"/>Adjuntar voucher (imagen o PDF)<input type="file" accept="image/*,application/pdf" class="hidden" (change)="onAdvanceVoucherFile($event)" /></label>}</div>
+  <aside class="flex flex-col gap-4">
+    <div hlmCard class="p-4">
+      <div class="mb-4 flex items-center justify-between"><h2 class="text-sm font-semibold">Estado del flujo</h2><button type="button" class="text-primary text-xs hover:underline" (click)="selectTab('history')">Ver historial</button></div>
+      <ol class="relative ml-2 border-l pl-5">@for(step of flowSteps;track step;let i=$index){<li class="relative pb-5 last:pb-0"><span class="absolute -left-[31px] flex size-6 items-center justify-center rounded-full border bg-background text-xs" [class.bg-primary]="i+1 < currentFlowStep()" [class.text-primary-foreground]="i+1 < currentFlowStep()" [class.border-primary]="i+1 <= currentFlowStep()">{{i+1}}</span><p class="text-sm" [class.font-semibold]="i+1===currentFlowStep()">{{step}}</p>@if(i+1===currentFlowStep()){<p class="text-muted-foreground mt-0.5 text-xs">Estado actual</p>}</li>}</ol>
     </div>
-    <div class="flex items-center justify-between gap-3 rounded-md bg-muted/40 px-3 py-2 text-xs"><span>Al guardar, el pedido quedará bloqueado hasta la revisión de Cobranzas.</span><button hlmBtn size="sm" [disabled]="!canSubmitAdvance()" (click)="saveAdvance()">Enviar a Cobranzas</button></div>
-  } @else if(o.paymentGate.status === 'pending_collections') {
-    @if(o.paymentGate.advancePayment; as payment){<dl class="grid grid-cols-2 gap-y-2 text-sm"><dt class="text-muted-foreground">Monto reportado</dt><dd class="font-medium tabular-nums">{{o.currency}} {{payment.amount | number:'1.2-2'}}</dd><dt class="text-muted-foreground">Medio</dt><dd>{{methodLabel(payment.method)}}</dd><dt class="text-muted-foreground">Fecha</dt><dd>{{payment.date}}</dd><dt class="text-muted-foreground">Voucher</dt><dd class="truncate">{{payment.voucher.name}}</dd></dl>}
-    <div class="rounded-md bg-muted/40 p-3 text-xs">El adelanto ya fue enviado a <b>Cobranzas</b>. Ventas no puede cambiar estados ni crear HT hasta que el voucher sea validado.</div>
-  } @else if(o.paymentGate.status === 'validated') {
-    @if(o.paymentGate.advancePayment; as payment){<dl class="grid grid-cols-2 gap-y-2 text-sm"><dt class="text-muted-foreground">Adelanto validado</dt><dd class="font-medium tabular-nums">{{o.currency}} {{payment.amount | number:'1.2-2'}}</dd><dt class="text-muted-foreground">Medio</dt><dd>{{methodLabel(payment.method)}}</dd><dt class="text-muted-foreground">Voucher</dt><dd class="truncate">{{payment.voucher.name}}</dd><dt class="text-muted-foreground">Validó</dt><dd>{{o.paymentGate.validatedBy}} · {{o.paymentGate.validatedAt}}</dd></dl>}
-    <div class="rounded-md border border-emerald-500/20 bg-emerald-500/5 p-3 text-xs">Adelanto validado. El pedido ya puede seguir el flujo normal de Ventas y crear HT.</div>
-  }
+    <div hlmCard class="p-4"><div class="mb-3 flex items-center justify-between"><h2 class="text-sm font-semibold">Información del cliente</h2><a class="text-primary text-xs hover:underline" [routerLink]="['/apps/sales/customers',o.customerId]">Ver cliente</a></div><dl class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm"><dt class="text-muted-foreground">Razón social</dt><dd>{{o.customerName}}</dd><dt class="text-muted-foreground">Moneda</dt><dd>{{o.currency}}</dd><dt class="text-muted-foreground">Contacto</dt><dd>{{o.contactId ?? '—'}}</dd><dt class="text-muted-foreground">Entrega</dt><dd>{{o.committedDeliveryDate}}</dd></dl></div>
+    <div hlmCard class="p-4"><div class="mb-2 flex items-center justify-between"><h2 class="text-sm font-semibold">Dirección de entrega</h2><button type="button" class="text-primary text-xs">Editar</button></div><p class="text-sm leading-6">{{o.deliveryAddress}}</p></div>
+    @if(o.paymentGate && o.paymentGate.status!=='not_required'){
+      <div hlmCard class="p-4"><div class="flex items-start gap-3"><div class="bg-primary/10 text-primary flex size-9 shrink-0 items-center justify-center rounded-full"><ng-icon name="tablerCoins" size="18"/></div><div class="min-w-0 flex-1"><div class="flex items-center justify-between gap-2"><h2 class="text-sm font-semibold">Pago al contado</h2><app-status-badge [label]="paymentGateStatusLabel(o.paymentGate.status)" [tone]="paymentGateStatusTone(o.paymentGate.status)" /></div><p class="text-muted-foreground mt-1 text-xs">Se requiere validar el adelanto antes de continuar el flujo.</p><button type="button" class="text-primary mt-2 text-xs font-medium hover:underline" (click)="selectTab('advances')">Ver adelantos</button></div></div></div>
+    }
+  </aside>
 </div>
 }
-</div></div>
+
+@if(activeTab()==='products') {
+<div class="grid grid-cols-1 gap-4">
+  <div hlmCard class="p-4"><div class="mb-4 flex items-center justify-between"><div><h2 class="text-sm font-semibold">Productos de la orden</h2><p class="text-muted-foreground mt-0.5 text-xs">Detalle comercial y trazabilidad de producción y despacho.</p></div><span class="text-muted-foreground text-xs">{{o.lines.length}} líneas</span></div><div class="overflow-x-auto"><table class="w-full min-w-[760px] text-sm"><thead class="bg-muted/40 text-muted-foreground text-xs"><tr><th class="px-3 py-2 text-start">#</th><th class="px-3 py-2 text-start">Código</th><th class="px-3 py-2 text-start">Descripción</th><th class="px-3 py-2 text-end">Pedido</th><th class="px-3 py-2 text-end">Producido</th><th class="px-3 py-2 text-end">Despachado</th><th class="px-3 py-2 text-end">Pendiente</th><th class="px-3 py-2 text-end">Precio unit.</th><th class="px-3 py-2 text-end">Total</th></tr></thead><tbody class="divide-y">@for(line of o.lines;track line.productCode;let i=$index){<tr><td class="px-3 py-3 text-muted-foreground">{{i+1}}</td><td class="px-3 py-3 font-mono text-xs">{{line.productCode}}</td><td class="px-3 py-3">{{line.description}}<div class="text-muted-foreground text-xs">{{line.unitOfMeasure}}</div></td><td class="px-3 py-3 text-end tabular-nums">{{line.quantity}}</td><td class="px-3 py-3 text-end tabular-nums">{{line.producedQuantity ?? 0}}</td><td class="px-3 py-3 text-end tabular-nums">{{line.dispatchedQuantity ?? 0}}</td><td class="px-3 py-3 text-end font-medium tabular-nums">{{line.quantity-(line.dispatchedQuantity ?? 0)}}</td><td class="px-3 py-3 text-end tabular-nums">{{line.unitPrice | number:'1.2-2'}} {{o.currency}}</td><td class="px-3 py-3 text-end font-medium tabular-nums">{{line.quantity*line.unitPrice | number:'1.2-2'}} {{o.currency}}</td></tr>}</tbody><tfoot class="border-t"><tr><td colspan="8" class="px-3 py-3 text-end font-semibold">Total</td><td class="px-3 py-3 text-end font-semibold">{{o.total | number:'1.2-2'}} {{o.currency}}</td></tr></tfoot></table></div></div>
+  <div hlmCard class="p-4"><div class="mb-3 flex items-center justify-between"><div><h2 class="text-sm font-semibold">Hojas de trabajo</h2><p class="text-muted-foreground mt-0.5 text-xs">HT generadas y vinculadas a esta orden.</p></div><span class="text-muted-foreground text-xs">{{existingWorkSheets().length}} HT</span></div><div class="grid grid-cols-1 gap-2 md:grid-cols-2">@for(ws of existingWorkSheets();track ws!.id){<a class="hover:bg-muted/40 flex items-center justify-between rounded-md border p-3" [routerLink]="['/apps/production/work-sheets',ws!.id]"><div><p class="text-sm font-medium">{{ws!.number}}</p><p class="text-muted-foreground text-xs">{{ws!.type ? SALES_ORDER_WORK_SHEET_TYPE_LABEL[ws!.type] : 'Hoja de trabajo'}}</p></div><ng-icon name="tablerChevronRight" size="16"/></a>}@empty{<p class="text-muted-foreground text-sm">Todavía no hay HT asociadas.</p>}</div></div>
+</div>
+}
+
+@if(activeTab()==='advances') {
+<div class="grid grid-cols-1 gap-4 xl:grid-cols-[1.7fr_1fr]">
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="p-4">
+      <div class="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <h2 class="text-sm font-semibold">Adelantos</h2>
+          <p class="text-muted-foreground mt-0.5 text-xs">Registra los pagos recibidos del cliente. Cada comprobante debe ser validado por Cobranzas.</p>
+        </div>
+        @if(o.paymentGate && ['pending_docs','observed'].includes(o.paymentGate.status)) {
+          <hlm-dialog>
+            <button hlmDialogTrigger hlmBtn size="sm" type="button" (click)="openAdvanceDialog()">
+              <ng-icon name="tablerPlus" class="mr-1.5" />Registrar adelanto
+            </button>
+            <hlm-dialog-content *hlmDialogPortal="let ctx" class="w-[calc(100vw-2rem)] sm:max-w-xl">
+              <hlm-dialog-header>
+                <h3 hlmDialogTitle>Registrar adelanto</h3>
+                <p hlmDialogDescription>Registra el pago recibido del cliente y adjunta el comprobante para enviarlo a Cobranzas.</p>
+              </hlm-dialog-header>
+
+              @if(o.paymentGate.status==='observed' && o.paymentGate.comment){
+                <div class="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs">
+                  <span class="font-medium">Observación de Cobranzas:</span> {{o.paymentGate.comment}}
+                </div>
+              }
+
+              <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div class="flex flex-col gap-1.5">
+                  <label hlmLabel for="advance-amount-dialog">Monto del adelanto</label>
+                  <input hlmInput id="advance-amount-dialog" type="number" min="0" step="0.01" [ngModel]="advanceAmount()" (ngModelChange)="advanceAmount.set(+$event)" />
+                  <p class="text-muted-foreground text-[11px]">Mínimo: {{o.currency}} {{requiredAdvanceAmount() | number:'1.2-2'}} ({{o.paymentGate.advancePct}}%).</p>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                  <label hlmLabel for="advance-date-dialog">Fecha</label>
+                  <input hlmInput id="advance-date-dialog" type="date" [ngModel]="advanceDate()" (ngModelChange)="advanceDate.set($event)" />
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                  <label hlmLabel>Medio de pago</label>
+                  <hlm-select class="block w-full" [value]="advanceMethod()" [itemToString]="methodLabel" (valueChange)="advanceMethod.set($event === 'cash' ? 'cash' : $event === 'check' ? 'check' : $event === 'card' ? 'card' : 'transfer')">
+                    <hlm-select-trigger class="w-full"><hlm-select-value placeholder="Selecciona medio" /></hlm-select-trigger>
+                    <hlm-select-content *hlmSelectPortal>
+                      @for(option of paymentMethodOptions;track option.value){
+                        <hlm-select-item [value]="option.value">{{option.label}}</hlm-select-item>
+                      }
+                    </hlm-select-content>
+                  </hlm-select>
+                </div>
+
+                <div class="flex flex-col gap-1.5">
+                  <label hlmLabel>Voucher</label>
+                  @if(advanceVoucherFile();as file){
+                    <div class="flex items-center justify-between gap-2 rounded-md border px-3 py-2 text-xs">
+                      <span class="truncate">{{file.name}}</span>
+                      <button hlmBtn type="button" size="sm" variant="ghost" (click)="clearAdvanceVoucher()"><ng-icon name="tablerX" size="14" /></button>
+                    </div>
+                  } @else {
+                    <label class="border-input hover:bg-muted/40 flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 py-4 text-xs">
+                      <ng-icon name="tablerPaperclip" size="15" />Adjuntar voucher (imagen o PDF)
+                      <input type="file" accept="image/*,application/pdf" class="hidden" (change)="onAdvanceVoucherFile($event)" />
+                    </label>
+                  }
+                </div>
+              </div>
+
+              <div class="rounded-md bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
+                El pedido seguirá bloqueado hasta la validación de Cobranzas.
+              </div>
+
+              <hlm-dialog-footer>
+                <button hlmBtn variant="outline" type="button" hlmDialogClose>Cancelar</button>
+                <button hlmBtn type="button" [disabled]="!canSubmitAdvance()" hlmDialogClose (click)="saveAdvance()">Enviar a Cobranzas</button>
+              </hlm-dialog-footer>
+            </hlm-dialog-content>
+          </hlm-dialog>
+        }
+      </div>
+
+      @if(o.paymentGate?.advancePayment;as payment){
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[760px] text-sm">
+            <thead class="bg-muted/40 text-muted-foreground text-xs"><tr><th class="px-3 py-2 text-start">#</th><th class="px-3 py-2 text-start">Fecha</th><th class="px-3 py-2 text-end">Monto</th><th class="px-3 py-2 text-start">Medio</th><th class="px-3 py-2 text-start">Voucher</th><th class="px-3 py-2 text-start">Estado</th><th class="px-3 py-2 text-start">Validación</th></tr></thead>
+            <tbody>
+              <tr class="border-b">
+                <td class="px-3 py-3">1</td>
+                <td class="px-3 py-3">{{payment.date}}</td>
+                <td class="px-3 py-3 text-end font-medium tabular-nums">{{payment.amount | number:'1.2-2'}} {{o.currency}}</td>
+                <td class="px-3 py-3">{{methodLabel(payment.method)}}</td>
+                <td class="px-3 py-3 truncate">{{payment.voucher.name}}</td>
+                <td class="px-3 py-3"><app-status-badge [label]="paymentGateStatusLabel(o.paymentGate!.status)" [tone]="paymentGateStatusTone(o.paymentGate!.status)" /></td>
+                <td class="px-3 py-3 text-xs">{{payment.validatedBy ? payment.validatedBy + ' · ' + payment.validatedAt : 'Pendiente de Cobranzas'}}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <div class="rounded-lg border border-dashed p-8 text-center">
+          <ng-icon name="tablerCoins" size="28" class="text-muted-foreground mx-auto" />
+          <p class="mt-2 text-sm font-medium">No hay adelantos registrados</p>
+          <p class="text-muted-foreground mt-1 text-xs">Cuando el cliente realice un adelanto, registra aquí el monto, medio de pago y voucher.</p>
+        </div>
+      }
+    </div>
+  </div>
+
+  <aside class="flex flex-col gap-4">
+    <div hlmCard class="p-4">
+      <h2 class="mb-3 text-sm font-semibold">Resumen de pago</h2>
+      <dl class="grid grid-cols-2 gap-y-2 text-sm">
+        <dt class="text-muted-foreground">Total de la orden</dt><dd class="text-end font-medium">{{o.total | number:'1.2-2'}} {{o.currency}}</dd>
+        <dt class="text-muted-foreground">Adelanto registrado</dt><dd class="text-end font-medium">{{(o.paymentGate?.advancePayment?.amount ?? 0) | number:'1.2-2'}} {{o.currency}}</dd>
+        <dt class="text-muted-foreground">Saldo</dt><dd class="text-end font-semibold">{{(o.total-(o.paymentGate?.advancePayment?.amount ?? 0)) | number:'1.2-2'}} {{o.currency}}</dd>
+      </dl>
+      <div class="mt-3 h-2 overflow-hidden rounded-full bg-muted"><div class="bg-primary h-full rounded-full" [style.width.%]="advancePercent()"></div></div>
+    </div>
+  </aside>
+</div>
+}
+
+@if(activeTab()==='documents') {
+<div class="grid grid-cols-1 gap-4 xl:grid-cols-[1.7fr_1fr]">
+  <div class="flex flex-col gap-4">
+    <div hlmCard class="p-4"><div class="mb-4"><h2 class="text-sm font-semibold">Documentos relacionados</h2><p class="text-muted-foreground mt-0.5 text-xs">Toda la trazabilidad documental asociada al pedido.</p></div><div class="overflow-x-auto"><table class="w-full min-w-[680px] text-sm"><thead class="bg-muted/40 text-muted-foreground text-xs"><tr><th class="px-3 py-2 text-start">Tipo</th><th class="px-3 py-2 text-start">Código / N.º</th><th class="px-3 py-2 text-start">Fecha</th><th class="px-3 py-2 text-start">Descripción</th><th class="px-3 py-2 text-end">Acciones</th></tr></thead><tbody class="divide-y">@for(doc of (o.relatedDocuments ?? []);track doc.id){<tr><td class="px-3 py-3 capitalize">{{doc.type.replace('_',' ')}}</td><td class="px-3 py-3 font-mono text-xs">{{doc.number ?? '—'}}</td><td class="px-3 py-3">{{doc.date ?? '—'}}</td><td class="px-3 py-3">{{doc.label}} @if(doc.fileName){<span class="text-muted-foreground">· {{doc.fileName}}</span>}</td><td class="px-3 py-3 text-end"><button type="button" class="text-primary text-xs hover:underline">Ver</button></td></tr>}@empty{<tr><td colspan="5" class="text-muted-foreground px-3 py-8 text-center">No hay documentos relacionados.</td></tr>}</tbody></table></div></div>
+    @if(['ready_for_dispatch','partially_dispatched','dispatched','finished','invoiced'].includes(o.status)){<div hlmCard class="p-4"><div class="mb-3 flex items-center justify-between"><div><h2 class="text-sm font-semibold">Registrar guía</h2><p class="text-muted-foreground text-xs">Agrega una guía de remisión cuando el pedido esté listo para despacho.</p></div><button hlmBtn size="sm" variant="outline" (click)="addGuide()"><ng-icon name="tablerPlus" class="mr-1.5"/>Registrar guía</button></div></div>}
+  </div>
+  <aside class="flex flex-col gap-4"><div hlmCard class="p-4"><h2 class="mb-3 text-sm font-semibold">Documentación del cliente</h2><div class="grid gap-3"><div class="flex flex-col gap-1.5"><label hlmLabel>Tipo de documento</label><hlm-select class="block w-full" [value]="documentType()" [itemToString]="documentTypeToString" (valueChange)="documentType.set($event === 'quotation' ? 'quotation' : 'purchase_order')"><hlm-select-trigger class="w-full"><hlm-select-value placeholder="Selecciona documento" /></hlm-select-trigger><hlm-select-content *hlmSelectPortal>@for(option of documentTypeOptions;track option.value){<hlm-select-item [value]="option.value">{{option.label}}</hlm-select-item>}</hlm-select-content></hlm-select></div><div class="flex flex-col gap-1.5"><label hlmLabel>N.º / código del cliente</label><input hlmInput type="text" placeholder="Ej. OC-2026-00458" [ngModel]="documentNumber()" (ngModelChange)="documentNumber.set($event)" /></div><div class="flex flex-col gap-1.5"><label hlmLabel>Adjunto PDF <span class="text-muted-foreground font-normal">(opcional)</span></label>@if(documentFile();as file){<div class="flex items-center justify-between rounded-md border px-3 py-2 text-sm"><span class="truncate">{{file.name}}</span><button hlmBtn type="button" variant="ghost" size="sm" (click)="documentFile.set(null)">Quitar</button></div>}@else{<label class="border-input hover:bg-muted/40 flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed px-3 py-4 text-xs"><ng-icon name="tablerPaperclip" size="15"/>Adjuntar documento (PDF)<input type="file" accept="application/pdf" class="hidden" (change)="onDocumentFile($event)" /></label>}</div><div class="flex justify-end"><button hlmBtn size="sm" (click)="saveCustomerDocument()">Guardar documentación</button></div></div></div></aside>
+</div>
+}
+
+@if(activeTab()==='notes') {
+<div class="grid grid-cols-1 gap-4 xl:grid-cols-[1.7fr_1fr]">
+  <div hlmCard class="p-4"><div class="mb-3"><h2 class="text-sm font-semibold">Notas internas</h2><p class="text-muted-foreground mt-0.5 text-xs">Instrucciones de Ventas para Producción. No se muestran al cliente.</p></div><textarea hlmInput rows="7" placeholder="Escribe instrucciones especiales para producción…" [ngModel]="internalNotes()" (ngModelChange)="internalNotes.set($event)"></textarea><div class="mt-3 flex justify-end"><button hlmBtn size="sm" variant="outline" (click)="saveInternalNotes()">Guardar notas internas</button></div></div>
+  <aside class="flex flex-col gap-4"><div hlmCard class="p-4"><h2 class="mb-2 text-sm font-semibold">Observaciones comerciales</h2><p class="text-muted-foreground text-sm leading-6">{{o.notes || 'No hay observaciones registradas.'}}</p></div><div hlmCard class="p-4"><h2 class="mb-2 text-sm font-semibold">Visibilidad</h2><p class="text-muted-foreground text-xs leading-5">Las notas internas se trasladan a la HT cuando Ventas crea una hoja de trabajo y son visibles para Producción.</p></div></aside>
+</div>
+}
+
+@if (activeTab() === 'history') {
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-[1.7fr_1fr]">
+    <div hlmCard class="p-4">
+      <div class="mb-4">
+        <h2 class="text-sm font-semibold">Historial de la orden</h2>
+        <p class="text-muted-foreground mt-0.5 text-xs">Seguimiento del avance de la orden y sus principales hitos.</p>
+      </div>
+      <ol class="relative ml-2 border-l pl-6">
+        @for (step of flowSteps; track step; let i = $index) {
+          <li class="relative pb-7 last:pb-0">
+            <span
+              class="absolute -left-[33px] flex size-7 items-center justify-center rounded-full border bg-background text-xs"
+              [class.bg-primary]="i + 1 <= currentFlowStep()"
+              [class.text-primary-foreground]="i + 1 <= currentFlowStep()"
+              [class.border-primary]="i + 1 <= currentFlowStep()"
+            >
+              @if (i + 1 < currentFlowStep()) {
+                <ng-icon name="tablerCheck" size="14" />
+              } @else {
+                {{ i + 1 }}
+              }
+            </span>
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-sm font-medium">{{ step }}</p>
+                <p class="text-muted-foreground mt-0.5 text-xs">
+                  @if (i + 1 < currentFlowStep()) {
+                    Completado
+                  } @else if (i + 1 === currentFlowStep()) {
+                    Estado actual
+                  } @else {
+                    Pendiente
+                  }
+                </p>
+              </div>
+              @if (i + 1 === 1) {
+                <span class="text-muted-foreground text-xs">{{ o.confirmedAt }}</span>
+              }
+            </div>
+          </li>
+        }
+      </ol>
+    </div>
+    <aside class="flex flex-col gap-4">
+      <div hlmCard class="p-4">
+        <h2 class="mb-3 text-sm font-semibold">Resumen</h2>
+        <dl class="grid grid-cols-2 gap-y-2 text-sm">
+          <dt class="text-muted-foreground">Orden</dt><dd>{{ o.number }}</dd>
+          <dt class="text-muted-foreground">Cliente</dt><dd>{{ o.customerName }}</dd>
+          <dt class="text-muted-foreground">Estado</dt><dd>{{ statusLabel(o.status) }}</dd>
+          <dt class="text-muted-foreground">HT asociadas</dt><dd>{{ existingWorkSheets().length }}</dd>
+        </dl>
+      </div>
+      <div hlmCard class="p-4">
+        <h2 class="mb-2 text-sm font-semibold">Próximo paso</h2>
+        <p class="text-muted-foreground text-xs leading-5">
+          {{ currentFlowStep() < flowSteps.length ? flowSteps[currentFlowStep()] : 'Orden finalizada' }}
+        </p>
+      </div>
+    </aside>
+  </div>
+}
 } @else {<app-empty-state icon="tablerShoppingCart" title="Orden de venta no encontrada" />}

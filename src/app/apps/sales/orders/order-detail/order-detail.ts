@@ -9,7 +9,6 @@ import { HlmDialogImports } from '@ui/dialog';
 import { HlmInputImports } from '@ui/input';
 import { HlmLabelImports } from '@ui/label';
 import { HlmSelectImports } from '@ui/select';
-import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { toast } from '@shared/toast';
@@ -20,7 +19,7 @@ import { InvoicingState } from '../../../finance/invoicing-state';
 
 @Component({
   selector: 'app-order-detail',
-  imports: [FormsModule, RouterLink, DecimalPipe, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmDialogImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, EntityHeader, EmptyState, StatusBadge],
+  imports: [FormsModule, RouterLink, DecimalPipe, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmDialogImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, EmptyState, StatusBadge],
   templateUrl: './order-detail.html',
 })
 export class OrderDetail {
@@ -31,6 +30,22 @@ export class OrderDetail {
   protected readonly order = computed(() => salesOrders().find(o => o.id === this.id()));
   protected readonly quotation = computed(() => salesQuotations().find((q) => q.id === this.order()?.quotationId));
   protected readonly actionPopover = signal<string | null>(null);
+  protected readonly activeTab = signal<'general' | 'products' | 'advances' | 'documents' | 'notes' | 'history'>('general');
+  protected readonly flowSteps = [
+    'Pedido confirmado',
+    'HT aceptada por Producción',
+    'Producción terminada',
+    'Ventas verifica',
+    'Listo para despacho',
+    'Despacho',
+    'Facturación',
+  ];
+  protected readonly totalQuantity = computed(() => this.order()?.lines.reduce((sum, line) => sum + line.quantity, 0) ?? 0);
+  protected readonly advancePercent = computed(() => {
+    const o = this.order();
+    if (!o?.total) return 0;
+    return Math.min(100, Math.max(0, ((o.paymentGate?.advancePayment?.amount ?? 0) / o.total) * 100));
+  });
   protected statusLabel = (s: SalesOrderStatus) => SALES_ORDER_STATUS_LABEL[s];
   protected statusTone = (s: SalesOrderStatus): Tone => SALES_ORDER_STATUS_TONE[s];
   protected readonly statusOptions = (Object.keys(SALES_ORDER_STATUS_LABEL) as SalesOrderStatus[]).map((value) => ({ value, label: SALES_ORDER_STATUS_LABEL[value] }));
@@ -41,6 +56,7 @@ export class OrderDetail {
   protected readonly documentFormInitialized = signal(false);
   protected readonly internalNotes = signal('');
   protected readonly workSheetType = signal<SalesOrderWorkSheetType>('regular');
+  protected readonly SALES_ORDER_WORK_SHEET_TYPE_LABEL = SALES_ORDER_WORK_SHEET_TYPE_LABEL;
   protected readonly workSheetTypeOptions = (Object.keys(SALES_ORDER_WORK_SHEET_TYPE_LABEL) as SalesOrderWorkSheetType[]).map((value) => ({ value, label: SALES_ORDER_WORK_SHEET_TYPE_LABEL[value] }));
   protected readonly workSheetModal = signal<'open' | 'closed'>('closed');
   protected readonly advanceAmount = signal(0);
@@ -87,6 +103,39 @@ export class OrderDetail {
     const o = this.order();
     return !!o && this.canManageFlow() && !['cancelled', 'pending_payment'].includes(o.status) && o.lines.length > 0;
   });
+  protected readonly advanceCount = computed(() => this.order()?.paymentGate?.advancePayment ? 1 : 0);
+  protected readonly documentCount = computed(() => this.order()?.relatedDocuments?.length ?? 0);
+  protected readonly notesCount = computed(() => this.order()?.internalNotes?.trim() ? 1 : 0);
+  protected readonly currentFlowStep = computed(() => {
+    const status = this.order()?.status;
+    const indexByStatus: Partial<Record<SalesOrderStatus, number>> = {
+      confirmed: 1,
+      preparing: 2,
+      production_ready: 4,
+      ready_for_dispatch: 5,
+      partially_dispatched: 5,
+      dispatched: 6,
+      finished: 6,
+      invoiced: 7,
+      pending_payment: 2,
+    };
+    return status ? (indexByStatus[status] ?? 1) : 1;
+  });
+
+  protected selectTab(tab: 'general' | 'products' | 'advances' | 'documents' | 'notes' | 'history'): void {
+    this.activeTab.set(tab);
+  }
+
+  protected openAdvanceDialog(): void {
+    const o = this.order();
+    const gate = o?.paymentGate;
+    const requiredAdvance = gate ? Math.round(o!.total * gate.advancePct) / 100 : 0;
+    this.advanceAmount.set(gate?.advancePayment?.amount ?? requiredAdvance);
+    this.advanceDate.set(gate?.advancePayment?.date ?? '2026-09-01');
+    this.advanceMethod.set(gate?.advancePayment?.method ?? 'transfer');
+    this.advanceVoucherFile.set(gate?.advancePayment?.voucher ?? null);
+  }
+
   protected readonly requiredAdvanceAmount = computed(() => {
     const o = this.order();
     return o?.paymentGate ? Math.round(o.total * o.paymentGate.advancePct) / 100 : 0;
