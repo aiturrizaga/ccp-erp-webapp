@@ -44,6 +44,21 @@ export class Sidebar {
     return items.filter((item) => !item.roles || (role && item.roles.includes(role)));
   });
 
+  protected readonly navSections = computed(() => {
+    const grouped = new Map<string, NavItem[]>();
+    for (const item of this.navItems()) {
+      if (!item.section) continue;
+      const items = grouped.get(item.section) ?? [];
+      items.push(item);
+      grouped.set(item.section, items);
+    }
+    return Array.from(grouped, ([label, items]) => ({ label, items }));
+  });
+
+  protected readonly ungroupedNavItems = computed(() => this.navItems().filter((item) => !item.section));
+
+  protected readonly hasNavSections = computed(() => this.navSections().length > 0);
+
   protected readonly companies = COMPANIES;
   protected readonly activeCompany = signal<Company>(COMPANIES[0]);
 

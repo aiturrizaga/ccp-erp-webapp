@@ -199,6 +199,29 @@ export interface SalesOrderDocument {
   type: 'customer_quotation' | 'customer_purchase_order' | 'guarantee_letter';
   name: string;
   uploadedAt: string;
+  url?: string;
+}
+
+export type SalesOrderCustomerDocumentType = 'purchase_order' | 'plan' | 'other';
+
+export const SALES_ORDER_CUSTOMER_DOCUMENT_TYPE_LABEL: Record<SalesOrderCustomerDocumentType, string> = {
+  purchase_order: 'Orden de compra',
+  plan: 'Plano',
+  other: 'Otro documento',
+};
+
+export interface SalesOrderCustomerDocument {
+  id: string;
+  type: SalesOrderCustomerDocumentType;
+  code?: string;
+  observation?: string;
+  file?: {
+    name: string;
+    uploadedAt: string;
+    mimeType?: string;
+    url?: string;
+  };
+  createdAt: string;
 }
 
 export interface SalesRelatedDocument {
@@ -208,6 +231,7 @@ export interface SalesRelatedDocument {
   number?: string;
   date?: string;
   fileName?: string;
+  url?: string;
 }
 
 export interface SalesQuotation {
@@ -378,6 +402,8 @@ export interface SalesOrder {
   priceReview?: { outcome: 'auto' | 'needs_gerencia'; reasons: string[]; approvalId?: string };
   /** Partial delivery destinations/lines are represented by quantities on each line. */
   relatedDocuments?: SalesRelatedDocument[];
+  /** Documentos entregados por el cliente asociados a este pedido (OC, planos u otros). */
+  customerDocuments?: SalesOrderCustomerDocument[];
   /** Reclamos filed against this order, for traceability. */
   claimIds?: string[];
   /** True once a refacturación edit has been made in the `invoiced` state. */
