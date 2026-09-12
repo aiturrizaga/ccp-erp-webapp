@@ -13,6 +13,7 @@ import { SelectFilterOption } from '@shared/components/select-filter/select-filt
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
 import { Supplier, SupplierClass, SupplierStatus, SupplierTier, SUPPLIER_STATUS_LABEL, Tone } from '@core/models';
 import { PurchasingState } from '../../purchasing-state';
+import { newestFirst } from '@core/utils/sort';
 
 const STATUS_TONE: Record<SupplierStatus, Tone> = {
   draft: 'neutral',
@@ -92,13 +93,14 @@ export class SupplierList {
     const statuses = this.statusFilter();
     const tiers = this.tierFilter();
     const classes = this.classFilter();
-    return this.purchasingState.suppliers().filter((s) => {
+    const list = this.purchasingState.suppliers().filter((s) => {
       const matchesSearch = !term || s.legalName.toLowerCase().includes(term) || s.taxId.includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(s.status);
       const matchesTier = tiers.size === 0 || tiers.has(s.tier);
       const matchesClass = classes.size === 0 || classes.has(s.class);
       return matchesSearch && matchesStatus && matchesTier && matchesClass;
-    }).reverse();
+    });
+    return newestFirst(list);
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.tierFilter().size + this.classFilter().size);

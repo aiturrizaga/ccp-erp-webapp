@@ -9,17 +9,52 @@ import { HlmDialogImports } from '@ui/dialog';
 import { HlmInputImports } from '@ui/input';
 import { HlmLabelImports } from '@ui/label';
 import { HlmSelectImports } from '@ui/select';
+import { HlmCheckboxImports } from '@ui/checkbox';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { toast } from '@shared/toast';
-import { SALES_ORDER_CUSTOMER_DOCUMENT_TYPE_LABEL, SalesOrderCustomerDocumentType, SALES_ORDER_WORK_SHEET_TYPE_LABEL, SalesOrderWorkSheetType, SalesOrderStatus, SALES_ORDER_STATUS_LABEL, SALES_ORDER_STATUS_TONE, PAYMENT_GATE_STATUS_LABEL, PAYMENT_GATE_STATUS_TONE, PAYMENT_METHOD_LABEL, PaymentMethod, SalesInvoice, SalesRelatedDocument, Tone } from '@core/models';
-import { acceptSalesOrderWorkSheet, markProductionReady, registerAdvancePayment, salesContacts, salesOrders, salesQuotations, saveOrder, verifyProduction } from '../../sales-state';
+import { SALES_ORDER_WORK_SHEET_TYPE_LABEL, SalesOrderWorkSheetType, SalesOrderStatus, SALES_ORDER_STATUS_LABEL, SALES_ORDER_STATUS_TONE, PAYMENT_GATE_STATUS_LABEL, PAYMENT_GATE_STATUS_TONE, PAYMENT_METHOD_LABEL, PaymentMethod, SalesInvoice, Tone, workSheetStatus, WORK_SHEET_STATUS_LABEL, SalesOrderCustomerDocumentType, SALES_ORDER_CUSTOMER_DOCUMENT_TYPE_LABEL, SalesOrderCustomerDocument, SalesOrderAdvancePayment } from '@core/models';
+import { acceptSalesOrderWorkSheet, createDispatchRelease, markProductionReady, registerAdvancePayment, salesClaims, salesContacts, salesDispatchReleases, salesOrders, salesQuotations, saveOrder } from '../../sales-state';
 import { ProductionState } from '../../../production/production-state';
 import { InvoicingState } from '../../../finance/invoicing-state';
+import { OrderTimelineComponent, OrderTimelineEvent } from './order-timeline';
+
+const RELATED_DOC_ICON: Record<string, string> = {
+  cotizacion: 'tablerFileText',
+  hoja_trabajo: 'tablerClipboardText',
+  guia: 'tablerRoute',
+  factura: 'tablerReceipt2',
+  voucher: 'tablerCashBanknote',
+  otro: 'tablerFile',
+  reclamo: 'tablerAlertTriangle',
+};
+
+interface RelatedDocRow {
+  id: string;
+  icon: string;
+  label: string;
+  number?: string;
+  date?: string;
+  description?: string;
+  fileName?: string;
+  url?: string;
+  link?: string;
+  /** True cuando el documento es una cotización de venta (link al detalle + botón PDF solo visual). */
+  isQuotation?: boolean;
+}
+
+/** Documento seleccionado para el visor / descarga. */
+interface OrderDocView {
+  title: string;
+  subtitle?: string;
+  name?: string;
+  mimeType?: string;
+  url?: string;
+}
 
 @Component({
   selector: 'app-order-detail',
-  imports: [FormsModule, RouterLink, DecimalPipe, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmDialogImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, EmptyState, StatusBadge],
+  imports: [FormsModule, RouterLink, DecimalPipe, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmDialogImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, ...HlmCheckboxImports, EmptyState, StatusBadge, OrderTimelineComponent],
   templateUrl: './order-detail.html',
 })
 export class OrderDetail {
@@ -29,11 +64,6 @@ export class OrderDetail {
   readonly id = input.required<string>();
   protected readonly order = computed(() => salesOrders().find(o => o.id === this.id()));
   protected readonly quotation = computed(() => salesQuotations().find((q) => q.id === this.order()?.quotationId));
-  protected readonly contactName = computed(() => {
-    const o = this.order();
-    if (!o?.contactId) return '—';
-    return salesContacts().find((contact) => contact.id === o.contactId)?.name ?? '—';
-  });
   protected readonly actionPopover = signal<string | null>(null);
   protected readonly activeTab = signal<'general' | 'products' | 'advances' | 'documents' | 'notes' | 'history'>('general');
   protected readonly flowSteps = [
@@ -54,17 +84,19 @@ export class OrderDetail {
   protected statusLabel = (s: SalesOrderStatus) => SALES_ORDER_STATUS_LABEL[s];
   protected statusTone = (s: SalesOrderStatus): Tone => SALES_ORDER_STATUS_TONE[s];
   protected readonly statusOptions = (Object.keys(SALES_ORDER_STATUS_LABEL) as SalesOrderStatus[]).map((value) => ({ value, label: SALES_ORDER_STATUS_LABEL[value] }));
-  protected readonly customerDocumentModal = signal<'open' | 'closed'>('closed');
-  protected readonly customerDocumentType = signal<SalesOrderCustomerDocumentType>('purchase_order');
-  protected readonly customerDocumentCode = signal('');
-  protected readonly customerDocumentObservation = signal('');
-  protected readonly customerDocumentFile = signal<{ name: string; uploadedAt: string; mimeType?: string; url?: string } | null>(null);
-  protected readonly customerDocumentTypeOptions = (Object.keys(SALES_ORDER_CUSTOMER_DOCUMENT_TYPE_LABEL) as SalesOrderCustomerDocumentType[]).map((value) => ({ value, label: SALES_ORDER_CUSTOMER_DOCUMENT_TYPE_LABEL[value] }));
+  protected readonly customerDocTypeOptions = (Object.keys(SALES_ORDER_CUSTOMER_DOCUMENT_TYPE_LABEL) as SalesOrderCustomerDocumentType[]).map((value) => ({ value, label: SALES_ORDER_CUSTOMER_DOCUMENT_TYPE_LABEL[value] }));
+  protected readonly newCustomerDocModal = signal<'open' | 'closed'>('closed');
+  protected readonly newDocType = signal<SalesOrderCustomerDocumentType>('purchase_order');
+  protected readonly newDocReference = signal('');
+  protected readonly newDocDescription = signal('');
+  protected readonly newDocFile = signal<{ name: string; uploadedAt: string; mimeType?: string; url?: string } | null>(null);
   protected readonly internalNotes = signal('');
   protected readonly workSheetType = signal<SalesOrderWorkSheetType>('regular');
   protected readonly SALES_ORDER_WORK_SHEET_TYPE_LABEL = SALES_ORDER_WORK_SHEET_TYPE_LABEL;
   protected readonly workSheetTypeOptions = (Object.keys(SALES_ORDER_WORK_SHEET_TYPE_LABEL) as SalesOrderWorkSheetType[]).map((value) => ({ value, label: SALES_ORDER_WORK_SHEET_TYPE_LABEL[value] }));
   protected readonly workSheetModal = signal<'open' | 'closed'>('closed');
+  protected readonly dispatchReleaseModal = signal<'open' | 'closed'>('closed');
+  protected readonly selectedWorkSheetIds = signal<Set<string>>(new Set());
   protected readonly advanceAmount = signal(0);
   protected readonly advanceDate = signal('2026-09-01');
   protected readonly advanceMethod = signal<PaymentMethod>('transfer');
@@ -93,12 +125,46 @@ export class OrderDetail {
     return !!o && (!o.paymentGate || o.paymentGate.status === 'not_required' || o.paymentGate.status === 'validated');
   });
 
+  protected contactName(contactId?: string): string {
+    if (!contactId) return '—';
+    return salesContacts().find((c) => c.id === contactId)?.name ?? contactId;
+  }
+  protected readonly editingDeliveryAddress = signal(false);
+  protected readonly deliveryAddressDraft = signal('');
+  protected startEditDeliveryAddress(current?: string): void {
+    this.deliveryAddressDraft.set(current ?? '');
+    this.editingDeliveryAddress.set(true);
+  }
+  protected cancelEditDeliveryAddress(): void {
+    this.editingDeliveryAddress.set(false);
+  }
+  protected saveDeliveryAddress(): void {
+    const order = this.order();
+    if (!order || !this.deliveryAddressDraft().trim()) return;
+    saveOrder({ ...order, deliveryAddress: this.deliveryAddressDraft().trim() });
+    this.editingDeliveryAddress.set(false);
+    toast.success('Dirección de entrega actualizada');
+  }
+
   protected readonly existingWorkSheets = computed(() => {
     const o = this.order();
     if (!o || !this.paymentCleared()) return [];
     const ids = o.workSheetIds?.length ? o.workSheetIds : (o.workSheetId ? [o.workSheetId] : []);
     return ids.map((id) => this.productionState.workSheets().find((ws) => ws.id === id)).filter(Boolean);
   });
+
+  protected readonly releasedWorkSheetIds = computed(() => {
+    const orderId = this.order()?.id;
+    if (!orderId) return new Set<string>();
+    return new Set(salesDispatchReleases().filter((r) => r.salesOrderId === orderId).flatMap((r) => r.workSheetIds));
+  });
+  protected readonly canReleaseForDispatch = computed(() => this.order()?.status === 'production_ready' && this.existingWorkSheets().length > 0);
+
+  /** Una HT puede ser seleccionada para despacho si no fue liberada y (está completada O el pedido está en producción lista). */
+  protected canReleaseWorkSheet(ws: import('@core/models').WorkSheet): boolean {
+    if (this.releasedWorkSheetIds().has(ws.id)) return false;
+    return workSheetStatus(ws) === 'completed' || this.order()?.status === 'production_ready';
+  }
 
   protected readonly canManageFlow = computed(() => this.paymentCleared() && this.order()?.status !== 'cancelled');
   protected readonly canCreateWorkSheet = computed(() => {
@@ -108,6 +174,94 @@ export class OrderDetail {
   protected readonly advanceCount = computed(() => this.order()?.paymentGate?.advancePayment ? 1 : 0);
   protected readonly documentCount = computed(() => (this.order()?.relatedDocuments?.length ?? 0) + (this.order()?.customerDocuments?.length ?? 0));
   protected readonly notesCount = computed(() => this.order()?.internalNotes?.trim() ? 1 : 0);
+  protected readonly customerDocumentRows = computed(() => (this.order()?.customerDocuments ?? []).slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+  protected readonly orderClaims = computed(() => {
+    const o = this.order();
+    if (!o) return [];
+    return salesClaims().filter((c) => o.claimIds?.includes(c.id));
+  });
+  protected customerDocTypeLabel = (t: SalesOrderCustomerDocumentType) => SALES_ORDER_CUSTOMER_DOCUMENT_TYPE_LABEL[t];
+
+  /** Documentos internos (cotizaciones, HT, guías, facturas, reclamos…) en una sola lista ordenable. */
+  protected readonly relatedDocRows = computed<RelatedDocRow[]>(() => {
+    const o = this.order();
+    if (!o) return [];
+    const rows: RelatedDocRow[] = (o.relatedDocuments ?? []).map((d) => ({
+      id: d.id,
+      icon: RELATED_DOC_ICON[d.type] ?? 'tablerFile',
+      label: d.label,
+      number: d.number,
+      date: d.date,
+      fileName: d.fileName,
+      url: d.url,
+      link: d.type === 'cotizacion' && d.number ? `/apps/sales/quotations/${d.number}` : undefined,
+      isQuotation: d.type === 'cotizacion',
+    }));
+    for (const c of this.orderClaims()) {
+      rows.push({
+        id: c.id,
+        icon: RELATED_DOC_ICON['reclamo'],
+        label: 'Reclamo registrado',
+        number: c.number,
+        date: c.createdAt,
+        description: c.description,
+        link: `/apps/sales/claims/${c.id}`,
+      });
+    }
+    return rows.sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
+  });
+
+  protected readonly documentViewerModal = signal<'open' | 'closed'>('closed');
+  protected readonly viewerDoc = signal<OrderDocView | null>(null);
+
+  protected openDocViewer(view: OrderDocView): void {
+    this.viewerDoc.set(view);
+    this.documentViewerModal.set('open');
+  }
+
+  protected relatedDocView(row: RelatedDocRow): OrderDocView {
+    return {
+      title: `${row.label}${row.number ? ` · ${row.number}` : ''}`,
+      subtitle: `${row.description ?? ''}${row.date ? `${row.description ? ' · ' : ''}${row.date}` : ''}` || undefined,
+      name: row.fileName,
+      url: row.url,
+    };
+  }
+
+  protected openAdvanceVoucherPreview(payment: SalesOrderAdvancePayment): void {
+    this.openDocViewer({
+      title: 'Voucher del adelanto',
+      subtitle: `${this.order()?.currency ?? ''} ${payment.amount.toFixed(2)} · ${payment.date}`,
+      name: payment.voucher.name,
+      mimeType: payment.voucher.mimeType,
+      url: payment.voucher.url,
+    });
+  }
+
+  protected customerDocView(doc: SalesOrderCustomerDocument): OrderDocView {
+    return {
+      title: this.customerDocTypeLabel(doc.type),
+      subtitle: doc.description,
+      name: doc.file?.name,
+      mimeType: doc.file?.mimeType,
+      url: doc.file?.url,
+    };
+  }
+
+  protected downloadDoc(name?: string, url?: string): void {
+    if (!name || !url) { toast.error('Este documento no tiene archivo adjunto para descargar'); return; }
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = name;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  }
+
+  /** Descarga del PDF de cotización: por ahora solo un botón visible (pendiente de generación del PDF). */
+  protected downloadQuotationPdf(): void {
+    toast.info('La descarga del PDF de la cotización estará disponible próximamente.');
+  }
   protected readonly currentFlowStep = computed(() => {
     const status = this.order()?.status;
     const indexByStatus: Partial<Record<SalesOrderStatus, number>> = {
@@ -124,45 +278,61 @@ export class OrderDetail {
     return status ? (indexByStatus[status] ?? 1) : 1;
   });
 
-  protected readonly orderTimeline = computed(() => {
+  /** Todos los movimientos de la orden, ordenados cronológicamente (de la cotización a la entrega). */
+  protected readonly orderTimeline = computed<OrderTimelineEvent[]>(() => {
     const o = this.order();
     if (!o) return [];
-    const quotation = this.quotation();
-    const current = this.currentFlowStep();
+    const events: OrderTimelineEvent[] = [];
+
+    const quote = this.quotation();
+    if (quote) events.push({ date: quote.issuedAt, kind: 'quotation', title: 'Cotización creada', detail: quote.number });
+
+    if (o.confirmedAt) events.push({ date: o.confirmedAt, kind: 'order', title: 'Pedido confirmado', detail: o.number });
+
     const advance = o.paymentGate?.advancePayment;
-    const hasCredit = !o.paymentGate;
-    const invoice = this.invoicingState.invoices().find((item) => item.documentType === 'sales' && 'salesOrderId' in item && item.salesOrderId === o.id);
-    const events: Array<{ title: string; detail: string; date?: string; state: 'completed' | 'current' | 'pending' }> = [];
-    const add = (title: string, detail: string, date: string | undefined, step: number) => events.push({ title, detail, date, state: step < current ? 'completed' : step === current ? 'current' : 'pending' });
+    if (advance?.registeredAt) events.push({ date: advance.registeredAt, kind: 'advance', title: 'Adelanto registrado', detail: `${o.currency} ${advance.amount.toFixed(2)} · ${this.methodLabel(advance.method)}`, user: advance.registeredBy });
+    if (advance?.validatedAt) events.push({ date: advance.validatedAt, kind: 'advance', title: 'Adelanto validado por Cobranzas', user: advance.validatedBy });
+    if (advance?.reviewedAt) events.push({ date: advance.reviewedAt, kind: 'advance', title: 'Adelanto revisado por Cobranzas', user: advance.reviewedBy });
 
-    if (quotation) {
-      events.push({ title: 'Cotización creada', detail: `${quotation.number} · ${quotation.customerName}`, date: quotation.issuedAt, state: 'completed' });
-      events.push({ title: 'Cotización aceptada', detail: 'La cotización dio origen a esta orden de pedido.', date: o.confirmedAt, state: 'completed' });
+    const docs = o.relatedDocuments ?? [];
+    let hasWorksheetEvent = false;
+    for (const doc of docs) {
+      if (doc.type === 'hoja_trabajo' && doc.date) {
+        events.push({ date: doc.date, kind: 'work_sheet', title: 'Hoja de trabajo creada', detail: doc.number });
+        hasWorksheetEvent = true;
+      }
     }
-    add('Orden de pedido creada', `${o.number} · ${o.customerName}`, o.confirmedAt, 1);
-
-    if (o.paymentGate && !hasCredit) {
-      if (advance) {
-        events.push({ title: 'Adelanto registrado', detail: `${advance.amount.toLocaleString('es-PE', { minimumFractionDigits: 2 })} ${o.currency} · ${this.methodLabel(advance.method)}`, date: advance.registeredAt || advance.date, state: 'completed' });
-        events.push({ title: advance.validatedAt ? 'Adelanto validado por Cobranzas' : 'Adelanto enviado a Cobranzas', detail: advance.validatedBy ? `Validado por ${advance.validatedBy}` : 'Pendiente de validación del comprobante.', date: advance.validatedAt, state: advance.validatedAt ? 'completed' : 'current' });
-      } else {
-        events.push({ title: 'Adelanto pendiente', detail: 'La orden está bloqueada hasta registrar y validar el adelanto.', state: 'current' });
+    if (!hasWorksheetEvent) {
+      for (const ws of this.existingWorkSheets()) {
+        if (ws?.scheduledDate) events.push({ date: ws.scheduledDate, kind: 'work_sheet', title: 'Hoja de trabajo creada', detail: ws.number });
       }
     }
 
-    const worksheets = this.existingWorkSheets();
-    if (worksheets.length) {
-      events.push({ title: worksheets.length === 1 ? 'HT creada' : 'HT creadas', detail: worksheets.map((ws) => ws?.number).filter(Boolean).join(' · '), date: o.relatedDocuments?.find((doc) => doc.type === 'hoja_trabajo')?.date, state: current >= 2 ? 'completed' : 'current' });
-    } else {
-      events.push({ title: 'HT por crear', detail: 'Ventas deberá crear la hoja de trabajo cuando la orden esté habilitada.', state: current > 1 ? 'completed' : 'pending' });
+    const releases = salesDispatchReleases().filter((r) => r.salesOrderId === o.id);
+    if (o.readyForDispatchAt && releases.length === 0) events.push({ date: o.readyForDispatchAt, kind: 'release', title: 'Listo para despacho', detail: o.number });
+    for (const release of releases) events.push({ date: release.releasedAt, kind: 'release', title: 'HT liberadas para despacho', detail: `${release.workSheetIds.length} HT`, user: release.releasedBy });
+
+    if (o.dispatchedAt) events.push({ date: o.dispatchedAt, kind: 'dispatch', title: 'Despacho registrado', detail: o.number });
+
+    for (const guide of this.invoicingState.guides().filter((g) => g.salesOrderId === o.id)) {
+      events.push({ date: guide.issuedAt, kind: 'guide', title: 'Guía de remisión emitida', detail: guide.number });
     }
 
-    add('HT aceptada por Producción', 'Producción tomó la orden para ejecución.', undefined, 2);
-    add('Producción terminada', 'Producción completó las cantidades solicitadas.', undefined, 3);
-    add('Ventas verificó la producción', 'Ventas confirmó que el pedido está listo para despacho.', o.readyForDispatchAt, 4);
-    add('Pedido despachado', 'El pedido salió de almacén y quedó registrado el despacho.', o.dispatchedAt, 6);
-    events.push({ title: 'Facturación', detail: invoice ? `${invoice.number} · comprobante emitido` : 'Pendiente de emisión del comprobante.', date: invoice?.issuedAt, state: invoice ? 'completed' : current >= 7 ? 'current' : 'pending' });
-    return events;
+    for (const invoice of this.invoicingState.invoices().filter((i) => i.documentType === 'sales' && i.salesOrderId === o.id)) {
+      events.push({ date: invoice.issuedAt, kind: 'invoice', title: 'Factura emitida', detail: invoice.number });
+    }
+
+    for (const claim of salesClaims().filter((c) => o.claimIds?.includes(c.id))) {
+      events.push({ date: claim.createdAt, kind: 'claim', title: 'Reclamo registrado', detail: claim.number });
+    }
+
+    for (const doc of docs) {
+      if (doc.date && !['cotizacion', 'hoja_trabajo', 'guia', 'factura', 'voucher'].includes(doc.type)) {
+        events.push({ date: doc.date, kind: 'other', title: doc.label, detail: doc.number });
+      }
+    }
+
+    return events.sort((a, b) => a.date.localeCompare(b.date));
   });
 
   protected selectTab(tab: 'general' | 'products' | 'advances' | 'documents' | 'notes' | 'history'): void {
@@ -262,12 +432,47 @@ export class OrderDetail {
   }
 
   protected canAccept = computed(() => this.order()?.status === 'confirmed' && !!this.order()?.workSheetId);
-  protected canVerify = computed(() => this.order()?.status === 'production_ready');
   protected canInvoice = computed(() => ['dispatched','finished'].includes(this.order()?.status ?? ''));
 
   protected acceptProduction(): void { const o=this.order(); if(!o)return; acceptSalesOrderWorkSheet(o.id); this.actionPopover.set(null); toast.success(`${o.number}: HT aceptada por Producción`); }
   protected notifyReady(): void { const o=this.order(); if(!o)return; markProductionReady(o.id); this.actionPopover.set(null); toast.success(`${o.number}: Producción indicó que está lista para verificación`); }
-  protected verify(): void { const o=this.order(); if(!o)return; verifyProduction(o.id); this.actionPopover.set(null); toast.success(`${o.number}: verificación completada`,{description:'El pedido quedó listo para despacho'}); }
+
+  protected openDispatchReleaseDialog(): void {
+    this.selectedWorkSheetIds.set(new Set());
+    this.dispatchReleaseModal.set('open');
+  }
+
+  protected toggleWorkSheetForDispatch(id: string, checked: boolean): void {
+    const next = new Set(this.selectedWorkSheetIds());
+    if (checked) next.add(id); else next.delete(id);
+    this.selectedWorkSheetIds.set(next);
+  }
+
+  protected releaseSelectedWorkSheets(): void {
+    const order = this.order();
+    const ids = [...this.selectedWorkSheetIds()];
+    if (!order || !ids.length || !this.canReleaseForDispatch()) return;
+    const release = createDispatchRelease({
+      salesOrderId: order.id,
+      salesOrderNumber: order.number,
+      customerId: order.customerId,
+      customerName: order.customerName,
+      workSheetIds: ids,
+      releasedBy: 'Ventas',
+    });
+    if (!release) return;
+    this.dispatchReleaseModal.set('closed');
+    this.selectedWorkSheetIds.set(new Set());
+    toast.success('HT liberadas para despacho', { description: `${ids.length} HT${ids.length === 1 ? '' : 's'} de ${order.number} quedaron disponibles para Despacho.` });
+  }
+
+  protected workSheetStatusLabel(ws: import('@core/models').WorkSheet): string {
+    return WORK_SHEET_STATUS_LABEL[workSheetStatus(ws)];
+  }
+
+  protected workSheetStatus(ws: import('@core/models').WorkSheet): import('@core/models').WorkSheetStatus {
+    return workSheetStatus(ws);
+  }
 
   protected statusToString = (value: string): string => this.statusOptions.find((option) => option.value === value)?.label ?? value;
   protected workSheetTypeToString = (value: string): string => this.workSheetTypeOptions.find((option) => option.value === value)?.label ?? value;
@@ -284,105 +489,54 @@ export class OrderDetail {
     toast.success(`Estado actualizado: ${SALES_ORDER_STATUS_LABEL[nextStatus]}`);
   }
 
-  protected openCustomerDocumentDialog(): void {
-    this.customerDocumentType.set('purchase_order');
-    this.customerDocumentCode.set('');
-    this.customerDocumentObservation.set('');
-    this.customerDocumentFile.set(null);
-    this.customerDocumentModal.set('open');
+  protected readonly canSubmitNewCustomerDoc = computed(() => this.newDocReference().trim().length > 0);
+  protected customerDocTypeToString = (value: string): string => this.customerDocTypeOptions.find((option) => option.value === value)?.label ?? value;
+
+  protected openNewCustomerDocDialog(): void {
+    this.newDocType.set('purchase_order');
+    this.newDocReference.set('');
+    this.newDocDescription.set('');
+    this.newDocFile.set(null);
+    this.newCustomerDocModal.set('open');
   }
 
-  protected customerDocumentTypeToString = (value: string): string => SALES_ORDER_CUSTOMER_DOCUMENT_TYPE_LABEL[value as SalesOrderCustomerDocumentType] ?? value;
-  protected setCustomerDocumentType(value: string | null | undefined): void {
-    if (!value) return;
-    if (value in SALES_ORDER_CUSTOMER_DOCUMENT_TYPE_LABEL) this.customerDocumentType.set(value as SalesOrderCustomerDocumentType);
-  }
-
-  protected onCustomerDocumentFile(event: Event): void {
+  protected onNewDocFile(event: Event): void {
     const file = (event.target as HTMLInputElement).files?.[0];
     if (!file) return;
-    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
-      toast.error('Solo se permiten imágenes o archivos PDF');
-      return;
-    }
-    this.customerDocumentFile.set({
-      name: file.name,
-      uploadedAt: new Date().toISOString(),
-      mimeType: file.type,
-      url: URL.createObjectURL(file),
-    });
+    this.newDocFile.set({ name: file.name, uploadedAt: new Date().toISOString(), mimeType: file.type, url: URL.createObjectURL(file) });
   }
 
-  protected clearCustomerDocumentFile(): void {
-    const file = this.customerDocumentFile();
-    if (file?.url) URL.revokeObjectURL(file.url);
-    this.customerDocumentFile.set(null);
+  protected clearNewDocFile(): void {
+    const current = this.newDocFile();
+    if (current?.url?.startsWith('blob:')) URL.revokeObjectURL(current.url);
+    this.newDocFile.set(null);
   }
 
-  protected saveCustomerDocument(): void {
+  protected saveNewCustomerDoc(): void {
     const order = this.order();
     if (!order) return;
-    const file = this.customerDocumentFile();
-    const next: import('@core/models').SalesOrderCustomerDocument = {
+    const reference = this.newDocReference().trim();
+    if (!reference) { toast.error('Ingresa la referencia del documento'); return; }
+    const description = this.newDocDescription().trim();
+    const file = this.newDocFile();
+    const isPurchaseOrder = this.newDocType() === 'purchase_order';
+    const doc: SalesOrderCustomerDocument = {
       id: `CUST-DOC-${order.id}-${Date.now()}`,
-      type: this.customerDocumentType(),
-      code: this.customerDocumentCode().trim() || undefined,
-      observation: this.customerDocumentObservation().trim() || undefined,
-      file: file ? { ...file } : undefined,
-      createdAt: new Date().toISOString(),
+      type: this.newDocType(),
+      reference,
+      description: description || undefined,
+      file: file ? { name: file.name, uploadedAt: file.uploadedAt, mimeType: file.mimeType, url: file.url } : undefined,
+      createdAt: new Date().toISOString().slice(0, 10),
     };
-    saveOrder({ ...order, customerDocuments: [...(order.customerDocuments ?? []), next] });
-    this.customerDocumentModal.set('closed');
+    saveOrder({
+      ...order,
+      customerDocuments: [...(order.customerDocuments ?? []), doc],
+      customerOrderDocumentType: isPurchaseOrder ? 'purchase_order' : order.customerOrderDocumentType,
+      customerOrderDocumentNumber: isPurchaseOrder && reference ? reference : order.customerOrderDocumentNumber,
+      customerOrderDocument: isPurchaseOrder && file ? { ...doc.file!, type: 'customer_purchase_order' } : order.customerOrderDocument,
+    });
+    this.newCustomerDocModal.set('closed');
     toast.success('Documento del cliente agregado');
-  }
-
-  protected customerDocuments = computed(() => {
-    const order = this.order();
-    if (!order) return [];
-    const docs = [...(order.customerDocuments ?? [])];
-    if (order.customerOrderDocument && !docs.some((doc) => doc.type === 'purchase_order' && doc.code === order.customerOrderDocumentNumber)) {
-      docs.unshift({
-        id: `LEGACY-CUST-DOC-${order.id}`,
-        type: 'purchase_order' as const,
-        code: order.customerOrderDocumentNumber || undefined,
-        file: {
-          name: order.customerOrderDocument.name,
-          uploadedAt: order.customerOrderDocument.uploadedAt,
-          url: order.customerOrderDocument.url,
-        },
-        createdAt: order.customerOrderDocument.uploadedAt,
-      });
-    }
-    return docs;
-  });
-
-  protected customerDocumentLabel(type: SalesOrderCustomerDocumentType): string {
-    return SALES_ORDER_CUSTOMER_DOCUMENT_TYPE_LABEL[type];
-  }
-
-  protected relatedDocumentRoute(doc: SalesRelatedDocument): string[] | null {
-    switch (doc.type) {
-      case 'cotizacion': {
-        const quotationId = salesQuotations().find((q) => q.number === doc.number)?.id ?? this.order()?.quotationId;
-        return quotationId ? ['/apps/sales/quotations', quotationId] : null;
-      }
-      case 'hoja_trabajo': {
-        const ws = this.existingWorkSheets().find((item) => item?.number === doc.number);
-        return ws ? ['/apps/production/work-sheets', ws.id] : null;
-      }
-      case 'factura': {
-        const invoice = this.invoicingState.invoices().find((item) => item.number === doc.number);
-        return invoice ? ['/apps/finance/invoices', invoice.id] : null;
-      }
-      case 'guia':
-        return ['/apps/finance/guides'];
-      default:
-        return null;
-    }
-  }
-
-  protected relatedDocumentDownloadName(doc: SalesRelatedDocument): string {
-    return doc.fileName ?? `${doc.number ?? doc.label}.pdf`;
   }
 
   protected addGuide(): void {

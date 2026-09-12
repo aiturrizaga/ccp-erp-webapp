@@ -9,6 +9,7 @@ import { ListToolbar } from '@shared/components/list-toolbar/list-toolbar';
 import { ListPagination } from '@shared/components/list-pagination/list-pagination';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { salesCustomers } from '../../sales-state';
+import { newestFirst } from '@core/utils/sort';
 import { CUSTOMER_PAYMENT_MODE_LABEL, Customer, CustomerPaymentMode } from '@core/models';
 
 @Component({
@@ -41,11 +42,12 @@ export class CustomerList {
   protected readonly rows = computed(() => {
     const term = this.search().trim().toLowerCase();
     const filter = this.modeFilter();
-    return salesCustomers().filter((c) => {
+    const list = salesCustomers().filter((c) => {
       const matchesSearch = !term || c.legalName.toLowerCase().includes(term) || c.taxId.includes(term);
       const modes = this.customerModes(c);
       return matchesSearch && (filter.size === 0 || modes.some((m) => filter.has(m)));
     });
+    return newestFirst(list);
   });
 
   protected customerModes(c: Customer): CustomerPaymentMode[] {

@@ -213,8 +213,9 @@ export const SALES_ORDER_CUSTOMER_DOCUMENT_TYPE_LABEL: Record<SalesOrderCustomer
 export interface SalesOrderCustomerDocument {
   id: string;
   type: SalesOrderCustomerDocumentType;
-  code?: string;
-  observation?: string;
+  /** Código del documento del cliente (ajeno a nuestro sistema), ej. la OC del cliente. */
+  reference?: string;
+  description?: string;
   file?: {
     name: string;
     uploadedAt: string;
@@ -222,6 +223,17 @@ export interface SalesOrderCustomerDocument {
     url?: string;
   };
   createdAt: string;
+}
+
+export interface SalesDispatchRelease {
+  id: string;
+  salesOrderId: string;
+  salesOrderNumber: string;
+  customerId: string;
+  customerName: string;
+  workSheetIds: string[];
+  releasedAt: string;
+  releasedBy: string;
 }
 
 export interface SalesRelatedDocument {
@@ -361,6 +373,19 @@ export const SALES_ORDER_WORK_SHEET_TYPE_LABEL: Record<SalesOrderWorkSheetType, 
   replacement: 'HT x reposición',
   claim: 'HT x reclamo',
 };
+
+
+
+export interface SalesDispatchRelease {
+  id: string;
+  salesOrderId: string;
+  salesOrderNumber: string;
+  customerId: string;
+  customerName: string;
+  workSheetIds: string[];
+  releasedAt: string;
+  releasedBy: string;
+}
 
 export interface SalesOrder {
   id: string;

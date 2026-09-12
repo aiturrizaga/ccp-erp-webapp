@@ -6,6 +6,7 @@ import { ListToolbar } from '@shared/components/list-toolbar/list-toolbar';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { QualityInspection, QualityInspectionResult, QUALITY_INSPECTION_RESULT_LABEL, Tone } from '@core/models';
 import { ProductionState } from '../../production-state';
+import { newestFirst } from '@core/utils/sort';
 
 const RESULT_TONE: Record<QualityInspectionResult, Tone> = {
   pass: 'success',
@@ -35,7 +36,8 @@ export class InspectionList {
 
   protected readonly rows = computed(() => {
     const term = this.search().trim().toLowerCase();
-    return this.productionState.qualityInspections().filter((i) => !term || i.workSheetId.toLowerCase().includes(term) || i.operationName.toLowerCase().includes(term));
+    const list = this.productionState.qualityInspections().filter((i) => !term || i.workSheetId.toLowerCase().includes(term) || i.operationName.toLowerCase().includes(term));
+    return newestFirst(list, (i) => i.inspectedAt);
   });
 
   protected protocolName(inspection: QualityInspection): string {

@@ -27,6 +27,7 @@ import {
 import { ITEMS } from '@core/mock-data';
 import { ProductionState } from '../../production-state';
 import { salesProducts } from '../../../sales/sales-state';
+import { newestFirst } from '@core/utils/sort';
 
 const STATUS_TONE: Record<ProductStatus, Tone> = {
   draft: 'neutral',
@@ -78,11 +79,12 @@ export class ProductList {
 
   protected readonly pendingProducts = computed(() => {
     const term = this.search().trim().toLowerCase();
-    return salesProducts().filter((p) => {
+    const list = salesProducts().filter((p) => {
       const hasCost = !!p.costBand && (p.productionUnitCost ?? 0) > 0 && p.costBand.min > 0 && p.costBand.max >= p.costBand.min;
       const text = `${formatSalesProductName(p)} ${p.legacyCode}`.toLowerCase();
       return !hasCost && (!term || text.includes(term));
     });
+    return newestFirst(list);
   });
 
   protected readonly pendingCount = computed(() => salesProducts().filter((p) => !p.costBand || !(p.productionUnitCost ?? 0) || p.costBand.min <= 0 || p.costBand.max < p.costBand.min).length);
@@ -99,7 +101,7 @@ export class ProductList {
     const term = this.search().trim().toLowerCase();
     const statuses = this.statusFilter();
 
-    return this.productionState.products().filter((p) => {
+    const list = this.productionState.products().filter((p) => {
       const matchesSearch =
         !term ||
         p.name.toLowerCase().includes(term) ||
@@ -110,6 +112,7 @@ export class ProductList {
 
       return matchesSearch && matchesStatus;
     });
+    return newestFirst(list);
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size);

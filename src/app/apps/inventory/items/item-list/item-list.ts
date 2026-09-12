@@ -15,6 +15,7 @@ import { SelectFilterOption } from '@shared/components/select-filter/select-filt
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
 import { STOCK_LEDGER } from '@core/mock-data';
 import { InventoryState } from '../../inventory-state';
+import { newestFirst } from '@core/utils/sort';
 import {
   CostCenterCode,
   COST_CENTER_LABEL,
@@ -156,14 +157,15 @@ export class ItemList {
     const stockTypes = this.stockTypeFilter();
     const itemGroups = this.itemGroupFilter();
     const costCenters = this.costCenterFilter();
-    return this.inventoryState.items().filter((i) => {
+    const list = this.inventoryState.items().filter((i) => {
       const matchesSearch = !term || i.code.toLowerCase().includes(term) || i.description.toLowerCase().includes(term);
       const matchesActive = actives.size === 0 || actives.has(i.active);
       const matchesStockType = stockTypes.size === 0 || stockTypes.has(i.stockType);
       const matchesItemGroup = itemGroups.size === 0 || (i.itemGroup !== undefined && itemGroups.has(i.itemGroup));
       const matchesCostCenter = costCenters.size === 0 || (i.costCenter !== undefined && costCenters.has(i.costCenter));
       return matchesSearch && matchesActive && matchesStockType && matchesItemGroup && matchesCostCenter;
-    }).reverse();
+    });
+    return newestFirst(list);
   });
 
   protected readonly filterCount = computed(

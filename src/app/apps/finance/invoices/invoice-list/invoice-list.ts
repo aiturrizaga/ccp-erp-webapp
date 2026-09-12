@@ -23,6 +23,7 @@ import {
   Tone,
 } from '@core/models';
 import { InvoicingState } from '../../invoicing-state';
+import { newestFirst } from '@core/utils/sort';
 
 const DOCUMENT_TYPE_OPTIONS: { value: InvoiceDocumentType; label: string }[] = (
   Object.keys(INVOICE_DOCUMENT_TYPE_LABEL) as InvoiceDocumentType[]
@@ -77,7 +78,7 @@ export class InvoiceList {
     const term = this.search().trim().toLowerCase();
     const types = this.documentTypeFilter();
     const statuses = this.statusFilter();
-    return this.state.invoices().filter((invoice) => {
+    const list = this.state.invoices().filter((invoice) => {
       const matchesSearch =
         !term ||
         invoice.number.toLowerCase().includes(term) ||
@@ -85,7 +86,8 @@ export class InvoiceList {
       const matchesType = types.size === 0 || types.has(invoice.documentType);
       const matchesStatus = statuses.size === 0 || statuses.has(invoice.status);
       return matchesSearch && matchesType && matchesStatus;
-    }).reverse();
+    });
+    return newestFirst(list);
   });
 
   protected readonly filterCount = computed(() => this.documentTypeFilter().size + this.statusFilter().size);

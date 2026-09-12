@@ -5,6 +5,7 @@ import { DataTable, DataTableColumn } from '@shared/components/data-table/data-t
 import { ListToolbar } from '@shared/components/list-toolbar/list-toolbar';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { salesClaims } from '../../sales-state';
+import { newestFirst } from '@core/utils/sort';
 import {
   CLAIM_DEFECT_TYPE_LABEL,
   SALES_CLAIM_RESOLUTION_LABEL,
@@ -35,9 +36,10 @@ export class ClaimList {
 
   protected readonly rows = computed(() => {
     const term = this.search().trim().toLowerCase();
-    return salesClaims().filter(
+    const list = salesClaims().filter(
       (c) => !term || c.number.toLowerCase().includes(term) || c.customerName.toLowerCase().includes(term) || c.salesOrderNumber.toLowerCase().includes(term),
     );
+    return newestFirst(list);
   });
 
   protected defectLabel = (d: SalesClaim['defectType']) => CLAIM_DEFECT_TYPE_LABEL[d];

@@ -261,7 +261,7 @@ export const PURCHASE_REQUIREMENTS: PurchaseRequirement[] = [
 
 export const QUOTATIONS: Quotation[] = [
   {
-    id: 'QT-001', number: 'COT-2026-0088', requirementId: 'RC-001', status: 'awarded', createdAt: '2026-08-05', dueDate: '2026-08-09',
+    id: 'QT-001', number: 'CT-CP-2026-0088', requirementId: 'RC-001', status: 'awarded', createdAt: '2026-08-05', dueDate: '2026-08-09',
     lines: [
       { itemId: 'MP00006', quantity: 600, unitOfMeasure: 'BOL', offers: [
         { supplierId: 'SUP-011', unitPrice: 22, currency: 'PEN', deliveryDays: 3, paymentTerms: 'CREDITO A 15 DIAS', attachmentName: 'cotizacion-cemex-0088.pdf', selected: true },
@@ -276,7 +276,7 @@ export const QUOTATIONS: Quotation[] = [
     awardReason: 'Mejor tiempo de entrega y condición de pago para cubrir la Hoja de Trabajo HT-2026-0311 a tiempo.',
   },
   {
-    id: 'QT-002', number: 'COT-2026-0091', requirementId: 'RC-004', status: 'under_evaluation', createdAt: '2026-08-13', dueDate: '2026-08-16',
+    id: 'QT-002', number: 'CT-CP-2026-0091', requirementId: 'RC-004', status: 'under_evaluation', createdAt: '2026-08-13', dueDate: '2026-08-16',
     lines: [
       { itemId: 'MP00013', quantity: 1200, unitOfMeasure: 'UND', offers: [
         { supplierId: 'SUP-013', unitPrice: 17, currency: 'PEN', deliveryDays: 5, paymentTerms: 'CREDITO A 30 DIAS', attachmentName: 'cotizacion-arequipa-0091.pdf', selected: false },
@@ -288,7 +288,7 @@ export const QUOTATIONS: Quotation[] = [
     ],
   },
   {
-    id: 'QT-003', number: 'COT-2026-0079', requirementId: 'RC-005', status: 'awarded', createdAt: '2026-07-21', dueDate: '2026-07-24',
+    id: 'QT-003', number: 'CT-CP-2026-0079', requirementId: 'RC-005', status: 'awarded', createdAt: '2026-07-21', dueDate: '2026-07-24',
     lines: [
       { itemId: 'MA00001', quantity: 60, unitOfMeasure: 'KG', offers: [{ supplierId: 'SUP-016', unitPrice: 12.8, currency: 'PEN', deliveryDays: 4, paymentTerms: 'CREDITO A 15 DIAS', selected: true }] },
       { itemId: 'MA00024', quantity: 40, unitOfMeasure: 'KG', offers: [{ supplierId: 'SUP-016', unitPrice: 12.1, currency: 'PEN', deliveryDays: 4, paymentTerms: 'CREDITO A 15 DIAS', selected: true }] },
@@ -296,7 +296,7 @@ export const QUOTATIONS: Quotation[] = [
     awardedSupplierId: 'SUP-016', authorizedBy: 'Jorge Salcedo (Jefe de Compras)', awardReason: 'Proveedor homologado único para electrodos Solditec.',
   },
   {
-    id: 'QT-004', number: 'COT-2026-0093', requirementId: 'RC-007', status: 'awarded', createdAt: '2026-08-14', dueDate: '2026-08-17',
+    id: 'QT-004', number: 'CT-CP-2026-0093', requirementId: 'RC-007', status: 'awarded', createdAt: '2026-08-14', dueDate: '2026-08-17',
     lines: [{ itemId: 'MA00031', quantity: 200, unitOfMeasure: 'UND', offers: [
       { supplierId: 'SUP-006', unitPrice: 3.7, currency: 'PEN', deliveryDays: 3, paymentTerms: 'CONTADO', selected: true },
       { supplierId: 'SUP-010', unitPrice: 3.9, currency: 'PEN', deliveryDays: 2, paymentTerms: 'CONTADO', selected: false },
@@ -304,7 +304,7 @@ export const QUOTATIONS: Quotation[] = [
     awardedSupplierId: 'SUP-006', authorizedBy: 'Rosa Injante (Compras)', awardReason: 'Mejor precio, entrega en ventana requerida.',
   },
   {
-    id: 'QT-005', number: 'COT-2026-0095', requirementId: 'RC-003', status: 'sent', createdAt: '2026-08-11', dueDate: '2026-08-15',
+    id: 'QT-005', number: 'CT-CP-2026-0095', requirementId: 'RC-003', status: 'sent', createdAt: '2026-08-11', dueDate: '2026-08-15',
     lines: [
       { itemId: 'MP00001', quantity: 60, unitOfMeasure: 'M3', offers: [] },
       { itemId: 'MP00002', quantity: 80, unitOfMeasure: 'M3', offers: [] },

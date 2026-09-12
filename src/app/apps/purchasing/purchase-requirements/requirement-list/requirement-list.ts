@@ -12,6 +12,7 @@ import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { SelectFilterOption } from '@shared/components/select-filter/select-filter';
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
 import { PurchasingState } from '../../purchasing-state';
+import { newestFirst } from '@core/utils/sort';
 import {
   PurchaseRequirement,
   PurchaseRequirementStatus,
@@ -84,12 +85,13 @@ export class RequirementList {
     const term = this.search().trim().toLowerCase();
     const statuses = this.statusFilter();
     const priorities = this.priorityFilter();
-    return this.purchasingState.requirements().filter((r) => {
+    const list = this.purchasingState.requirements().filter((r) => {
       const matchesSearch = !term || r.number.toLowerCase().includes(term) || r.requestedBy.toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(r.status);
       const matchesPriority = priorities.size === 0 || priorities.has(r.priority);
       return matchesSearch && matchesStatus && matchesPriority;
-    }).reverse();
+    });
+    return newestFirst(list);
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.priorityFilter().size);

@@ -1,5 +1,5 @@
 /**
- * One-time seed: pushes the app's bundled fixture data into the Supabase tables created by
+ * Seed: pushes the app's bundled fixture data into the Supabase tables created by
  * supabase/migration.sql, so testers see the real demo dataset instead of empty tables.
  *
  * Run once, after applying the migration and filling in src/environments/environment.ts:
@@ -7,7 +7,10 @@
  *
  * Safe to re-run — everything is upserted by id, so re-running just refreshes rows to match the
  * fixtures again (useful to reset demo data back to a clean baseline after testers have played
- * with it).
+ * with it). Re-running also PURGES rows whose document number still carries a legacy prefix
+ * (PV-…, COT-…, CV-…, CL-…, bare CT-…, SO-2026-…), so the baseline always lands on the current
+ * OC / CT-VT / CT-LG / CT-CP / OP / HT standard — otherwise rows persisted before the prefix
+ * change would survive the upsert and keep showing the old prefixes in the app.
  */
 import { createClient } from '@supabase/supabase-js';
 import { environment } from '../src/environments/environment';
@@ -43,7 +46,47 @@ if (!environment.supabaseUrl || !environment.supabaseAnonKey) {
 
 const supabase = createClient(environment.supabaseUrl, environment.supabaseAnonKey);
 
-async function seed<T extends { id: string }>(table: string, rows: T[], extraColumns: (row: T) => Record<string, unknown>) {
+/** Prefixes the app no longer produces. Any row still carrying one is deleted before seeding. */
+const LEGACY_PREFIXES = ['PV-', 'COT-', 'CV-', 'CL-', 'SO-2026-'];
+
+/**
+ * Delete rows whose `data` number field(s) still carry an obsolete prefix. `numberFields` names the
+ * keys inside `data` that hold a document number (e.g. `['number']`, `['salesOrderNumber', 'quotationCode']`).
+ * The bare `CT-` prefix is also purged, but only when it is not one of the current variants
+ * (CT-VT / CT-LG / CT-CP).
+ */
+async function purgeLegacy(table: string, numberFields: string[]): Promise<void> {
+  for (const field of numberFields) {
+    const col = `data->>${field}`;
+    for (const prefix of LEGACY_PREFIXES) {
+      const { error } = await supabase.from(table).delete().filter(col, 'like', `${prefix}%`);
+      if (error) {
+        console.error(`✗ purge ${table}.${field} (~${prefix}%):`, error.message);
+        process.exitCode = 1;
+        return;
+      }
+    }
+    const { error } = await supabase
+      .from(table)
+      .delete()
+      .filter(col, 'like', 'CT-%')
+      .not(col, 'like', 'CT-VT-%')
+      .not(col, 'like', 'CT-LG-%')
+      .not(col, 'like', 'CT-CP-%');
+    if (error) {
+      console.error(`✗ purge ${table}.${field} (legacy CT-%):`, error.message);
+      process.exitCode = 1;
+    }
+  }
+}
+
+async function seed<T extends { id: string }>(
+  table: string,
+  rows: T[],
+  extraColumns: (row: T) => Record<string, unknown>,
+  numberFields: string[] = ['number'],
+): Promise<void> {
+  await purgeLegacy(table, numberFields);
   const payload = rows.map((row) => ({ id: row.id, ...extraColumns(row), data: row }));
   const { error } = await supabase.from(table).upsert(payload);
   if (error) {
@@ -73,10 +116,10 @@ async function main() {
   await seed('customer_contacts', CONTACTS, (c) => ({ customer_id: c.customerId, type: c.type ?? null }));
   await seed('sales_quotations', SALES_QUOTATIONS, (q) => ({ status: q.status, customer_id: q.customerId }));
   await seed('sales_orders', SALES_ORDERS, (o) => ({ status: o.status, customer_id: o.customerId }));
-  await seed('sales_claims', SALES_CLAIMS, (c) => ({ status: c.status, sales_order_id: c.salesOrderId }));
-  await seed('invoices', INVOICES, (i) => ({ status: i.status, document_type: i.documentType }));
+  await seed('sales_claims', SALES_CLAIMS, (c) => ({ status: c.status, sales_order_id: c.salesOrderId }), ['salesOrderNumber']);
+  await seed('invoices', INVOICES, (i) => ({ status: i.status, document_type: i.documentType }), ['salesOrderNumber', 'quotationCode']);
   await seed('doc_series', DOC_SERIES, (s) => ({ doc_kind: s.docKind, environment: s.environment }));
-  await seed('dispatch_guides', DISPATCH_GUIDES, (g) => ({ status: g.status, kind: g.kind }));
+  await seed('dispatch_guides', DISPATCH_GUIDES, (g) => ({ status: g.status, kind: g.kind }), ['salesOrderNumber']);
   await seed('credit_agreements', CREDIT_AGREEMENTS, (a) => ({ status: a.status, customer_id: a.customerId }));
   await seed('document_deliveries', DOCUMENT_DELIVERIES, (d) => ({ kind: d.kind, customer_id: d.customerId }));
 

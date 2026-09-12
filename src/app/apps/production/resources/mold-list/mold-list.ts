@@ -6,6 +6,7 @@ import { ListToolbar } from '@shared/components/list-toolbar/list-toolbar';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { Mold, MOLD_TYPE_LABEL, RESOURCE_CONDITION_LABEL, Tone } from '@core/models';
 import { ProductionState } from '../../production-state';
+import { newestFirst } from '@core/utils/sort';
 
 @Component({
   selector: 'app-mold-list',
@@ -28,7 +29,8 @@ export class MoldList {
 
   protected readonly rows = computed(() => {
     const term = this.search().trim().toLowerCase();
-    return this.productionState.molds().filter((m) => !term || m.code.toLowerCase().includes(term));
+    const list = this.productionState.molds().filter((m) => !term || m.code.toLowerCase().includes(term));
+    return newestFirst(list);
   });
 
   protected productNames(mold: Mold): string {

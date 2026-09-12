@@ -12,6 +12,7 @@ import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.mode
 import { ITEMS, WAREHOUSES } from '@core/mock-data';
 import { STOCK_STATUS_LABEL, StockLot, StockStatus, Tone } from '@core/models';
 import { WarehouseOpsState } from '../../warehouse-ops-state';
+import { newestFirst } from '@core/utils/sort';
 
 const STATUS_TONE: Record<StockStatus, Tone> = {
   available: 'success',
@@ -94,11 +95,12 @@ export class StockList {
   protected readonly filteredRows = computed(() => {
     const term = this.search().trim().toLowerCase();
     const statuses = this.statusFilter();
-    return this.enrichedLots().filter((r) => {
+    const list = this.enrichedLots().filter((r) => {
       const matchesSearch = !term || r.itemLabel.toLowerCase().includes(term) || r.lot.toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(r.status);
       return matchesSearch && matchesStatus;
-    }).reverse();
+    });
+    return newestFirst(list);
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size);

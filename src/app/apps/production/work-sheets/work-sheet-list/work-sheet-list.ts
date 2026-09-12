@@ -14,6 +14,7 @@ import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.mode
 import { PRODUCTS, WAREHOUSES } from '@core/mock-data';
 import { Tone, WorkSheet, WorkSheetStatus, WORK_SHEET_STATUS_LABEL, workSheetProgressPct, workSheetStatus } from '@core/models';
 import { ProductionState } from '../../production-state';
+import { newestFirst } from '@core/utils/sort';
 
 const STATUS_TONE: Record<WorkSheetStatus, Tone> = {
   planned: 'neutral',
@@ -105,15 +106,15 @@ export class WorkSheetList {
     const statuses = this.statusFilter();
     const plants = this.plantFilter();
     const risks = this.riskFilter();
-    return this.rows()
+    const list = this.rows()
       .filter((r) => {
         const matchesSearch = !term || r.ws.number.toLowerCase().includes(term) || r.productLabel.toLowerCase().includes(term);
         const matchesStatus = statuses.size === 0 || statuses.has(r.status);
         const matchesPlant = plants.size === 0 || plants.has(r.ws.plant);
         const matchesRisk = risks.size === 0 || risks.has(r.ws.atRisk);
         return matchesSearch && matchesStatus && matchesPlant && matchesRisk;
-      })
-      .reverse();
+      });
+    return newestFirst(list, (r) => r.ws.scheduledDate);
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.plantFilter().size + this.riskFilter().size);

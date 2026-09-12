@@ -6,6 +6,7 @@ import { ListToolbar } from '@shared/components/list-toolbar/list-toolbar';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { QualityProtocol, QualityProtocolStatus, QUALITY_PROTOCOL_STATUS_LABEL, Tone } from '@core/models';
 import { ProductionState } from '../../production-state';
+import { newestFirst } from '@core/utils/sort';
 
 const STATUS_TONE: Record<QualityProtocolStatus, Tone> = {
   active: 'success',
@@ -34,7 +35,8 @@ export class ProtocolList {
 
   protected readonly rows = computed(() => {
     const term = this.search().trim().toLowerCase();
-    return this.productionState.qualityProtocols().filter((p) => !term || p.name.toLowerCase().includes(term));
+    const list = this.productionState.qualityProtocols().filter((p) => !term || p.name.toLowerCase().includes(term));
+    return newestFirst(list);
   });
 
   protected appliesTo(protocol: QualityProtocol): string {

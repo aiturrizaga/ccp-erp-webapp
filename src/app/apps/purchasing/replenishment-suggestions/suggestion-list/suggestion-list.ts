@@ -13,6 +13,7 @@ import { SelectFilterOption } from '@shared/components/select-filter/select-filt
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
 import { WORK_SHEETS } from '@core/mock-data';
 import { PurchasingState } from '../../purchasing-state';
+import { newestFirst } from '@core/utils/sort';
 import {
   ReplenishmentSuggestion,
   ReplenishmentSuggestionStatus,
@@ -116,7 +117,7 @@ export class SuggestionList {
     const priorities = this.priorityFilter();
     const origins = this.originFilter();
     const htStatuses = this.htStatusFilter();
-    return this.purchasingState.suggestions().filter((s) => {
+    const list = this.purchasingState.suggestions().filter((s) => {
       const matchesSearch = !term || s.number.toLowerCase().includes(term) || s.requestedBy.toLowerCase().includes(term);
       const matchesStatus = statuses.size === 0 || statuses.has(s.status);
       const matchesPriority = priorities.size === 0 || priorities.has(s.priority);
@@ -124,7 +125,8 @@ export class SuggestionList {
       const htStatus = this.htStatus(s.workSheetRef);
       const matchesHtStatus = htStatuses.size === 0 || (!!htStatus && htStatuses.has(htStatus));
       return matchesSearch && matchesStatus && matchesPriority && matchesOrigin && matchesHtStatus;
-    }).reverse();
+    });
+    return newestFirst(list);
   });
 
   protected readonly filterCount = computed(

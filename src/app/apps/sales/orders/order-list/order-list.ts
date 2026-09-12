@@ -15,6 +15,7 @@ import { SelectFilterOption } from '@shared/components/select-filter/select-filt
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
 import { Currency, SalesOrder, SalesOrderStatus, SALES_ORDER_STATUS_LABEL, SALES_ORDER_STATUS_TONE, Tone } from '@core/models';
 import { salesOrders } from '../../sales-state';
+import { newestFirst } from '@core/utils/sort';
 
 const STATUS_OPTIONS: { value: SalesOrderStatus; label: string }[] = (Object.keys(SALES_ORDER_STATUS_LABEL) as SalesOrderStatus[]).map((value) => ({
   value,
@@ -115,7 +116,7 @@ export class OrderList {
     const statuses = this.statusFilter();
     const currencies = this.currencyFilter();
 
-    return salesOrders().filter((so) => {
+    const list = salesOrders().filter((so) => {
       let matchesSearch = true;
       if (sel) {
         if (sel.startsWith('cust:')) {
@@ -134,7 +135,8 @@ export class OrderList {
       const matchesStatus = statuses.size === 0 || statuses.has(so.status);
       const matchesCurrency = currencies.size === 0 || currencies.has(so.currency);
       return matchesSearch && matchesStatus && matchesCurrency;
-    }).reverse();
+    });
+    return newestFirst(list);
   });
 
   protected readonly filterCount = computed(() => this.statusFilter().size + this.currencyFilter().size);

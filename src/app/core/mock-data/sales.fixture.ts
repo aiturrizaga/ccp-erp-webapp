@@ -3,7 +3,7 @@ import { SalesOrder, SalesQuotation } from '@core/models';
 export const SALES_QUOTATIONS: SalesQuotation[] = [
   {
     id: 'SQ-001',
-    number: 'CT-2026-0301',
+    number: 'CT-VT-2026-0301',
     customerId: 'CUST-001',
     customerName: 'Constructora Andina S.A.C.',
     status: 'accepted',
@@ -19,7 +19,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-002',
-    number: 'CT-2026-0302',
+    number: 'CT-VT-2026-0302',
     customerId: 'CUST-002',
     customerName: 'Electro Sur Distribución S.A.',
     status: 'sent',
@@ -35,7 +35,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-003',
-    number: 'CT-2026-0303',
+    number: 'CT-VT-2026-0303',
     customerId: 'CUST-003',
     customerName: 'Municipalidad Provincial de Cañete',
     status: 'draft',
@@ -47,7 +47,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-004',
-    number: 'CT-2026-0304',
+    number: 'CT-VT-2026-0304',
     customerId: 'CUST-004',
     customerName: 'Inversiones Vial Norte E.I.R.L.',
     status: 'expired',
@@ -59,7 +59,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-005',
-    number: 'CT-2026-0305',
+    number: 'CT-VT-2026-0305',
     customerId: 'CUST-005',
     customerName: 'Hidrandina Distribución Eléctrica S.A.',
     status: 'rejected',
@@ -74,7 +74,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-006',
-    number: 'CT-2026-0306',
+    number: 'CT-VT-2026-0306',
     customerId: 'CUST-006',
     customerName: 'Constructora Los Álamos S.R.L.',
     status: 'accepted',
@@ -91,7 +91,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-007',
-    number: 'CT-2026-0307',
+    number: 'CT-VT-2026-0307',
     customerId: 'CUST-007',
     customerName: 'Municipalidad Distrital de Pativilca',
     status: 'sent',
@@ -103,7 +103,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-008',
-    number: 'CT-2026-0308',
+    number: 'CT-VT-2026-0308',
     customerId: 'CUST-008',
     customerName: 'Distribuidora Eléctrica del Centro S.A.C.',
     status: 'draft',
@@ -118,7 +118,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
   },
   {
     id: 'SQ-009',
-    number: 'CT-2026-0309',
+    number: 'CT-VT-2026-0309',
     customerId: 'CUST-009',
     customerName: 'Consorcio Vial Chincha S.A.',
     status: 'accepted',
@@ -134,7 +134,7 @@ export const SALES_QUOTATIONS: SalesQuotation[] = [
 export const SALES_ORDERS: SalesOrder[] = [
   {
     id: 'SO-001',
-    number: 'PV-2026-0501',
+    number: 'OP-2026-0501',
     customerId: 'CUST-001',
     customerName: 'Constructora Andina S.A.C.',
     quotationId: 'SQ-001',
@@ -151,7 +151,7 @@ export const SALES_ORDERS: SalesOrder[] = [
   },
   {
     id: 'SO-002',
-    number: 'PV-2026-0502',
+    number: 'OP-2026-0502',
     customerId: 'CUST-006',
     customerName: 'Constructora Los Álamos S.R.L.',
     quotationId: 'SQ-006',
@@ -173,7 +173,7 @@ export const SALES_ORDERS: SalesOrder[] = [
   },
   {
     id: 'SO-003',
-    number: 'PV-2026-0503',
+    number: 'OP-2026-0503',
     customerId: 'CUST-009',
     customerName: 'Consorcio Vial Chincha S.A.',
     quotationId: 'SQ-009',
@@ -187,7 +187,7 @@ export const SALES_ORDERS: SalesOrder[] = [
   },
   {
     id: 'SO-004',
-    number: 'PV-2026-0504',
+    number: 'OP-2026-0504',
     customerId: 'CUST-010',
     customerName: 'Electro Puno Distribución S.A.',
     status: 'pending_payment',
@@ -222,7 +222,7 @@ export const SALES_ORDERS: SalesOrder[] = [
   },
   {
     id: 'SO-005',
-    number: 'PV-2026-0505',
+    number: 'OP-2026-0505',
     customerId: 'CUST-011',
     customerName: 'Municipalidad Provincial de Barranca',
     status: 'ready_for_dispatch',
@@ -237,7 +237,7 @@ export const SALES_ORDERS: SalesOrder[] = [
   },
   {
     id: 'SO-006',
-    number: 'PV-2026-0506',
+    number: 'OP-2026-0506',
     customerId: 'CUST-012',
     customerName: 'Distribuidora Eléctrica Ica S.A.C.',
     status: 'partially_dispatched',
@@ -258,7 +258,7 @@ export const SALES_ORDERS: SalesOrder[] = [
   },
   {
     id: 'SO-007',
-    number: 'PV-2026-0507',
+    number: 'OP-2026-0507',
     customerId: 'CUST-013',
     customerName: 'Constructora Vial del Sur S.A.C.',
     status: 'cancelled',
@@ -272,7 +272,7 @@ export const SALES_ORDERS: SalesOrder[] = [
   },
   {
     id: 'SO-008',
-    number: 'PV-2026-0508',
+    number: 'OP-2026-0508',
     customerId: 'CUST-002',
     customerName: 'Electro Sur Distribución S.A.',
     status: 'invoiced',
@@ -288,7 +288,7 @@ export const SALES_ORDERS: SalesOrder[] = [
   },
   {
     id: 'SO-009',
-    number: 'PV-2026-0509',
+    number: 'OP-2026-0509',
     customerId: 'CUST-014',
     customerName: 'Municipalidad Distrital de Nazca',
     status: 'confirmed',

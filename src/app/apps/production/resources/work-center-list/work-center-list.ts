@@ -4,6 +4,7 @@ import { DataTable, DataTableColumn } from '@shared/components/data-table/data-t
 import { ListToolbar } from '@shared/components/list-toolbar/list-toolbar';
 import { WorkCenter } from '@core/models';
 import { ProductionState } from '../../production-state';
+import { newestFirst } from '@core/utils/sort';
 
 @Component({
   selector: 'app-work-center-list',
@@ -26,10 +27,11 @@ export class WorkCenterList {
 
   protected readonly rows = computed(() => {
     const term = this.search().trim().toLowerCase();
-    return this.productionState
+    const list = this.productionState
       .workCenters()
       .filter((w) => !term || w.name.toLowerCase().includes(term) || w.code.toLowerCase().includes(term))
       .map((w) => ({ ...w, machineCount: this.productionState.machines().filter((m) => m.workCenterId === w.id).length }));
+    return newestFirst(list);
   });
 
   protected openDetail(row: WorkCenter): void {

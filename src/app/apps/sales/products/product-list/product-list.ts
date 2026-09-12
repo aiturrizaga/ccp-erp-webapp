@@ -11,6 +11,7 @@ import { ListPagination } from '@shared/components/list-pagination/list-paginati
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
 import { salesProducts } from '../../sales-state';
+import { newestFirst } from '@core/utils/sort';
 import {
   SalesCategory,
   SalesProduct,
@@ -53,8 +54,8 @@ export class ProductList {
     { key: 'status', header: 'Estado', width: '120px' },
   ];
 
-  protected readonly rows = computed(() =>
-    salesProducts()
+  protected readonly rows = computed(() => {
+    const list = salesProducts()
       .map((p) => ({ ...p, fullName: formatSalesProductName(p) }))
       .filter((p) => {
         const term = this.search().trim().toLowerCase();
@@ -62,8 +63,9 @@ export class ProductList {
         const statuses = this.statusFilter();
         const matchesSearch = !term || p.fullName.toLowerCase().includes(term) || p.legacyCode.toLowerCase().includes(term);
         return matchesSearch && (cats.size === 0 || cats.has(p.category)) && (statuses.size === 0 || statuses.has(p.status));
-      }),
-  );
+      });
+    return newestFirst(list);
+  });
 
   protected readonly filterCount = computed(() => this.categoryFilter().size + this.statusFilter().size);
 
