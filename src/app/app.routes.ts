@@ -15,6 +15,7 @@ export const routes: Routes = [
       { path: 'apps/production', loadChildren: () => import('./apps/production/production.routes').then((m) => m.PRODUCTION_ROUTES) },
       { path: 'apps/sales', loadChildren: () => import('./apps/sales/sales.routes').then((m) => m.SALES_ROUTES) },
       { path: 'apps/finance', loadChildren: () => import('./apps/finance/finance.routes').then((m) => m.FINANCE_ROUTES) },
+      { path: 'apps/dispatch', loadChildren: () => import('./apps/dispatch/dispatch.routes').then((m) => m.DISPATCH_ROUTES) },
     ],
   },
 ];

@@ -1,0 +1,33 @@
+<div class="flex flex-col gap-6">
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div><h1 class="text-xl font-semibold tracking-tight">Dashboard de Despacho</h1><p class="text-muted-foreground text-sm">Control de salidas desde producto terminado hasta la entrega al cliente.</p></div>
+    <a hlmBtn size="sm" routerLink="/apps/dispatch/planning">Planificar despacho</a>
+  </div>
+
+  <div class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <app-stat-card label="HT disponibles" [value]="state.pendingCandidates().length + ''" hint="terminadas o con avance parcial" />
+    <app-stat-card label="Salidas programadas" [value]="programmed().length + ''" hint="pendientes de entrega" />
+    <app-stat-card label="Stock disponible" [value]="(availableUnits() | number:'1.0-0') + ''" hint="unidades no comprometidas" />
+    <app-stat-card label="Entregas a tiempo" [value]="onTimeRate() + '%'" hint="meta mínima: 84%" [trend]="onTimeRate() >= 84 ? 'up' : 'down'" />
+  </div>
+
+  <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+    <div hlmCard class="overflow-hidden">
+      <div class="flex items-center justify-between border-b px-4 py-3"><div><h2 class="text-sm font-semibold">Próximas salidas</h2><p class="text-muted-foreground text-xs">Transporte y planta confirmados.</p></div><a class="text-primary text-xs hover:underline" routerLink="/apps/dispatch/planning">Ver planificación</a></div>
+      <div class="divide-y">
+        @for (row of programmed(); track row.id) {
+          <div class="flex items-center justify-between gap-3 px-4 py-3 text-sm"><div class="min-w-0"><p class="font-medium">{{ row.id }} · {{ row.customerName }}</p><p class="text-muted-foreground truncate text-xs">{{ row.workSheetNumber }} · {{ row.quantity }} UND · {{ row.originPlant }} · {{ row.carrier }}</p></div><div class="text-right"><p class="whitespace-nowrap text-xs font-medium">{{ row.dispatchDate }}</p><app-status-badge label="Programado" tone="info" /></div></div>
+        } @empty { <p class="text-muted-foreground p-6 text-center text-sm">No existen salidas programadas.</p> }
+      </div>
+    </div>
+
+    <div hlmCard class="overflow-hidden">
+      <div class="flex items-center justify-between border-b px-4 py-3"><div><h2 class="text-sm font-semibold">Stock listo por planta</h2><p class="text-muted-foreground text-xs">Disponible luego de descontar lo programado y despachado.</p></div><a class="text-primary text-xs hover:underline" routerLink="/apps/dispatch/finished-stock">Ver stock</a></div>
+      <div class="divide-y">
+        @for (row of state.stock().slice(0, 6); track row.id) {
+          <div class="flex items-center justify-between gap-3 px-4 py-2.5 text-sm"><div class="min-w-0"><p class="truncate font-medium">{{ row.productCode }} — {{ row.productName }}</p><p class="text-muted-foreground text-xs">{{ row.plant }}</p></div><span class="shrink-0 font-semibold tabular-nums">{{ available(row) }} {{ row.unitOfMeasure }}</span></div>
+        }
+      </div>
+    </div>
+  </div>
+</div>

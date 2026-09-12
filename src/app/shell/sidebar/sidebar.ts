@@ -14,6 +14,7 @@ import { INVENTORY_NAV } from '@apps/inventory/inventory-nav';
 import { PRODUCTION_NAV } from '@apps/production/production-nav';
 import { SALES_NAV } from '@apps/sales/sales-nav';
 import { FINANCE_NAV } from '@apps/finance/finance-nav';
+import { DISPATCH_NAV } from '@apps/dispatch/dispatch-nav';
 
 const NAV_BY_APP: Record<string, NavItem[]> = {
   purchasing: PURCHASING_NAV,
@@ -21,6 +22,7 @@ const NAV_BY_APP: Record<string, NavItem[]> = {
   production: PRODUCTION_NAV,
   sales: SALES_NAV,
   finance: FINANCE_NAV,
+  dispatch: DISPATCH_NAV,
 };
 
 /** Contextual sidebar, built on spartan/ui's hlm-sidebar (inset variant, collapsible to icons). */
