@@ -1,4 +1,4 @@
-import { Component, computed, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -6,6 +6,7 @@ import { NgIcon } from '@ng-icons/core';
 import { HlmButtonImports } from '@ui/button';
 import { HlmInputImports } from '@ui/input';
 import { HlmCheckboxImports } from '@ui/checkbox';
+import { HlmComboboxImports } from '@ui/combobox';
 import { DataTable, DataTableColumn } from '@shared/components/data-table/data-table';
 import { DataGrid } from '@shared/components/data-grid/data-grid';
 import { DataKanban, KanbanColumn } from '@shared/components/data-kanban/data-kanban';
@@ -14,8 +15,8 @@ import { ListPagination } from '@shared/components/list-pagination/list-paginati
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { SelectFilterOption } from '@shared/components/select-filter/select-filter';
 import { ListViewOption, LIST_VIEW_OPTIONS } from '@shared/models/list-view.model';
-import { salesContacts, salesCustomers, salesQuotations } from '../../sales-state';
-import { Currency, Customer, SalesQuotation, SalesQuotationStatus, SALES_QUOTATION_STATUS_LABEL, SALES_QUOTATION_STATUS_TONE, Tone } from '@core/models';
+import { salesContacts, salesQuotations } from '../../sales-state';
+import { Currency, SalesQuotation, SalesQuotationStatus, SALES_QUOTATION_STATUS_LABEL, SALES_QUOTATION_STATUS_TONE, Tone } from '@core/models';
 
 const STATUS_OPTIONS: { value: SalesQuotationStatus; label: string }[] = (Object.keys(SALES_QUOTATION_STATUS_LABEL) as SalesQuotationStatus[]).map((value) => ({
   value,
@@ -35,15 +36,13 @@ const GROUP_BY_OPTIONS: SelectFilterOption[] = [
 
 @Component({
   selector: 'app-quotation-list',
-  imports: [FormsModule, NgIcon, ...HlmButtonImports, ...HlmInputImports, ...HlmCheckboxImports, DataTable, DataGrid, DataKanban, ListToolbar, ListPagination, StatusBadge, DecimalPipe],
+  imports: [FormsModule, NgIcon, ...HlmButtonImports, ...HlmInputImports, ...HlmCheckboxImports, ...HlmComboboxImports, DataTable, DataGrid, DataKanban, ListToolbar, ListPagination, StatusBadge, DecimalPipe],
   templateUrl: './quotation-list.html',
-  host: { '(document:click)': 'onDocumentClick($event)' },
 })
 export class QuotationList {
   private readonly router = inject(Router);
-  private readonly customerField = viewChild<ElementRef<HTMLElement>>('customerField');
-
-  protected readonly search = signal('');
+  protected readonly searchSelection = signal('');
+  protected readonly searchInput = signal('');
   protected readonly view = signal<'list' | 'grid' | 'kanban'>('list');
   protected readonly groupBy = signal('none');
   protected readonly page = signal(1);
@@ -53,22 +52,60 @@ export class QuotationList {
   protected readonly currencyFilter = signal<Set<Currency>>(new Set());
   protected readonly dateFrom = signal('');
   protected readonly dateTo = signal('');
-  protected readonly customerIdFilter = signal('');
-  protected readonly customerSearch = signal('');
-  protected readonly customerOpen = signal(false);
-
   protected readonly views: ListViewOption[] = [LIST_VIEW_OPTIONS.list, LIST_VIEW_OPTIONS.grid, LIST_VIEW_OPTIONS.kanban];
   protected readonly groupByOptions = GROUP_BY_OPTIONS;
   protected readonly statusOptions = STATUS_OPTIONS;
   protected readonly currencyOptions = CURRENCY_OPTIONS;
-  protected readonly customers = salesCustomers;
-  protected readonly customer = computed(() => this.customers().find((c) => c.id === this.customerIdFilter()));
-  protected readonly customerOptions = computed(() => {
-    const q = this.customerSearch().trim().toLowerCase();
-    return this.customers()
-      .filter((c) => !q || `${c.legalName} ${c.taxId}`.toLowerCase().includes(q))
-      .slice(0, 10);
+  protected readonly searchOptions = computed<{ value: string; label: string; type: 'customer' | 'quotation' }[]>(() => {
+    const query = this.searchInput().trim().toLowerCase();
+    const quotations = salesQuotations();
+    const customerMap = new Map<string, string>();
+    for (const q of quotations) {
+      if (!customerMap.has(q.customerId)) customerMap.set(q.customerId, q.customerName);
+    }
+
+    const options: { value: string; label: string; type: 'customer' | 'quotation' }[] = [];
+    for (const [id, name] of customerMap.entries()) {
+      if (!query || name.toLowerCase().includes(query)) {
+        options.push({ value: `cust:${id}`, label: `Cliente: ${name}`, type: 'customer' });
+      }
+    }
+    for (const q of quotations) {
+      if (!query || q.number.toLowerCase().includes(query) || q.customerName.toLowerCase().includes(query)) {
+        options.push({ value: `quo:${q.id}`, label: `Cotización: ${q.number} - ${q.customerName}`, type: 'quotation' });
+      }
+    }
+    return options;
   });
+
+  protected readonly selectedSearchBadge = computed<{ label: string; type: 'customer' | 'quotation' } | null>(() => {
+    const sel = this.searchSelection();
+    if (!sel) return null;
+    const found = this.searchOptions().find((o) => o.value === sel);
+    if (found) return { label: found.label, type: found.type };
+    if (sel.startsWith('cust:')) {
+      const id = sel.replace('cust:', '');
+      const q = salesQuotations().find((row) => row.customerId === id);
+      return { label: `Cliente: ${q?.customerName ?? id}`, type: 'customer' };
+    }
+    if (sel.startsWith('quo:')) {
+      const id = sel.replace('quo:', '');
+      const q = salesQuotations().find((row) => row.id === id);
+      return { label: `Cotización: ${q?.number ?? id}`, type: 'quotation' };
+    }
+    return null;
+  });
+
+  protected searchPickerToString = (value: string): string => {
+    if (!value) return '';
+    return this.searchOptions().find((o) => o.value === value)?.label ?? value;
+  };
+
+  protected clearSearchSelection(): void {
+    this.searchSelection.set('');
+    this.searchInput.set('');
+    this.page.set(1);
+  }
 
   protected readonly statusColumns: KanbanColumn[] = STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label, tone: SALES_QUOTATION_STATUS_TONE[o.value] }));
   protected readonly statusKey = (row: SalesQuotation): string => row.status;
@@ -86,19 +123,25 @@ export class QuotationList {
 
   /** Rows matching every filter EXCEPT status — used to count how many fall in each status. */
   protected readonly baseRows = computed(() => {
-    const term = this.search().trim().toLowerCase();
+    const selection = this.searchSelection();
+    const term = this.searchInput().trim().toLowerCase();
     const currencies = this.currencyFilter();
     const from = this.dateFrom();
     const to = this.dateTo();
     return salesQuotations()
       .map((q) => ({ ...q, contactName: salesContacts().find((c) => c.id === q.contactId)?.name ?? 'Sin contacto asociado' }))
       .filter((q) => {
-        const matchesSearch = !term || q.number.toLowerCase().includes(term) || q.customerName.toLowerCase().includes(term);
+        let matchesSearch = true;
+        if (selection) {
+          if (selection.startsWith('cust:')) matchesSearch = q.customerId === selection.replace('cust:', '');
+          else if (selection.startsWith('quo:')) matchesSearch = q.id === selection.replace('quo:', '');
+        } else if (term) {
+          matchesSearch = q.number.toLowerCase().includes(term) || q.customerName.toLowerCase().includes(term);
+        }
         const matchesCurrency = currencies.size === 0 || currencies.has(q.currency);
-        const matchesCustomer = !this.customerIdFilter() || q.customerId === this.customerIdFilter();
         const matchesFrom = !from || q.issuedAt >= from;
         const matchesTo = !to || q.issuedAt <= to;
-        return matchesSearch && matchesCurrency && matchesCustomer && matchesFrom && matchesTo;
+        return matchesSearch && matchesCurrency && matchesFrom && matchesTo;
       })
       .reverse();
   });
@@ -118,7 +161,7 @@ export class QuotationList {
   protected count = (status: string): number => this.statusCounts()[status] ?? 0;
 
   protected readonly filterCount = computed(
-    () => this.statusFilter().size + this.currencyFilter().size + (this.customerIdFilter() ? 1 : 0) + (this.dateFrom() ? 1 : 0) + (this.dateTo() ? 1 : 0),
+    () => this.statusFilter().size + this.currencyFilter().size + (this.dateFrom() ? 1 : 0) + (this.dateTo() ? 1 : 0),
   );
 
   protected readonly groupedSections = computed<{ label: string; rows: SalesQuotation[] }[] | null>(() => {
@@ -168,43 +211,11 @@ export class QuotationList {
   protected clearFilters(): void {
     this.statusFilter.set(new Set());
     this.currencyFilter.set(new Set());
-    this.customerIdFilter.set('');
-    this.customerSearch.set('');
-    this.customerOpen.set(false);
+    this.searchSelection.set('');
+    this.searchInput.set('');
     this.dateFrom.set('');
     this.dateTo.set('');
     this.page.set(1);
-  }
-
-  protected chooseCustomer(customer: Customer): void {
-    this.customerIdFilter.set(customer.id);
-    this.customerSearch.set(customer.legalName);
-    this.customerOpen.set(false);
-    this.page.set(1);
-  }
-
-  protected onCustomerSearch(value: string): void {
-    this.customerSearch.set(value);
-    this.customerOpen.set(true);
-    if (this.customerIdFilter() && value !== this.customer()?.legalName) {
-      this.customerIdFilter.set('');
-    }
-    this.page.set(1);
-  }
-
-  protected onCustomerFocus(): void {
-    this.customerOpen.set(true);
-  }
-
-  protected clearCustomerFilter(): void {
-    this.customerIdFilter.set('');
-    this.customerSearch.set('');
-    this.customerOpen.set(false);
-    this.page.set(1);
-  }
-
-  protected onDocumentClick(event: MouseEvent): void {
-    if (!this.customerField()?.nativeElement.contains(event.target as Node)) this.customerOpen.set(false);
   }
 
   private toggled<T>(set: Set<T>, value: T): Set<T> {
