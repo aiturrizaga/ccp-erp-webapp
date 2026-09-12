@@ -4,6 +4,7 @@ import { Router } from '@angular/router';
 import { NgIcon } from '@ng-icons/core';
 import { HlmButtonImports } from '@ui/button';
 import { HlmCheckboxImports } from '@ui/checkbox';
+import { HlmComboboxImports } from '@ui/combobox';
 import { DataTable, DataTableColumn } from '@shared/components/data-table/data-table';
 import { DataGrid } from '@shared/components/data-grid/data-grid';
 import { DataKanban, KanbanColumn } from '@shared/components/data-kanban/data-kanban';
@@ -33,13 +34,14 @@ const GROUP_BY_OPTIONS: SelectFilterOption[] = [
 
 @Component({
   selector: 'app-order-list',
-  imports: [NgIcon, ...HlmButtonImports, ...HlmCheckboxImports, DataTable, DataGrid, DataKanban, ListToolbar, ListPagination, StatusBadge, DecimalPipe],
+  imports: [NgIcon, ...HlmButtonImports, ...HlmCheckboxImports, ...HlmComboboxImports, DataTable, DataGrid, DataKanban, ListToolbar, ListPagination, StatusBadge, DecimalPipe],
   templateUrl: './order-list.html',
 })
 export class OrderList {
   private readonly router = inject(Router);
 
-  protected readonly search = signal('');
+  protected readonly searchSelection = signal('');
+  protected readonly searchInput = signal('');
   protected readonly view = signal<'list' | 'grid' | 'kanban'>('list');
   protected readonly groupBy = signal('none');
   protected readonly page = signal(1);
@@ -47,6 +49,45 @@ export class OrderList {
 
   protected readonly statusFilter = signal<Set<SalesOrderStatus>>(new Set());
   protected readonly currencyFilter = signal<Set<Currency>>(new Set());
+
+  protected readonly searchOptions = computed<{ value: string; label: string; type: 'customer' | 'order' }[]>(() => {
+    const query = this.searchInput().trim().toLowerCase();
+    const orders = salesOrders();
+    
+    // Aggregate unique customers
+    const customerMap = new Map<string, string>();
+    for (const o of orders) {
+      if (!customerMap.has(o.customerId)) {
+        customerMap.set(o.customerId, o.customerName);
+      }
+    }
+
+    const options: { value: string; label: string; type: 'customer' | 'order' }[] = [];
+
+    // Customer options
+    for (const [id, name] of customerMap.entries()) {
+      if (!query || name.toLowerCase().includes(query)) {
+        options.push({
+          value: `cust:${id}`,
+          label: `Cliente: ${name}`,
+          type: 'customer',
+        });
+      }
+    }
+
+    // Order options
+    for (const o of orders) {
+      if (!query || o.number.toLowerCase().includes(query) || (o.customerOrderDocumentNumber && o.customerOrderDocumentNumber.toLowerCase().includes(query))) {
+        options.push({
+          value: `ord:${o.id}`,
+          label: `OP: ${o.number}${o.customerOrderDocumentNumber ? ' (' + o.customerOrderDocumentNumber + ')' : ''} - ${o.customerName}`,
+          type: 'order',
+        });
+      }
+    }
+
+    return options;
+  });
 
   protected readonly views: ListViewOption[] = [LIST_VIEW_OPTIONS.list, LIST_VIEW_OPTIONS.grid, LIST_VIEW_OPTIONS.kanban];
   protected readonly groupByOptions = GROUP_BY_OPTIONS;
@@ -69,11 +110,27 @@ export class OrderList {
   ];
 
   protected readonly filteredRows = computed(() => {
-    const term = this.search().trim().toLowerCase();
+    const sel = this.searchSelection();
+    const query = this.searchInput().trim().toLowerCase();
     const statuses = this.statusFilter();
     const currencies = this.currencyFilter();
+
     return salesOrders().filter((so) => {
-      const matchesSearch = !term || so.number.toLowerCase().includes(term) || so.customerName.toLowerCase().includes(term) || (so.customerOrderDocumentNumber ?? '').toLowerCase().includes(term);
+      let matchesSearch = true;
+      if (sel) {
+        if (sel.startsWith('cust:')) {
+          const custId = sel.replace('cust:', '');
+          matchesSearch = so.customerId === custId;
+        } else if (sel.startsWith('ord:')) {
+          const ordId = sel.replace('ord:', '');
+          matchesSearch = so.id === ordId;
+        }
+      } else if (query) {
+        matchesSearch = so.number.toLowerCase().includes(query) ||
+          so.customerName.toLowerCase().includes(query) ||
+          (so.customerOrderDocumentNumber ?? '').toLowerCase().includes(query);
+      }
+
       const matchesStatus = statuses.size === 0 || statuses.has(so.status);
       const matchesCurrency = currencies.size === 0 || currencies.has(so.currency);
       return matchesSearch && matchesStatus && matchesCurrency;
@@ -120,6 +177,37 @@ export class OrderList {
     else next.add(value);
     return next;
   }
+
+  protected readonly selectedSearchBadge = computed<{ label: string; type: 'customer' | 'order' } | null>(() => {
+    const sel = this.searchSelection();
+    if (!sel) return null;
+    const found = this.searchOptions().find((o) => o.value === sel);
+    if (found) {
+      return { label: found.label, type: found.type };
+    }
+    if (sel.startsWith('cust:')) {
+      const custId = sel.replace('cust:', '');
+      const cust = salesOrders().find((o) => o.customerId === custId);
+      return { label: `Cliente: ${cust?.customerName ?? custId}`, type: 'customer' };
+    }
+    if (sel.startsWith('ord:')) {
+      const ordId = sel.replace('ord:', '');
+      const ord = salesOrders().find((o) => o.id === ordId);
+      return { label: `OP: ${ord?.number ?? ordId}`, type: 'order' };
+    }
+    return null;
+  });
+
+  protected clearSearchSelection(): void {
+    this.searchSelection.set('');
+    this.searchInput.set('');
+  }
+
+  protected searchPickerToString = (val: string): string => {
+    if (!val) return '';
+    const found = this.searchOptions().find((o) => o.value === val);
+    return found ? found.label : val;
+  };
 
   protected isLate(order: SalesOrder): boolean {
     const notDelivered = !['dispatched', 'invoiced', 'cancelled'].includes(order.status);

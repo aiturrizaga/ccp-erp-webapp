@@ -21,6 +21,7 @@ import { SelectFilter, SelectFilterOption } from '../select-filter/select-filter
 export class ListToolbar {
   readonly search = model('');
   readonly searchPlaceholder = input('Buscar...');
+  readonly hasSearchInput = input(true);
 
   readonly views = input<ListViewOption[]>([]);
   readonly view = model<ListViewType>('list');

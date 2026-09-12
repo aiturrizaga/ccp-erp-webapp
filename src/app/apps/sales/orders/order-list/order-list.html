@@ -1,6 +1,5 @@
 <app-list-toolbar
-  [(search)]="search"
-  searchPlaceholder="Buscar por número o cliente..."
+  [hasSearchInput]="false"
   [views]="views"
   [(view)]="view"
   [groupByOptions]="view() === 'kanban' ? [] : groupByOptions"
@@ -10,6 +9,36 @@
   [hasSecondaryActions]="true"
   (action)="onNew()"
 >
+  <div search class="flex items-center gap-2">
+    @if (selectedSearchBadge(); as badge) {
+      <div class="bg-primary/10 border-primary/20 text-primary flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium">
+        <ng-icon [name]="badge.type === 'customer' ? 'tablerBuilding' : 'tablerFileText'" class="shrink-0" />
+        <span class="max-w-[280px] truncate" [title]="badge.label">{{ badge.label }}</span>
+        <button type="button" class="hover:bg-primary/20 flex size-4 items-center justify-center rounded-full transition-colors" (click)="clearSearchSelection()" title="Quitar filtro">
+          <ng-icon name="tablerX" class="size-3" />
+        </button>
+      </div>
+    } @else {
+      <div class="w-80 md:w-96">
+        <hlm-combobox [value]="searchSelection()" (valueChange)="searchSelection.set($event ?? '')" [itemToString]="searchPickerToString">
+          <hlm-combobox-input placeholder="Buscar por OP o cliente..." (input)="searchInput.set($any($event.target).value)" />
+          <hlm-combobox-content *hlmComboboxPortal class="w-96">
+            <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+            <div hlmComboboxList class="max-h-60 overflow-y-auto">
+              @for (option of searchOptions(); track option.value) {
+                <hlm-combobox-item [value]="option.value">
+                  <div class="flex items-center gap-1.5 truncate">
+                    <ng-icon [name]="option.type === 'customer' ? 'tablerBuilding' : 'tablerFileText'" class="text-muted-foreground shrink-0" />
+                    <span class="truncate">{{ option.label }}</span>
+                  </div>
+                </hlm-combobox-item>
+              }
+            </div>
+          </hlm-combobox-content>
+        </hlm-combobox>
+      </div>
+    }
+  </div>
   <div filters class="flex flex-col gap-3">
     <div>
       <p class="text-muted-foreground mb-1.5 text-xs font-medium">Estado</p>
