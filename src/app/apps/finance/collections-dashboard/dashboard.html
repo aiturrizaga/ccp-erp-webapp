@@ -1,17 +1,5 @@
 <div class="flex flex-col gap-6">
-<div hlmCard class="mb-4 p-4">
-  <h3 class="mb-1 text-sm font-semibold">Adelantos para liberar producción</h3>
-  <p class="text-muted-foreground mb-3 text-xs">Ventas al contado: se valida el voucher antes de generar la HT.</p>
-  <div class="flex flex-col divide-y">
-    @for (r of advancesToValidate(); track r.order.id) {
-      <div class="flex items-center justify-between gap-3 py-2">
-        <div><a class="text-primary text-sm font-medium hover:underline" [routerLink]="['/apps/sales/orders', r.order.id]">{{ r.order.number }}</a><p class="text-muted-foreground text-xs">{{ r.order.customerName }} · Adelanto {{ r.gate.advancePct }}% · {{ r.gate.status === 'pending_docs' ? 'Pendiente de voucher' : 'Voucher por validar' }}</p></div>
-        @if (r.gate.status === 'pending_collections' && r.gate.advanceVoucher) { <button hlmBtn size="sm" (click)="validateAdvance(r.order.id, r.order.number)">Validar y generar HT</button> }
-      </div>
-    } @empty { <p class="text-muted-foreground py-2 text-sm">No hay adelantos pendientes.</p> }
-  </div>
-</div>
-  <div>
+<div>
     <h1 class="text-xl font-semibold tracking-tight">Dashboard</h1>
     <p class="text-muted-foreground text-sm">Vista general de Cobranzas — control de crédito, cobranza al contado y saldos por cobrar.</p>
   </div>
@@ -30,10 +18,10 @@
     </div>
     <ul class="divide-y">
       @for (r of paymentsToValidate(); track r.payment.id) {
-        <li class="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToInvoice(r.invoiceId)">
+        <li class="flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-muted/50" (click)="goToPayment(r)">
           <div class="min-w-0">
-            <p class="font-medium">{{ r.invoiceNumber }}</p>
-            <p class="text-muted-foreground truncate text-xs">{{ r.customerName }} · reportó {{ r.payment.registeredBy }} · {{ r.payment.date }}</p>
+            <p class="font-medium">{{ r.source === 'invoice' ? r.invoiceNumber : r.orderNumber }}</p>
+            <p class="text-muted-foreground truncate text-xs">{{ r.customerName }} · {{ r.source === 'invoice' ? 'pago de factura' : 'adelanto de orden' }} · {{ r.payment.date }}</p>
           </div>
           <div class="flex items-center gap-2 whitespace-nowrap">
             <span class="font-medium tabular-nums">{{ r.currency }} {{ r.payment.amount | number: '1.2-2' }}</span>
@@ -74,8 +62,8 @@
 
     <div class="rounded-lg border">
       <div class="flex items-center justify-between border-b px-4 py-3">
-        <h2 class="text-sm font-semibold">Adelantos por validar (contado)</h2>
-        <span class="text-muted-foreground text-xs">OC + voucher 50%</span>
+        <h2 class="text-sm font-semibold">Adelantos de órdenes al contado</h2>
+        <a routerLink="/apps/finance/payments" class="text-primary text-xs hover:underline">Ir a validar</a>
       </div>
       <ul class="divide-y">
         @for (row of advancesToValidate(); track row.order.id) {
@@ -85,8 +73,8 @@
               <p class="text-muted-foreground truncate text-xs">{{ row.order.customerName }}</p>
             </div>
             <div class="flex items-center gap-2 whitespace-nowrap">
-              <span class="font-medium">S/ {{ (row.order.total * row.gate.advancePct / 100) | number: '1.2-2' }}</span>
-              <app-status-badge [label]="row.gate.status === 'pending_docs' ? 'Faltan docs' : 'Por validar'" [tone]="row.gate.status === 'pending_docs' ? 'warning' : 'info'" />
+              <span class="font-medium">{{ row.order.currency }} {{ (row.gate.advancePayment?.amount ?? (row.order.total * row.gate.advancePct / 100)) | number: '1.2-2' }}</span>
+              <app-status-badge [label]="row.gate.status === 'pending_docs' ? 'Faltan voucher' : row.gate.status === 'observed' ? 'Observado' : 'Por validar'" [tone]="row.gate.status === 'pending_docs' ? 'warning' : row.gate.status === 'observed' ? 'danger' : 'info'" />
             </div>
           </li>
         } @empty {

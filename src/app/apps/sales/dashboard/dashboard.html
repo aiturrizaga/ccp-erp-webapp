@@ -87,8 +87,8 @@
 
     <div class="rounded-lg border">
       <div class="flex items-center justify-between border-b px-4 py-3">
-        <h2 class="text-sm font-semibold">Contado por cobrar</h2>
-        <span class="text-muted-foreground text-xs">adelanto sin validar</span>
+        <h2 class="text-sm font-semibold">Adelantos al contado</h2>
+        <span class="text-muted-foreground text-xs">pendientes de validación</span>
       </div>
       <ul class="divide-y">
         @for (row of cashToCollect(); track row.order.id) {
@@ -98,7 +98,7 @@
               <p class="text-muted-foreground truncate text-xs">{{ customerName(row.order) }}</p>
             </div>
             <div class="text-right whitespace-nowrap">
-              <p class="font-medium">S/ {{ (row.order.total * row.gate.advancePct / 100) | number: '1.2-2' }}</p>
+              <p class="font-medium">{{ row.order.currency }} {{ (row.gate.advancePayment?.amount ?? (row.order.total * row.gate.advancePct / 100)) | number: '1.2-2' }}</p>
               <p class="text-muted-foreground text-xs">{{ row.gate.advancePct }}% adelanto</p>
             </div>
           </li>

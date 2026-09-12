@@ -149,6 +149,14 @@ export interface WorkSheetLine {
   runs: ManufacturingRun[];
 }
 
+export type WorkSheetType = 'regular' | 'replacement' | 'claim';
+
+export const WORK_SHEET_TYPE_LABEL: Record<WorkSheetType, string> = {
+  regular: 'HT regular',
+  replacement: 'HT x reposición',
+  claim: 'HT x reclamo',
+};
+
 export interface WorkSheet {
   id: string;
   number: string;
@@ -156,6 +164,10 @@ export interface WorkSheet {
   salesOrderId?: string;
   salesOrderNumber?: string;
   customerName?: string;
+  /** Tipo de HT originada desde Ventas. */
+  type?: WorkSheetType;
+  /** Instrucciones internas de Ventas que Producción debe considerar. */
+  internalNotes?: string;
   plant: string;
   scheduledDate: string;
   committedDate: string;

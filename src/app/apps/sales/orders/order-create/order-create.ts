@@ -39,6 +39,7 @@ export class OrderCreate {
   protected readonly deliveryAddress = signal('');
   protected readonly glosa = signal('');
   protected readonly notes = signal('');
+  protected readonly internalNotes = signal('');
   protected readonly customerOrderDocumentType = signal<CustomerOrderDocumentType>('purchase_order');
   protected readonly customerOrderDocumentNumber = signal('');
   protected readonly customerOrderDocument = signal<{ name: string; uploadedAt: string } | null>(null);
@@ -172,6 +173,7 @@ export class OrderCreate {
       deliveryAddress: this.deliveryAddress().trim(),
       glosa: this.glosa().trim() || undefined,
       notes: this.notes().trim() || undefined,
+      internalNotes: this.internalNotes().trim() || undefined,
       customerOrderDocumentType: this.customerOrderDocumentType(),
       customerOrderDocumentNumber: this.customerOrderDocumentNumber().trim(),
       customerOrderDocument: this.customerOrderDocument() ? { type: this.customerOrderDocumentType() === 'quotation' ? 'customer_quotation' : 'customer_purchase_order', ...this.customerOrderDocument()! } : undefined,

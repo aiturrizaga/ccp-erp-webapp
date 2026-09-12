@@ -11,6 +11,7 @@ import {
   SalesQuotation,
   SalesQuotationDelivery,
   evaluateSalesOrder,
+  PaymentMethod,
 } from '@core/models';
 import {
   CONTACTS,
@@ -215,7 +216,8 @@ export function createSalesOrderFromQuotation(quotation: {
 }): SalesOrder {
   const seq = nextOrderSeq++;
   const customer = salesCustomers().find((c) => c.id === quotation.customerId);
-  const cashSale = customer?.paymentMode === 'cash';
+  const hasCreditLine = (customer?.paymentModes ?? (customer?.paymentMode ? [customer.paymentMode] : [])).includes('credit') && (customer?.creditLimit ?? 0) > 0;
+  const cashSale = !hasCreditLine;
   const order: SalesOrder = {
     id: `SO-${String(seq).padStart(3, '0')}`,
     number: nextNumber('sales_order', salesOrders()),
@@ -230,18 +232,18 @@ export function createSalesOrderFromQuotation(quotation: {
     deliveryAddress: customer?.address ?? 'Por confirmar con el cliente',
     lines: quotation.lines.map((l) => ({ ...l, producedQuantity: 0, dispatchedQuantity: 0 })),
     total: quotation.total,
-    workSheetId: cashSale ? undefined : `HT-2026-${String(1000 + seq).slice(1)}`,
+    workSheetId: undefined,
+    workSheetIds: [],
     paymentGate: cashSale ? { status: 'pending_docs', advancePct: 50 } : { status: 'not_required', advancePct: 0 },
     relatedDocuments: [
       { id: `DOC-${seq}-Q`, type: 'cotizacion', label: 'Cotización', number: quotation.number, date: TODAY },
-      ...(!cashSale ? [{ id: `DOC-${seq}-HT`, type: 'hoja_trabajo' as const, label: 'Hoja de trabajo', number: `HT-2026-${String(1000 + seq).slice(1)}`, date: TODAY }] : []),
     ],
   };
   saveOrder(order);
   return order;
 }
 
-/** Ventas crea un pedido directamente (sin cotización previa). Corre la evaluación comercial y arma la HT. */
+/** Ventas crea un pedido directamente (sin cotización previa). Corre la evaluación comercial y deja el pedido en el flujo correspondiente. */
 export function createSalesOrder(input: {
   customerId: string;
   customerName: string;
@@ -251,6 +253,7 @@ export function createSalesOrder(input: {
   deliveryAddress: string;
   glosa?: string;
   notes?: string;
+  internalNotes?: string;
   customerOrderDocumentType?: SalesOrder['customerOrderDocumentType'];
   customerOrderDocumentNumber?: string;
   customerOrderDocument?: SalesOrder['customerOrderDocument'];
@@ -259,7 +262,8 @@ export function createSalesOrder(input: {
 }): SalesOrder {
   const seq = nextOrderSeq++;
   const customer = salesCustomers().find((c) => c.id === input.customerId);
-  const cashSale = customer?.paymentMode === 'cash';
+  const hasCreditLine = (customer?.paymentModes ?? (customer?.paymentMode ? [customer.paymentMode] : [])).includes('credit') && (customer?.creditLimit ?? 0) > 0;
+  const cashSale = !hasCreditLine;
   const total = input.lines.reduce((s, l) => s + l.quantity * l.unitPrice, 0);
 
   const rule = salesDecisionRules().find((r) => r.active);
@@ -282,15 +286,15 @@ export function createSalesOrder(input: {
     total,
     glosa: input.glosa,
     notes: input.notes,
+    internalNotes: input.internalNotes,
+    workSheetIds: [],
     customerOrderDocumentType: input.customerOrderDocumentType,
     customerOrderDocumentNumber: input.customerOrderDocumentNumber,
     customerOrderDocument: input.customerOrderDocument,
     guaranteeLetter: input.guaranteeLetter,
-    workSheetId: cashSale ? undefined : `HT-2026-${String(1000 + seq).slice(1)}`,
+    workSheetId: undefined,
     paymentGate: cashSale ? { status: 'pending_docs', advancePct: 50 } : { status: 'not_required', advancePct: 0 },
-    relatedDocuments: [
-      ...(!cashSale ? [{ id: `DOC-${seq}-HT`, type: 'hoja_trabajo' as const, label: 'Hoja de trabajo', number: `HT-2026-${String(1000 + seq).slice(1)}`, date: TODAY }] : []),
-    ],
+    relatedDocuments: [],
     priceReview: evalResult ? { outcome: evalResult.outcome, reasons: evalResult.reasons } : undefined,
   };
   saveOrder(order);
@@ -362,18 +366,97 @@ export function verifyProduction(orderId: string): void {
   saveOrder({ ...order, status: 'ready_for_dispatch', readyForDispatch: true, readyForDispatchAt: TODAY });
 }
 
-export function validateAdvanceAndGenerateWorkSheet(orderId: string): void {
+export function registerAdvancePayment(orderId: string, input: {
+  amount: number;
+  date: string;
+  method: PaymentMethod;
+  voucher: { name: string; uploadedAt: string; mimeType?: string; url?: string };
+  registeredBy?: string;
+}): boolean {
   const order = salesOrders().find((o) => o.id === orderId);
-  if (!order || !order.paymentGate || order.paymentGate.status === 'validated') return;
-  const seq = Number(order.id.replace(/\D/g, '')) || nextOrderSeq++;
-  const workSheetId = `HT-2026-${String(1000 + seq).slice(1)}`;
+  if (!order || order.status === 'cancelled' || !order.paymentGate || order.paymentGate.status === 'not_required') return false;
+  if (input.amount <= 0 || input.amount > order.total) return false;
+
+  const paymentId = `ADV-${order.id}-${Date.now().toString().slice(-8)}`;
+  const payment = {
+    id: paymentId,
+    amount: input.amount,
+    date: input.date,
+    method: input.method,
+    voucher: input.voucher,
+    registeredBy: input.registeredBy ?? 'Ventas',
+    registeredAt: TODAY,
+  };
+  const nextDocuments = [
+    ...(order.relatedDocuments ?? []).filter((d) => d.type !== 'voucher'),
+    {
+      id: `DOC-${order.id}-ADV`,
+      type: 'voucher' as const,
+      label: 'Voucher de adelanto',
+      date: input.date,
+      fileName: input.voucher.name,
+    },
+  ];
+  saveOrder({
+    ...order,
+    status: 'pending_payment',
+    paymentGate: {
+      ...order.paymentGate,
+      status: 'pending_collections',
+      advancePayment: payment,
+      advanceVoucher: { name: input.voucher.name, uploadedAt: input.voucher.uploadedAt },
+      comment: undefined,
+      validatedBy: undefined,
+      validatedAt: undefined,
+      reviewedBy: undefined,
+      reviewedAt: undefined,
+    },
+    relatedDocuments: nextDocuments,
+  });
+  return true;
+}
+
+/** Cobranzas validates the cash-sale advance. Validation only unlocks the normal Sales flow;
+ * creating the HT remains an explicit Sales action. */
+export function validateAdvancePayment(orderId: string, by = 'Cobranzas'): boolean {
+  const order = salesOrders().find((o) => o.id === orderId);
+  const gate = order?.paymentGate;
+  if (!order || !gate || gate.status !== 'pending_collections' || !gate.advancePayment) return false;
+  const validatedAt = TODAY;
   saveOrder({
     ...order,
     status: 'confirmed',
-    workSheetId,
-    paymentGate: { ...order.paymentGate, status: 'validated', validatedBy: 'Finanzas', validatedAt: TODAY },
-    relatedDocuments: [...(order.relatedDocuments ?? []), { id: `DOC-${seq}-HT`, type: 'hoja_trabajo', label: 'Hoja de trabajo', number: workSheetId, date: TODAY }],
+    paymentGate: {
+      ...gate,
+      status: 'validated',
+      validatedBy: by,
+      validatedAt,
+      advancePayment: { ...gate.advancePayment, validatedBy: by, validatedAt },
+    },
   });
+  return true;
+}
+
+/** Cobranzas rejects an advance voucher so Ventas can correct and resubmit it. */
+export function rejectAdvancePayment(orderId: string, comment: string, by = 'Cobranzas'): boolean {
+  const order = salesOrders().find((o) => o.id === orderId);
+  const gate = order?.paymentGate;
+  if (!order || !gate || gate.status !== 'pending_collections' || !gate.advancePayment) return false;
+  saveOrder({
+    ...order,
+    status: 'pending_payment',
+    paymentGate: {
+      ...gate,
+      status: 'observed',
+      comment,
+      reviewedBy: by,
+      reviewedAt: TODAY,
+      validatedBy: undefined,
+      validatedAt: undefined,
+      advancePayment: { ...gate.advancePayment, reviewedBy: by, reviewedAt: TODAY, comment },
+    },
+  });
+  return true;
 }
 
 export function recordDispatch(orderId: string, quantities?: number[]): void {

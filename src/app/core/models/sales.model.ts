@@ -1,4 +1,5 @@
 import { Currency, Tone } from './shared.model';
+import { PaymentMethod } from './finance.model';
 
 /**
  * Commercial category of a finished product. CCP sells three lines today, and each line is booked to
@@ -298,16 +299,44 @@ export const PAYMENT_GATE_STATUS_TONE: Record<PaymentGateStatus, Tone> = {
   observed: 'danger',
 };
 
+export interface SalesOrderAdvancePayment {
+  id: string;
+  amount: number;
+  date: string;
+  method: PaymentMethod;
+  voucher: { name: string; uploadedAt: string; mimeType?: string; url?: string };
+  registeredBy: string;
+  registeredAt: string;
+  validatedBy?: string;
+  validatedAt?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
+  comment?: string;
+}
+
 export interface PaymentGate {
   status: PaymentGateStatus;
   /** % of the total required upfront for cash sales. */
   advancePct: number;
   purchaseOrderDoc?: { name: string; uploadedAt: string };
+  /** Legacy voucher metadata kept for compatibility with existing fixtures. */
   advanceVoucher?: { name: string; uploadedAt: string };
+  /** Payment evidence registered by Ventas and validated by Cobranzas. */
+  advancePayment?: SalesOrderAdvancePayment;
   validatedBy?: string;
   validatedAt?: string;
+  reviewedBy?: string;
+  reviewedAt?: string;
   comment?: string;
 }
+
+export type SalesOrderWorkSheetType = 'regular' | 'replacement' | 'claim';
+
+export const SALES_ORDER_WORK_SHEET_TYPE_LABEL: Record<SalesOrderWorkSheetType, string> = {
+  regular: 'HT regular',
+  replacement: 'HT x reposición',
+  claim: 'HT x reclamo',
+};
 
 export interface SalesOrder {
   id: string;
@@ -331,10 +360,14 @@ export interface SalesOrder {
   lines: SalesOrderLine[];
   total: number;
   notes?: string;
+  /** Instrucciones internas de Ventas para Producción. No se muestra al cliente. */
+  internalNotes?: string;
+  /** Todas las HT generadas para el pedido; workSheetId se mantiene como referencia legacy/principal. */
+  workSheetIds?: string[];
   // --- added across phases (all optional so the legacy fixture rows still type-check) ---
   /** Glosa shown on the order and carried down to the invoice. */
   glosa?: string;
-  /** The order IS the Hoja de Trabajo — this links to the Producción HT it generated. */
+  /** Legacy/principal HT reference kept for compatibility; new orders can have multiple HTs in workSheetIds. */
   workSheetId?: string;
   paymentGate?: PaymentGate;
   /** Ventas flagged the order ready to leave the warehouse. */

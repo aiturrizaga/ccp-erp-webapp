@@ -111,6 +111,70 @@ export class ProductionState {
     if (patched) this.persistWorkSheet(patched);
   }
 
+  /** Creates a new HT from a Sales Order. The HT owns a snapshot of the active BOM/routing. */
+  createWorkSheetFromSalesOrder(input: {
+    salesOrderId: string;
+    salesOrderNumber: string;
+    customerName: string;
+    committedDate: string;
+    internalNotes?: string;
+    type: WorkSheet['type'];
+    lines: { productId: string; quantity: number; unitOfMeasure: string; description?: string }[];
+  }): WorkSheet {
+    const seq = Math.max(
+      0,
+      ...this.workSheets().map((w) => Number(w.number.replace(/\D/g, '')) || 0),
+    ) + 1;
+    const number = `HT-2026-${String(seq).padStart(4, '0')}`;
+    const id = number;
+    const activeLines = input.lines.map((line, index) => {
+      const product = this.products().find((p) => p.id === line.productId);
+      const bom = product?.activeBomId
+        ? this.billsOfMaterials().find((b) => b.id === product.activeBomId)
+        : this.billsOfMaterials().find((b) => b.productId === line.productId && b.status === 'active');
+      const routing = bom?.routing ?? [];
+      const materials = (bom?.components ?? []).map((component) => ({
+        itemId: component.itemId,
+        required: component.quantity * line.quantity,
+        available: 0,
+        reserved: 0,
+        consumed: 0,
+        unitOfMeasure: component.unitOfMeasure,
+        isSupply: component.isSupply,
+      }));
+      return {
+        id: `HTL-${seq}-${index + 1}`,
+        productId: line.productId,
+        bomId: bom?.id ?? '',
+        bomVersion: bom?.version ?? product?.version ?? '—',
+        routing: [...routing],
+        plannedQuantity: line.quantity,
+        unitOfMeasure: line.unitOfMeasure,
+        materials,
+        runs: [],
+      };
+    });
+    const ws: WorkSheet = {
+      id,
+      number,
+      salesOrderId: input.salesOrderId,
+      salesOrderNumber: input.salesOrderNumber,
+      customerName: input.customerName,
+      type: input.type ?? 'regular',
+      internalNotes: input.internalNotes?.trim() || undefined,
+      plant: 'AL01 · Planta 02',
+      scheduledDate: new Date().toISOString().slice(0, 10),
+      committedDate: input.committedDate,
+      responsible: 'Pendiente de asignar',
+      lines: activeLines,
+      atRisk: activeLines.some((line) => !line.bomId),
+      riskReason: activeLines.some((line) => !line.bomId) ? 'No se encontró una BOM vigente para uno o más productos.' : undefined,
+    };
+    this.workSheets.update((rows) => [...rows, ws]);
+    this.persistWorkSheet(ws);
+    return ws;
+  }
+
   /** Registers a new corrida de fabricación under a HT line — the only way progress advances on the HT. */
   addRun(workSheetId: string, lineId: string, input: Omit<ManufacturingRun, 'id' | 'operations'> & { operations?: ManufacturingRun['operations'] }): void {
     const id = `RUN-${this.nextRunSeq++}`;

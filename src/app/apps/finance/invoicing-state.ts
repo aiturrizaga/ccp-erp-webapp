@@ -11,9 +11,11 @@ import {
   PaymentMethod,
   PaymentVoucher,
   SalesInvoice,
+  SalesOrderAdvancePayment,
   SeriesDocKind,
 } from '@core/models';
 import { TableStore } from '@core/supabase/table-store';
+import { rejectAdvancePayment, salesOrders, validateAdvancePayment } from '@apps/sales/sales-state';
 
 export interface InvoicePayment {
   amount: number;
@@ -24,7 +26,10 @@ export interface InvoicePayment {
 }
 
 /** An invoice's pending payment surfaced for Cobranzas' validation queue. */
-export interface PendingPayment {
+export type PendingPayment = PendingInvoicePayment | PendingOrderAdvancePayment;
+
+export interface PendingInvoicePayment {
+  source: 'invoice';
   invoiceId: string;
   invoiceNumber: string;
   customerName: string;
@@ -32,6 +37,16 @@ export interface PendingPayment {
   invoiceTotal: number;
   outstandingBalance: number;
   payment: InvoicePaymentRecord;
+}
+
+export interface PendingOrderAdvancePayment {
+  source: 'sales_order_advance';
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  currency: string;
+  orderTotal: number;
+  payment: SalesOrderAdvancePayment;
 }
 
 /**
@@ -146,7 +161,7 @@ export class InvoicingState {
     );
   }
 
-  /** Flat list of payments awaiting Cobranzas' validation. */
+  /** Flat list of invoice payments and cash-sale advances awaiting Cobranzas' validation. */
   pendingPayments(): PendingPayment[] {
     const out: PendingPayment[] = [];
     for (const inv of this.invoices()) {
@@ -154,6 +169,7 @@ export class InvoicingState {
       for (const p of inv.payments) {
         if (p.status !== 'pending_validation') continue;
         out.push({
+          source: 'invoice',
           invoiceId: inv.id,
           invoiceNumber: inv.number,
           customerName: inv.customerName,
@@ -164,7 +180,30 @@ export class InvoicingState {
         });
       }
     }
+    for (const order of salesOrders()) {
+      const gate = order.paymentGate;
+      if (!gate || gate.status !== 'pending_collections' || !gate.advancePayment) continue;
+      out.push({
+        source: 'sales_order_advance',
+        orderId: order.id,
+        orderNumber: order.number,
+        customerName: order.customerName,
+        currency: order.currency,
+        orderTotal: order.total,
+        payment: gate.advancePayment,
+      });
+    }
     return out;
+  }
+
+  /** Cobranzas validates the cash-sale advance; this only unlocks the order flow. */
+  validateOrderAdvancePayment(orderId: string, by = 'Cobranzas'): boolean {
+    return validateAdvancePayment(orderId, by);
+  }
+
+  /** Cobranzas rejects a cash-sale advance so Ventas can correct and resubmit it. */
+  rejectOrderAdvancePayment(orderId: string, comment: string, by = 'Cobranzas'): boolean {
+    return rejectAdvancePayment(orderId, comment, by);
   }
 
   /** Advances the correlativo for a doc kind/environment and returns the formatted `SERIE-00000123`. */

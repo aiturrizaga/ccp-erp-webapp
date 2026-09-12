@@ -135,10 +135,17 @@
       }
     </div>
 
-    <div hlmCard class="p-4">
+    <div hlmCard class="flex flex-col gap-4 p-4">
       <div class="flex flex-col gap-1.5">
         <label hlmLabel for="nt">Observaciones</label>
         <textarea hlmInput id="nt" rows="2" [ngModel]="notes()" (ngModelChange)="notes.set($event)"></textarea>
+      </div>
+      <div class="flex flex-col gap-1.5 border-t pt-4">
+        <div>
+          <label hlmLabel for="int-notes">Notas internas</label>
+          <p class="text-muted-foreground mt-1 text-xs">Instrucciones de Ventas para Producción. No se muestran al cliente.</p>
+        </div>
+        <textarea hlmInput id="int-notes" rows="3" placeholder="Ej. Considerar acabado, tolerancias, secuencia o indicaciones especiales para fabricación…" [ngModel]="internalNotes()" (ngModelChange)="internalNotes.set($event)"></textarea>
       </div>
     </div>
   </div>

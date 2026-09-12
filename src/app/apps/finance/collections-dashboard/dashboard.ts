@@ -3,8 +3,6 @@ import { DecimalPipe } from '@angular/common';
 import { Router, RouterLink } from '@angular/router';
 import { HlmCardImports } from '@ui/card';
 import { HlmButtonImports } from '@ui/button';
-import { toast } from '@shared/toast';
-import { validateAdvanceAndGenerateWorkSheet } from '@apps/sales/sales-state';
 import { StatCard } from '@shared/components/stat-card/stat-card';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { salesCustomers, salesOrders } from '@apps/sales/sales-state';
@@ -45,11 +43,13 @@ export class CollectionsDashboard {
   /** Pagos reportados sobre facturas, a la espera de validar el voucher. */
   protected readonly paymentsToValidate = computed(() => this.state.pendingPayments());
 
-  protected validateAdvance(orderId: string, orderNumber: string): void { validateAdvanceAndGenerateWorkSheet(orderId); toast.success(`Adelanto de ${orderNumber} validado`, { description: 'Se generó la HT y el pedido vuelve al flujo de Producción.' }); }
-
+  protected goToPayment(row: ReturnType<InvoicingState['pendingPayments']>[number]): void {
+    this.router.navigate(row.source === 'invoice' ? ['/apps/finance/invoices', row.invoiceId] : ['/apps/sales/orders', row.orderId]);
+  }
   protected goToInvoice(id: string): void {
     this.router.navigate(['/apps/finance/invoices', id]);
   }
+
   protected goToOrder(id: string): void {
     this.router.navigate(['/apps/sales/orders', id]);
   }

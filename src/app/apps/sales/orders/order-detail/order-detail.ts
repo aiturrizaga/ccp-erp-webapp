@@ -13,18 +13,20 @@ import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { EmptyState } from '@shared/components/empty-state/empty-state';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
 import { toast } from '@shared/toast';
-import { CustomerOrderDocumentType, CUSTOMER_ORDER_DOCUMENT_TYPE_LABEL, SalesOrderStatus, SALES_ORDER_STATUS_LABEL, SALES_ORDER_STATUS_TONE, SalesInvoice, Tone } from '@core/models';
-import { acceptSalesOrderWorkSheet, markProductionReady, salesOrders, salesQuotations, saveOrder, verifyProduction } from '../../sales-state';
+import { CustomerOrderDocumentType, CUSTOMER_ORDER_DOCUMENT_TYPE_LABEL, SALES_ORDER_WORK_SHEET_TYPE_LABEL, SalesOrderWorkSheetType, SalesOrderStatus, SALES_ORDER_STATUS_LABEL, SALES_ORDER_STATUS_TONE, PAYMENT_GATE_STATUS_LABEL, PAYMENT_GATE_STATUS_TONE, PAYMENT_METHOD_LABEL, PaymentMethod, SalesInvoice, Tone } from '@core/models';
+import { acceptSalesOrderWorkSheet, markProductionReady, registerAdvancePayment, salesOrders, salesQuotations, saveOrder, verifyProduction } from '../../sales-state';
+import { ProductionState } from '../../../production/production-state';
 import { InvoicingState } from '../../../finance/invoicing-state';
 
 @Component({
   selector: 'app-order-detail',
-  imports: [FormsModule, RouterLink, DecimalPipe, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmPopoverImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, EntityHeader, EmptyState],
+  imports: [FormsModule, RouterLink, DecimalPipe, NgIcon, ...HlmButtonImports, ...HlmCardImports, ...HlmPopoverImports, ...HlmInputImports, ...HlmLabelImports, ...HlmSelectImports, EntityHeader, EmptyState, StatusBadge],
   templateUrl: './order-detail.html',
 })
 export class OrderDetail {
   private readonly router = inject(Router);
   private readonly invoicingState = inject(InvoicingState);
+  private readonly productionState = inject(ProductionState);
   readonly id = input.required<string>();
   protected readonly order = computed(() => salesOrders().find(o => o.id === this.id()));
   protected readonly quotation = computed(() => salesQuotations().find((q) => q.id === this.order()?.quotationId));
@@ -37,6 +39,18 @@ export class OrderDetail {
   protected readonly documentNumber = signal('');
   protected readonly documentFile = signal<{ name: string; uploadedAt: string } | null>(null);
   protected readonly documentFormInitialized = signal(false);
+  protected readonly internalNotes = signal('');
+  protected readonly workSheetType = signal<SalesOrderWorkSheetType>('regular');
+  protected readonly workSheetTypeOptions = (Object.keys(SALES_ORDER_WORK_SHEET_TYPE_LABEL) as SalesOrderWorkSheetType[]).map((value) => ({ value, label: SALES_ORDER_WORK_SHEET_TYPE_LABEL[value] }));
+  protected readonly workSheetPopover = signal<'open' | 'closed'>('closed');
+  protected readonly advanceAmount = signal(0);
+  protected readonly advanceDate = signal('2026-09-01');
+  protected readonly advanceMethod = signal<PaymentMethod>('transfer');
+  protected readonly advanceVoucherFile = signal<{ name: string; uploadedAt: string; mimeType?: string; url?: string } | null>(null);
+  protected readonly paymentMethodOptions = (Object.keys(PAYMENT_METHOD_LABEL) as PaymentMethod[]).map((value) => ({ value, label: PAYMENT_METHOD_LABEL[value] }));
+  protected methodLabel = (m: PaymentMethod) => PAYMENT_METHOD_LABEL[m];
+  protected readonly paymentGateStatusLabel = (status: keyof typeof PAYMENT_GATE_STATUS_LABEL) => PAYMENT_GATE_STATUS_LABEL[status];
+  protected readonly paymentGateStatusTone = (status: keyof typeof PAYMENT_GATE_STATUS_TONE): Tone => PAYMENT_GATE_STATUS_TONE[status];
 
   constructor() {
     effect(() => {
@@ -46,7 +60,113 @@ export class OrderDetail {
       this.documentNumber.set(order.customerOrderDocumentNumber ?? '');
       this.documentFile.set(order.customerOrderDocument ? { name: order.customerOrderDocument.name, uploadedAt: order.customerOrderDocument.uploadedAt } : null);
       this.documentFormInitialized.set(true);
+      this.internalNotes.set(order.internalNotes ?? '');
+      const gate = order.paymentGate;
+      const requiredAdvance = gate ? Math.round(order.total * gate.advancePct) / 100 : 0;
+      this.advanceAmount.set(gate?.advancePayment?.amount ?? requiredAdvance);
+      this.advanceDate.set(gate?.advancePayment?.date ?? '2026-09-01');
+      this.advanceMethod.set(gate?.advancePayment?.method ?? 'transfer');
+      this.advanceVoucherFile.set(gate?.advancePayment?.voucher ?? null);
     });
+  }
+
+  protected readonly paymentCleared = computed(() => {
+    const o = this.order();
+    return !!o && (!o.paymentGate || o.paymentGate.status === 'not_required' || o.paymentGate.status === 'validated');
+  });
+
+  protected readonly existingWorkSheets = computed(() => {
+    const o = this.order();
+    if (!o || !this.paymentCleared()) return [];
+    const ids = o.workSheetIds?.length ? o.workSheetIds : (o.workSheetId ? [o.workSheetId] : []);
+    return ids.map((id) => this.productionState.workSheets().find((ws) => ws.id === id)).filter(Boolean);
+  });
+
+  protected readonly canManageFlow = computed(() => this.paymentCleared() && this.order()?.status !== 'cancelled');
+  protected readonly canCreateWorkSheet = computed(() => {
+    const o = this.order();
+    return !!o && this.canManageFlow() && !['cancelled', 'pending_payment'].includes(o.status) && o.lines.length > 0;
+  });
+  protected readonly requiredAdvanceAmount = computed(() => {
+    const o = this.order();
+    return o?.paymentGate ? Math.round(o.total * o.paymentGate.advancePct) / 100 : 0;
+  });
+  protected readonly canSubmitAdvance = computed(() => {
+    const o = this.order();
+    return !!o?.paymentGate && ['pending_docs', 'observed'].includes(o.paymentGate.status) && this.advanceAmount() >= this.requiredAdvanceAmount() && this.advanceAmount() <= (o?.total ?? 0) && !!this.advanceVoucherFile() && !!this.advanceDate() && !!this.advanceMethod();
+  });
+
+  protected onAdvanceVoucherFile(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/') && file.type !== 'application/pdf') {
+      toast.error('El voucher debe ser una imagen o PDF');
+      return;
+    }
+    this.advanceVoucherFile.set({
+      name: file.name,
+      uploadedAt: new Date().toISOString(),
+      mimeType: file.type,
+      url: URL.createObjectURL(file),
+    });
+  }
+
+  protected clearAdvanceVoucher(): void {
+    const current = this.advanceVoucherFile();
+    if (current?.url?.startsWith('blob:')) URL.revokeObjectURL(current.url);
+    this.advanceVoucherFile.set(null);
+  }
+
+  protected saveAdvance(): void {
+    const order = this.order();
+    const voucher = this.advanceVoucherFile();
+    if (!order || !voucher || !this.canSubmitAdvance()) return;
+    const ok = registerAdvancePayment(order.id, {
+      amount: this.advanceAmount(),
+      date: this.advanceDate(),
+      method: this.advanceMethod(),
+      voucher,
+      registeredBy: 'Ventas',
+    });
+    if (ok) toast.success('Adelanto enviado a Cobranzas', { description: `${order.number} quedó pendiente de validación del voucher.` });
+  }
+
+  protected saveInternalNotes(): void {
+    const order = this.order();
+    if (!order) return;
+    saveOrder({ ...order, internalNotes: this.internalNotes().trim() || undefined });
+    toast.success('Notas internas actualizadas');
+  }
+
+  protected createWorkSheet(): void {
+    const order = this.order();
+    if (!order || !this.canCreateWorkSheet()) return;
+    const ws = this.productionState.createWorkSheetFromSalesOrder({
+      salesOrderId: order.id,
+      salesOrderNumber: order.number,
+      customerName: order.customerName,
+      committedDate: order.committedDeliveryDate,
+      internalNotes: this.internalNotes().trim() || order.internalNotes,
+      type: this.workSheetType(),
+      lines: order.lines.map((line) => {
+        const salesProduct = line.salesProductId ? this.productionState.products().find((p) => p.code === line.productCode) : undefined;
+        return {
+          productId: salesProduct?.id ?? '',
+          quantity: line.quantity,
+          unitOfMeasure: line.unitOfMeasure,
+          description: line.description,
+        };
+      }),
+    });
+    const workSheetIds = [...new Set([...(order.workSheetIds ?? []), ...(order.workSheetId ? [order.workSheetId] : []), ws.id])];
+    const relatedDocuments = [
+      ...(order.relatedDocuments ?? []),
+      { id: `DOC-${order.id}-HT-${ws.id}`, type: 'hoja_trabajo' as const, label: SALES_ORDER_WORK_SHEET_TYPE_LABEL[this.workSheetType()], number: ws.number, date: new Date().toISOString().slice(0, 10) },
+    ];
+    saveOrder({ ...order, workSheetId: order.workSheetId ?? ws.id, workSheetIds, relatedDocuments, internalNotes: this.internalNotes().trim() || order.internalNotes });
+    this.workSheetPopover.set('closed');
+    toast.success(`${ws.number} creada`, { description: `${SALES_ORDER_WORK_SHEET_TYPE_LABEL[this.workSheetType()]} · vinculada a ${order.number}` });
+    this.router.navigate(['/apps/production/work-sheets', ws.id]);
   }
 
   protected canAccept = computed(() => this.order()?.status === 'confirmed' && !!this.order()?.workSheetId);
@@ -58,11 +178,16 @@ export class OrderDetail {
   protected verify(): void { const o=this.order(); if(!o)return; verifyProduction(o.id); this.actionPopover.set(null); toast.success(`${o.number}: verificación completada`,{description:'El pedido quedó listo para despacho'}); }
 
   protected statusToString = (value: string): string => this.statusOptions.find((option) => option.value === value)?.label ?? value;
+  protected workSheetTypeToString = (value: string): string => this.workSheetTypeOptions.find((option) => option.value === value)?.label ?? value;
   protected documentTypeToString = (value: string): string => this.documentTypeOptions.find((option) => option.value === value)?.label ?? value;
   protected changeStatus(status: string | null | undefined): void {
     if (!status || !this.statusOptions.some((option) => option.value === status)) return;
     const order = this.order();
     if (!order || order.status === status) return;
+    if (!this.canManageFlow()) {
+      toast.info('El pedido está bloqueado hasta validar el adelanto en Cobranzas.');
+      return;
+    }
     const nextStatus = status as SalesOrderStatus;
     saveOrder({ ...order, status: nextStatus });
     toast.success(`Estado actualizado: ${SALES_ORDER_STATUS_LABEL[nextStatus]}`);
