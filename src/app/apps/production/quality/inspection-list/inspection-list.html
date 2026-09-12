@@ -1,32 +1,196 @@
 <app-list-toolbar
   [(search)]="search"
   searchPlaceholder="Buscar por HT, formato o producto..."
+  [groupByOptions]="groupByOptions"
+  [(groupBy)]="groupBy"
   actionLabel="Nueva inspección"
   (action)="onNew()"
-/>
+>
+  <div search class="flex items-center gap-2">
+    @if (customerBadge(); as badge) {
+      <div class="bg-primary/10 border-primary/20 text-primary flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium">
+        <ng-icon name="tablerBuilding" class="shrink-0" />
+        <span class="max-w-[280px] truncate" [title]="badge">{{ badge }}</span>
+        <button type="button" class="hover:bg-primary/20 flex size-4 items-center justify-center rounded-full transition-colors" (click)="clearCustomerFilter()" title="Quitar filtro">
+          <ng-icon name="tablerX" class="size-3" />
+        </button>
+      </div>
+    } @else {
+      <div class="w-64">
+        <hlm-combobox [value]="customerFilter()" (valueChange)="onCustomerChange($event)" [itemToString]="customerPickerToString">
+          <hlm-combobox-input placeholder="Filtrar por cliente..." (input)="customerSearch.set($any($event.target).value)" />
+          <hlm-combobox-content *hlmComboboxPortal class="w-72">
+            <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+            <div hlmComboboxList class="max-h-60 overflow-y-auto">
+              @for (option of customerOptions(); track option.value) {
+                <hlm-combobox-item [value]="option.value">
+                  <div class="flex items-center gap-1.5 truncate">
+                    <ng-icon name="tablerBuilding" class="text-muted-foreground shrink-0" />
+                    <span class="truncate">{{ option.label }}</span>
+                  </div>
+                </hlm-combobox-item>
+              }
+            </div>
+          </hlm-combobox-content>
+        </hlm-combobox>
+      </div>
+    }
+  </div>
+</app-list-toolbar>
 
-<app-data-table
-  [columns]="columns"
-  [rows]="rows()"
-  [rowClickable]="true"
-  (rowClick)="openDetail($event)"
-  emptyMessage="No se encontraron inspecciones."
-  [cellTemplate]="cellTpl"
-/>
+@if (groupedSections(); as sections) {
+  <div class="flex flex-col gap-5">
+    @for (section of sections; track section.label) {
+      <div>
+        <h3 class="text-muted-foreground mb-2 text-xs font-semibold tracking-wide uppercase">{{ section.label }} · {{ section.rows.length }}</h3>
+        <app-data-table
+          [columns]="columns"
+          [rows]="section.rows"
+          [rowClickable]="true"
+          (rowClick)="toggleExpand($event)"
+          [isRowExpanded]="isRowExpanded"
+          [expandedTemplate]="expandedTpl"
+          emptyMessage="No se encontraron inspecciones."
+          [cellTemplate]="cellTpl"
+        />
+      </div>
+    }
+  </div>
+} @else {
+  <app-data-table
+    [columns]="columns"
+    [rows]="filteredRows()"
+    [rowClickable]="true"
+    (rowClick)="toggleExpand($event)"
+    [isRowExpanded]="isRowExpanded"
+    [expandedTemplate]="expandedTpl"
+    emptyMessage="No se encontraron inspecciones."
+    [cellTemplate]="cellTpl"
+  />
+}
 
 <ng-template #cellTpl let-row let-key="key">
   @switch (key) {
     @case ('format') {
-      {{ formatName(row) }}
+      {{ row.formatLabel }}
+    }
+    @case ('workSheetId') {
+      {{ row.inspection.workSheetId }}
+    }
+    @case ('customerName') {
+      {{ row.customerName }}
     }
     @case ('products') {
-      <span class="text-xs">{{ productNames(row) }}</span>
+      <span class="text-xs">{{ row.productsLabel }}</span>
+    }
+    @case ('wsStatus') {
+      @if (row.wsStatus; as status) {
+        <app-status-badge [label]="statusLabel(status)" [tone]="statusTone(status)" />
+      } @else {
+        <span class="text-muted-foreground">—</span>
+      }
+    }
+    @case ('inspectedBy') {
+      {{ row.inspection.inspectedBy }}
+    }
+    @case ('inspectedAt') {
+      {{ row.inspection.inspectedAt }}
     }
     @case ('overallResult') {
-      <app-status-badge [label]="resultLabel(row)" [tone]="resultTone(row)" />
+      <app-status-badge [label]="resultLabel(row.inspection)" [tone]="resultTone(row.inspection)" />
     }
     @default {
       {{ row[key] }}
     }
   }
+</ng-template>
+
+<ng-template #expandedTpl let-row>
+  <div class="border-t">
+    <div class="grid gap-6 p-4 md:grid-cols-2">
+      <!-- Detalle del registro inspeccionado -->
+      <div class="min-w-0">
+        <div class="mb-2 flex items-center justify-between gap-2">
+          <h4 class="text-sm font-semibold">Detalle de la inspección</h4>
+          <button hlmBtn variant="ghost" size="sm" class="gap-1.5 text-primary" (click)="openDetail(row)">
+            <ng-icon name="tablerArrowUpRight" class="size-4" />
+            Abrir detalle
+          </button>
+        </div>
+        <dl class="space-y-1.5 text-sm">
+          <div class="flex gap-3">
+            <dt class="text-muted-foreground w-36 shrink-0">Formato</dt>
+            <dd class="min-w-0 text-right">{{ row.formatLabel }}</dd>
+          </div>
+          <div class="flex gap-3">
+            <dt class="text-muted-foreground w-36 shrink-0">Producto(s)</dt>
+            <dd class="min-w-0 text-right">{{ row.productsLabel }}</dd>
+          </div>
+          <div class="flex gap-3">
+            <dt class="text-muted-foreground w-36 shrink-0">Cliente</dt>
+            <dd class="min-w-0 text-right">{{ row.customerName }}</dd>
+          </div>
+          <div class="flex gap-3">
+            <dt class="text-muted-foreground w-36 shrink-0">Estado HT</dt>
+            <dd class="min-w-0 text-right">
+              @if (row.wsStatus; as status) {
+                <app-status-badge [label]="statusLabel(status)" [tone]="statusTone(status)" />
+              } @else {
+                <span class="text-muted-foreground">—</span>
+              }
+            </dd>
+          </div>
+          <div class="flex gap-3">
+            <dt class="text-muted-foreground w-36 shrink-0">Inspeccionado por</dt>
+            <dd class="min-w-0 text-right">{{ row.inspection.inspectedBy }}</dd>
+          </div>
+          <div class="flex gap-3">
+            <dt class="text-muted-foreground w-36 shrink-0">Fecha</dt>
+            <dd class="min-w-0 text-right">{{ row.inspection.inspectedAt }}</dd>
+          </div>
+          <div class="flex gap-3">
+            <dt class="text-muted-foreground w-36 shrink-0">Resultado</dt>
+            <dd class="min-w-0 text-right">
+              <app-status-badge [label]="resultLabel(row.inspection)" [tone]="resultTone(row.inspection)" />
+            </dd>
+          </div>
+          @if (row.inspection.notes) {
+            <div class="flex gap-3">
+              <dt class="text-muted-foreground w-36 shrink-0">Observaciones</dt>
+              <dd class="min-w-0 text-right">{{ row.inspection.notes }}</dd>
+            </div>
+          }
+        </dl>
+      </div>
+
+      <!-- Inspecciones de la misma HT -->
+      <div class="min-w-0 border-t pt-3 md:border-t-0 md:pt-0 md:ps-6">
+        <h4 class="mb-2 text-sm font-semibold">Inspecciones de {{ row.inspection.workSheetId }}</h4>
+        <div class="bg-muted/40 divide-muted flex flex-col divide-y rounded-lg">
+          @for (other of inspectionsOfHt(row.inspection.workSheetId); track other.inspection.id) {
+            <button
+              type="button"
+              class="flex w-full items-center justify-between gap-2 px-3 py-2 text-left"
+              [class.bg-primary/5]="other.inspection.id === row.inspection.id"
+              (click)="toggleExpand(other)"
+            >
+              <div class="flex min-w-0 items-center gap-2">
+                <ng-icon
+                  [name]="other.inspection.id === row.inspection.id ? 'tablerChevronDown' : 'tablerChevronRight'"
+                  class="text-muted-foreground size-4 shrink-0"
+                />
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-medium">{{ other.formatLabel }}</p>
+                  <p class="text-muted-foreground truncate text-xs">{{ other.inspection.inspectedBy }} · {{ other.inspection.inspectedAt }}</p>
+                </div>
+              </div>
+              <app-status-badge [label]="resultLabel(other.inspection)" [tone]="resultTone(other.inspection)" />
+            </button>
+          } @empty {
+            <p class="text-muted-foreground px-3 py-2 text-sm">Sin otras inspecciones.</p>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
 </ng-template>

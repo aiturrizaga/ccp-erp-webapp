@@ -40,6 +40,10 @@ export class DataTable<T> {
   readonly frozenColumnCount = input(0);
   /** When true, columns keep their declared widths (growing the table past the container and scrolling horizontally) instead of shrinking to fit — use when there are too many columns to compact without hurting legibility. */
   readonly naturalWidth = input(false);
+  /** Optional expanded-row template: renders a full-width detail row below the clicked row. */
+  readonly expandedTemplate = input<TemplateRef<{ $implicit: T }>>();
+  /** Returns true for the currently expanded row — checked per row on every render. */
+  readonly isRowExpanded = input<(row: T) => boolean>();
 
   readonly rowClick = output<T>();
 
@@ -99,6 +103,11 @@ export class DataTable<T> {
 
   protected onRowClick(row: T): void {
     if (this.rowClickable()) this.rowClick.emit(row);
+  }
+
+  /** Convenience wrapper so the template doesn't need optional-call syntax inside `@if`. */
+  protected isRowExpandedFn(row: T): boolean {
+    return this.isRowExpanded()?.(row) ?? false;
   }
 
   protected cellValue(row: T, key: string): unknown {

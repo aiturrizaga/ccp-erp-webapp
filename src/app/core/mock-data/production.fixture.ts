@@ -25,7 +25,7 @@ function addHours(iso: string, hours: number): string {
 
 export const WORK_SHEETS: WorkSheet[] = [
   {
-    id: 'HT-2026-0311', number: 'HT-2026-0311', plant: 'AL01 · Planta 02',
+    id: 'HT-2026-0311', number: 'HT-2026-0311', plant: 'AL01 · Planta 02', customerName: 'Constructora Andina S.A.C.',
     scheduledDate: '2026-08-07', committedDate: '2026-08-12', responsible: 'Alex Vasquez', atRisk: false,
     lines: [
       {
@@ -85,7 +85,7 @@ export const WORK_SHEETS: WorkSheet[] = [
     ],
   },
   {
-    id: 'HT-2026-0303', number: 'HT-2026-0303', plant: 'AL01 · Planta 02',
+    id: 'HT-2026-0303', number: 'HT-2026-0303', plant: 'AL01 · Planta 02', customerName: 'Constructora Andina S.A.C.',
     scheduledDate: '2026-08-07', committedDate: '2026-08-12', responsible: 'Alex Vasquez', atRisk: true,
     riskReason: 'Stock de BA-CO 6MM insuficiente para la siguiente hoja de trabajo — requerimiento SC-2026-0145 en cotización.',
     lines: [
@@ -176,7 +176,7 @@ export const WORK_SHEETS: WorkSheet[] = [
     ],
   },
   {
-    id: 'HT-2026-0320', number: 'HT-2026-0320', plant: 'AL01 · Planta 03',
+    id: 'HT-2026-0320', number: 'HT-2026-0320', plant: 'AL01 · Planta 03', customerName: 'Consorcio Vial Chincha S.A.',
     scheduledDate: '2026-08-18', committedDate: '2026-08-24', responsible: 'Cristian Espinoza', atRisk: false,
     lines: [
       {
@@ -207,7 +207,7 @@ export const WORK_SHEETS: WorkSheet[] = [
     ],
   },
   {
-    id: 'HT-2026-0335', number: 'HT-2026-0335', plant: 'AL01 · Accesorios 01',
+    id: 'HT-2026-0335', number: 'HT-2026-0335', plant: 'AL01 · Accesorios 01', customerName: 'Electro Sur Distribución S.A.',
     scheduledDate: '2026-08-24', committedDate: '2026-08-28', responsible: 'Haldeer Vasquez', atRisk: false,
     lines: [
       {

@@ -86,6 +86,15 @@
             </td>
           }
         </tr>
+        @if (isRowExpandedFn(row)) {
+          @if (expandedTemplate(); as expTpl) {
+            <tr hlmTr>
+              <td hlmTd [attr.colspan]="columns().length + (actionsTemplate() ? 1 : 0)" class="!p-0">
+                <ng-container *ngTemplateOutlet="expTpl; context: { $implicit: row }" />
+              </td>
+            </tr>
+          }
+        }
       } @empty {
         <tr hlmTr>
           <td hlmTd [attr.colspan]="columns().length + (actionsTemplate() ? 1 : 0)" class="text-muted-foreground p-6 text-center">
