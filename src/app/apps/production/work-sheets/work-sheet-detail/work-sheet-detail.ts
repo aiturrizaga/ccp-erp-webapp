@@ -9,6 +9,7 @@ import { HlmLabelImports } from '@ui/label';
 import { HlmPopoverImports } from '@ui/popover';
 import { HlmDialogImports } from '@ui/dialog';
 import { HlmSelectImports } from '@ui/select';
+import { HlmComboboxImports } from '@ui/combobox';
 import { toast } from '@shared/toast';
 import { EntityHeader } from '@shared/components/entity-header/entity-header';
 import { StatusBadge } from '@shared/components/status-badge/status-badge';
@@ -71,6 +72,7 @@ const RUN_STATUS_TONE: Record<RunStatus, Tone> = {
     ...HlmPopoverImports,
     ...HlmDialogImports,
     ...HlmSelectImports,
+    ...HlmComboboxImports,
     EntityHeader,
     StatusBadge,
     EmptyState,
@@ -188,24 +190,63 @@ export class WorkSheetDetail {
   protected readonly newRunPlannedQty = signal(0);
   protected readonly newRunScheduledStart = signal('');
   protected readonly newRunScheduledEnd = signal('');
-  protected readonly newRunWorkCenterId = signal('');
+  protected readonly newRunPlant = signal('');
+  protected readonly newRunArea = signal('');
   protected readonly newRunMachineId = signal('');
   protected readonly newRunMoldId = signal('');
   protected readonly newRunIncidents = signal('');
   protected readonly newRunMaterials = signal<DraftMaterial[]>([]);
 
-  protected readonly machineOptions = computed(() => this.productionState.machines());
+  /** Plantas disponibles entre todos los centros de trabajo — primer select del diálogo. */
+  protected readonly workCenterPlantOptions = computed(() => [...new Set(this.productionState.workCenters().map((w) => w.plant))].sort());
+
+  /** Áreas de trabajo del MVP: Centrifugado / Accesorios / Vaciado. */
+  protected readonly workAreaOptions = ['Centrifugado', 'Accesorios', 'Vaciado'] as const;
+
+  /** El centro de trabajo real se deriva de planta + área — ya no hay select directo del centro. */
+  protected readonly newRunWorkCenterId = computed(() => {
+    const plant = this.newRunPlant();
+    const area = this.newRunArea().toLowerCase();
+    if (!plant || !area) return '';
+    return this.productionState.workCenters().find((w) => w.plant === plant && w.name.toLowerCase().includes(area))?.id ?? '';
+  });
+
+  /** Máquinas del centro derivado (todas si aún no hay centro seleccionado). */
+  protected readonly machineOptions = computed(() => {
+    const wcId = this.newRunWorkCenterId();
+    return wcId ? this.productionState.machines().filter((m) => m.workCenterId === wcId) : this.productionState.machines();
+  });
   protected readonly moldOptions = computed(() => this.productionState.molds());
-  protected readonly workCenterOptions = computed(() => this.productionState.workCenters());
+
+  /** Operadores activos, filtrados por el área seleccionada (sin área → todos). El combobox además filtra por texto al teclear. */
+  protected readonly operatorOptions = computed(() => {
+    const area = this.newRunArea().toLowerCase();
+    const active = this.productionState.operators().filter((o) => o.active);
+    return active.filter((o) => !area || o.area === area);
+  });
+
+  protected operatorPickerToString = (value: string): string => {
+    return this.operatorOptions().find((o) => o.name === value)?.name ?? value;
+  };
+
+  private areaFromWorkCenterName(name: string): string {
+    const n = name.toLowerCase();
+    if (n.includes('centrifug')) return 'Centrifugado';
+    if (n.includes('accesorio')) return 'Accesorios';
+    if (n.includes('vaciado')) return 'Vaciado';
+    return '';
+  }
 
   protected openNewRunDraft(line: WorkSheetLine): void {
     const bom = this.productionState.billsOfMaterials().find((b) => b.id === line.bomId);
+    const wc = bom?.routing[0]?.workCenterId ? this.productionState.workCenters().find((w) => w.id === bom?.routing[0]?.workCenterId) : undefined;
     this.newRunLineId.set(line.id);
     this.newRunOperator.set('');
     this.newRunPlannedQty.set(line.plannedQuantity - lineProducedQuantity(line));
     this.newRunScheduledStart.set('');
     this.newRunScheduledEnd.set('');
-    this.newRunWorkCenterId.set(bom?.routing[0]?.workCenterId ?? this.productionState.workCenters()[0]?.id ?? '');
+    this.newRunPlant.set(wc?.plant ?? this.productionState.workCenters()[0]?.plant ?? '');
+    this.newRunArea.set(wc ? this.areaFromWorkCenterName(wc.name) : '');
     this.newRunMachineId.set('');
     this.newRunMoldId.set('');
     this.newRunIncidents.set('');

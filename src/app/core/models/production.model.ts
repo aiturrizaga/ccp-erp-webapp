@@ -9,6 +9,17 @@ import { RouteOperation } from './production-plm.model';
  */
 
 // ---------------------------------------------------------------------------
+// Operadores de producción
+// ---------------------------------------------------------------------------
+
+export interface Operator {
+  id: string;
+  name: string;
+  area: string;
+  active: boolean;
+}
+
+// ---------------------------------------------------------------------------
 // Recursos productivos — moldes, máquinas, centros de trabajo
 // ---------------------------------------------------------------------------
 

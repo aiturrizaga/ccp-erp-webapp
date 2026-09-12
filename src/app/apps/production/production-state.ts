@@ -6,6 +6,7 @@ import {
   ManufacturingRun,
   Mold,
   NonConformity,
+  Operator,
   Product,
   QualityInspection,
   QualityProtocol,
@@ -17,6 +18,7 @@ import {
   MACHINES,
   MOLDS,
   NON_CONFORMITIES,
+  OPERATORS,
   PRODUCTS,
   QUALITY_INSPECTIONS,
   QUALITY_PROTOCOLS,
@@ -49,12 +51,14 @@ export class ProductionState {
   private readonly machinesStore = new TableStore<Machine>('production_machines');
   private readonly moldsStore = new TableStore<Mold>('production_molds');
   private readonly workCentersStore = new TableStore<WorkCenter>('production_work_centers');
+  private readonly operatorsStore = new TableStore<Operator>('production_operators');
   private readonly protocolsStore = new TableStore<QualityProtocol>('quality_protocols');
 
   readonly workSheets = signal<WorkSheet[]>([...WORK_SHEETS]);
   readonly products = signal<Product[]>([...PRODUCTS]);
   readonly billsOfMaterials = signal<BillOfMaterials[]>([...BILLS_OF_MATERIALS]);
   readonly workCenters = signal<WorkCenter[]>([...WORK_CENTERS]);
+  readonly operators = signal<Operator[]>([...OPERATORS]);
   readonly machines = signal<Machine[]>([...MACHINES]);
   readonly molds = signal<Mold[]>([...MOLDS]);
   readonly qualityProtocols = signal<QualityProtocol[]>([...QUALITY_PROTOCOLS]);
@@ -95,6 +99,9 @@ export class ProductionState {
     });
     this.workCentersStore.fetchAll().then((rows) => {
       if (rows?.length) this.workCenters.set(rows);
+    });
+    this.operatorsStore.fetchAll().then((rows) => {
+      if (rows?.length) this.operators.set(rows);
     });
     this.protocolsStore.fetchAll().then((rows) => {
       if (rows?.length) this.qualityProtocols.set(rows);

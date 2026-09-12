@@ -342,6 +342,13 @@ create table if not exists production_work_centers (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists production_operators (
+  id text primary key,
+  active boolean default true,
+  data jsonb not null,
+  updated_at timestamptz not null default now()
+);
+
 create table if not exists quality_protocols (
   id text primary key,
   status text,
@@ -356,7 +363,7 @@ begin
   for t in select unnest(array[
     'sales_dispatch_releases', 'production_work_sheets', 'quality_inspections', 'non_conformities',
     'production_products', 'production_boms', 'production_machines', 'production_molds',
-    'production_work_centers', 'quality_protocols'
+    'production_work_centers', 'production_operators', 'quality_protocols'
   ])
   loop
     execute format('alter table %I enable row level security', t);

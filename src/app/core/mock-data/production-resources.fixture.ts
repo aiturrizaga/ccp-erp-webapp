@@ -1,4 +1,18 @@
-import { Machine, Mold, WorkCenter } from '@core/models';
+import { Machine, Mold, Operator, WorkCenter } from '@core/models';
+
+/** Operadores disponibles de planta (personal de producción) — catálogo para el combobox de corridas. */
+export const OPERATORS: Operator[] = [
+  { id: 'OP-001', name: 'Carlos Mamani Quispe', area: 'centrifugado', active: true },
+  { id: 'OP-002', name: 'Jorge Luis Aguilar Torres', area: 'centrifugado', active: true },
+  { id: 'OP-003', name: 'Renzo Paredes Flores', area: 'centrifugado', active: true },
+  { id: 'OP-004', name: 'Ana María Huanca Chipana', area: 'accesorios', active: true },
+  { id: 'OP-005', name: 'María Elena Díaz Vargas', area: 'accesorios', active: true },
+  { id: 'OP-006', name: 'Lucía Condori Apaza', area: 'accesorios', active: true },
+  { id: 'OP-007', name: 'Pedro Pablo Gutiérrez López', area: 'vaciado', active: true },
+  { id: 'OP-008', name: 'Luis Fernando Ríos Camacho', area: 'vaciado', active: true },
+  { id: 'OP-009', name: 'Miguel Ángel Cárdenas Rojas', area: 'vaciado', active: true },
+  { id: 'OP-010', name: 'Juan Carlos Mendoza Paredes', area: 'vaciado', active: true },
+];
 
 export const WORK_CENTERS: WorkCenter[] = [
   { id: 'WC-001', code: 'CT-P02', name: 'Planta 02 · Centrifugado', plant: 'AL01', capacityPerDay: 40, unitOfMeasure: 'UND' },

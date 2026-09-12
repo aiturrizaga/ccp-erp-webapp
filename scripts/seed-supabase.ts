@@ -25,6 +25,9 @@ import {
   GOODS_RECEIPTS,
   INVOICES,
   ITEMS,
+  MACHINES,
+  MOLDS,
+  OPERATORS,
   PURCHASE_ORDERS,
   PURCHASE_REQUIREMENTS,
   QUOTATIONS,
@@ -37,6 +40,7 @@ import {
   STOCK_LEDGER,
   STOCK_LOTS,
   SUPPLIERS,
+  WORK_CENTERS,
 } from '../src/app/core/mock-data';
 
 if (!environment.supabaseUrl || !environment.supabaseAnonKey) {
@@ -122,6 +126,12 @@ async function main() {
   await seed('dispatch_guides', DISPATCH_GUIDES, (g) => ({ status: g.status, kind: g.kind }), ['salesOrderNumber']);
   await seed('credit_agreements', CREDIT_AGREEMENTS, (a) => ({ status: a.status, customer_id: a.customerId }));
   await seed('document_deliveries', DOCUMENT_DELIVERIES, (d) => ({ kind: d.kind, customer_id: d.customerId }));
+
+  // --- Producción ---
+  await seed('production_work_centers', WORK_CENTERS, (w) => ({ plant: w.plant }));
+  await seed('production_operators', OPERATORS, (o) => ({ active: o.active }));
+  await seed('production_machines', MACHINES, (m) => ({ plant: m.plant, status: m.status }));
+  await seed('production_molds', MOLDS, (m) => ({ plant: m.plant, estado: m.estado }));
 
   console.log('Done.');
 }

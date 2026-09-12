@@ -95,18 +95,57 @@
             <hlm-dialog-content *hlmDialogPortal="let ctx" class="max-h-[90vh] w-[calc(100vw-2rem)] overflow-hidden sm:max-w-2xl">
               <hlm-dialog-header>
                 <h3 hlmDialogTitle>Registrar corrida</h3>
-                <p hlmDialogDescription>Divide la producción de esta línea en una corrida más — centro, máquina, molde, materiales y cantidades planificadas.</p>
+                <p hlmDialogDescription>Divide la producción de esta línea en una corrida más — centro y área, máquina, molde, operador, tiempos y cantidades planificadas.</p>
               </hlm-dialog-header>
               <div class="flex max-h-[68vh] flex-col gap-3 overflow-y-auto pe-2">
-                <div class="flex flex-col gap-1">
-                  <label hlmLabel for="run-operator">Operador</label>
-                  <input hlmInput id="run-operator" [ngModel]="newRunOperator()" (ngModelChange)="newRunOperator.set($event)" />
-                </div>
-                <div class="flex flex-col gap-1">
-                  <label hlmLabel for="run-qty">Cantidad planificada</label>
-                  <input hlmInput id="run-qty" type="number" min="0" [ngModel]="newRunPlannedQty()" (ngModelChange)="newRunPlannedQty.set($event)" />
-                </div>
+                <!-- Fila 1: 2 cols — Centro de trabajo (plantas) + Área de trabajo -->
                 <div class="grid grid-cols-2 gap-2">
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel for="run-plant">Centro de trabajo</label>
+                    <select id="run-plant" class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="newRunPlant()" (ngModelChange)="newRunPlant.set($event)">
+                      <option value="">Selecciona…</option>
+                      @for (plant of workCenterPlantOptions(); track plant) {
+                        <option [value]="plant">{{ plant }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel for="run-area">Área de trabajo</label>
+                    <select id="run-area" class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="newRunArea()" (ngModelChange)="newRunArea.set($event)">
+                      <option value="">Selecciona…</option>
+                      @for (area of workAreaOptions; track area) {
+                        <option [value]="area">{{ area }}</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+                <!-- Fila 2: 2 cols — Máquina + Molde -->
+                <div class="grid grid-cols-2 gap-2">
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel for="run-machine">Máquina</label>
+                    <select id="run-machine" class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="newRunMachineId()" (ngModelChange)="newRunMachineId.set($event)">
+                      <option value="">Sin asignar</option>
+                      @for (m of machineOptions(); track m.id) {
+                        <option [value]="m.id">{{ m.name }}</option>
+                      }
+                    </select>
+                  </div>
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel for="run-mold">Molde</label>
+                    <select id="run-mold" class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="newRunMoldId()" (ngModelChange)="newRunMoldId.set($event)">
+                      <option value="">Sin asignar</option>
+                      @for (m of moldOptions(); track m.id) {
+                        <option [value]="m.id">{{ m.code }} ({{ m.estado }})</option>
+                      }
+                    </select>
+                  </div>
+                </div>
+                <!-- Fila 3: 3 cols — Cantidad planificada + Inicio + Fin -->
+                <div class="grid grid-cols-3 gap-2">
+                  <div class="flex flex-col gap-1">
+                    <label hlmLabel for="run-qty">Cantidad planificada</label>
+                    <input hlmInput id="run-qty" type="number" min="0" [ngModel]="newRunPlannedQty()" (ngModelChange)="newRunPlannedQty.set($event)" />
+                  </div>
                   <div class="flex flex-col gap-1">
                     <label hlmLabel for="run-start">Inicio</label>
                     <input hlmInput id="run-start" type="datetime-local" [ngModel]="newRunScheduledStart()" (ngModelChange)="newRunScheduledStart.set($event)" />
@@ -116,32 +155,25 @@
                     <input hlmInput id="run-end" type="datetime-local" [ngModel]="newRunScheduledEnd()" (ngModelChange)="newRunScheduledEnd.set($event)" />
                   </div>
                 </div>
+                <!-- Operador — combobox filtrable por área y búsqueda -->
                 <div class="flex flex-col gap-1">
-                  <label hlmLabel for="run-wc">Centro de trabajo</label>
-                  <select id="run-wc" class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="newRunWorkCenterId()" (ngModelChange)="newRunWorkCenterId.set($event)">
-                    <option value="">Selecciona…</option>
-                    @for (wc of workCenterOptions(); track wc.id) {
-                      <option [value]="wc.id">{{ wc.name }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="flex flex-col gap-1">
-                  <label hlmLabel for="run-machine">Máquina</label>
-                  <select id="run-machine" class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="newRunMachineId()" (ngModelChange)="newRunMachineId.set($event)">
-                    <option value="">Sin asignar</option>
-                    @for (m of machineOptions(); track m.id) {
-                      <option [value]="m.id">{{ m.name }}</option>
-                    }
-                  </select>
-                </div>
-                <div class="flex flex-col gap-1">
-                  <label hlmLabel for="run-mold">Molde</label>
-                  <select id="run-mold" class="border-input h-9 rounded-md border bg-transparent px-2 text-sm" [ngModel]="newRunMoldId()" (ngModelChange)="newRunMoldId.set($event)">
-                    <option value="">Sin asignar</option>
-                    @for (m of moldOptions(); track m.id) {
-                      <option [value]="m.id">{{ m.code }} ({{ m.estado }})</option>
-                    }
-                  </select>
+                  <label hlmLabel for="run-operator">Operador</label>
+                  <hlm-combobox [(value)]="newRunOperator" [itemToString]="operatorPickerToString">
+                    <hlm-combobox-input id="run-operator" placeholder="Buscar operador…" />
+                    <hlm-combobox-content *hlmComboboxPortal class="w-80">
+                      <hlm-combobox-empty>Sin resultados.</hlm-combobox-empty>
+                      <div hlmComboboxList class="max-h-48 overflow-y-auto">
+                        @for (op of operatorOptions(); track op.id) {
+                          <hlm-combobox-item [value]="op.name">
+                            <div class="flex items-center justify-between gap-3">
+                              <span class="truncate">{{ op.name }}</span>
+                              <span class="text-muted-foreground text-xs capitalize">{{ op.area }}</span>
+                            </div>
+                          </hlm-combobox-item>
+                        }
+                      </div>
+                    </hlm-combobox-content>
+                  </hlm-combobox>
                 </div>
 
                 <div class="flex items-center justify-between">
