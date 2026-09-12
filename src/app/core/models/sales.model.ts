@@ -175,6 +175,10 @@ export interface SalesQuotationLine {
   /** Mock traceability quantities; production/warehouse would own these in the real system. */
   producedQuantity?: number;
   dispatchedQuantity?: number;
+  /** Importe de envío asignado a esta línea, cuando la cotización incluye despacho. */
+  shippingCost?: number;
+  /** Materiales o especificaciones comerciales adicionales de la línea. */
+  materials?: string;
 }
 
 export interface SalesQuotationDelivery {
@@ -220,14 +224,17 @@ export interface SalesQuotation {
   total: number;
   deliveries?: SalesQuotationDelivery[];
   shippingTotal?: number;
+  /** Condición comercial de pago escrita libremente para esta cotización. */
+  paymentTerms?: string;
   /** Future reference to a CRM Opportunity — plain string until CRM exists. */
   opportunityId?: string;
   notes?: string;
 }
 
-export type SalesOrderStatus = 'confirmed' | 'pending_payment' | 'preparing' | 'production_ready' | 'ready_for_dispatch' | 'partially_dispatched' | 'dispatched' | 'invoiced' | 'finished' | 'cancelled';
+export type SalesOrderStatus = 'pending' | 'confirmed' | 'pending_payment' | 'preparing' | 'production_ready' | 'ready_for_dispatch' | 'partially_dispatched' | 'dispatched' | 'invoiced' | 'finished' | 'cancelled';
 
 export const SALES_ORDER_STATUS_LABEL: Record<SalesOrderStatus, string> = {
+  pending: 'Pendiente',
   confirmed: 'Confirmada · HT pendiente de aceptación',
   pending_payment: 'Pendiente de adelanto',
   preparing: 'En producción',
@@ -241,6 +248,7 @@ export const SALES_ORDER_STATUS_LABEL: Record<SalesOrderStatus, string> = {
 };
 
 export const SALES_ORDER_STATUS_TONE: Record<SalesOrderStatus, Tone> = {
+  pending: 'warning',
   confirmed: 'info',
   pending_payment: 'warning',
   preparing: 'warning',

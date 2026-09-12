@@ -1,10 +1,10 @@
 <app-entity-header title="Nueva cotización" [crumbs]="[{ label: 'Cotizaciones', link: '/apps/sales/quotations' }, { label: 'Nueva cotización' }]" />
 <div class="grid grid-cols-1 gap-4 xl:grid-cols-[1.7fr_1fr]">
   <div class="flex flex-col gap-4">
-    <div hlmCard class="p-4">
+    <div hlmCard class="relative z-20 overflow-visible! p-4">
       <h3 class="mb-4 text-sm font-semibold">Datos de la cotización</h3>
       <div class="grid grid-cols-1 gap-3 md:grid-cols-2">
-        <div class="relative flex flex-col gap-1.5">
+        <div #customerField class="relative flex flex-col gap-1.5">
           <label hlmLabel>Cliente</label>
           <input hlmInput type="text" placeholder="Buscar cliente por nombre o RUC..." [ngModel]="customerSearch()" (ngModelChange)="onCustomerSearch($event)" (focus)="onCustomerFocus()" />
           @if (customerOpen() && customerOptions().length) {
@@ -18,18 +18,24 @@
           }
           @if (customer(); as c) { <p class="text-muted-foreground text-xs">{{ c.docType ?? 'RUC' }} {{ c.taxId }} · {{ c.currency }}</p> }
         </div>
-        <div class="flex flex-col gap-1.5"><label hlmLabel>Contacto</label><select class="border-input bg-background h-9 rounded-md border px-3 text-sm" [ngModel]="contactId()" (ngModelChange)="contactId.set($event)"><option value="">Selecciona un contacto</option>@for(c of customerContacts();track c.id){<option [value]="c.id">{{c.name}} · {{c.type}}</option>}</select></div>
+        <div class="flex flex-col gap-1.5"><label hlmLabel>Contacto</label><hlm-select class="block w-full" [value]="contactId()" [itemToString]="contactToString" (valueChange)="changeContact($event)"><hlm-select-trigger class="w-full"><hlm-select-value placeholder="Selecciona un contacto" /></hlm-select-trigger><hlm-select-content *hlmSelectPortal>@for(c of customerContacts();track c.id){<hlm-select-item [value]="c.id">{{c.name}} · {{c.type}}</hlm-select-item>}</hlm-select-content></hlm-select></div>
         <div class="flex flex-col gap-1.5"><label hlmLabel>Vigente hasta</label><input hlmInput type="date" [ngModel]="expiresAt()" (ngModelChange)="expiresAt.set($event)" /></div>
+        <div class="flex flex-col gap-1.5"><label hlmLabel>Forma de pago</label><input hlmInput type="text" placeholder="Ej.: Crédito a 30 días o al contado" [ngModel]="paymentTerms()" (ngModelChange)="paymentTerms.set($event)" /></div>
+        <div class="flex flex-col gap-1.5">
+          <label class="flex items-center gap-2 text-sm font-medium"><input type="checkbox" [ngModel]="includesShipping()" (ngModelChange)="onShippingChange($event)" /> Incluir envío</label>
+        </div>
+        @if (includesShipping()) {
+          <div class="flex flex-col gap-1.5">
+            <label hlmLabel>Dirección de envío</label>
+            <input hlmInput type="text" placeholder="Dirección de entrega" [ngModel]="shippingAddress()" (ngModelChange)="shippingAddress.set($event)" />
+          </div>
+        }
       </div>
     </div>
     <div hlmCard class="p-4 relative z-10 overflow-visible!">
       <h3 class="mb-2 text-sm font-semibold">Detalle</h3>
       <app-product-picker [products]="products()" [resetAfterPick]="true" placeholder="Buscar producto y agregarlo..." (picked)="onProductPicked($event)" />
-      @if(lines().length){<div class="mt-3 divide-y border-t">@for(l of lines();track l.salesProductId){<div class="flex items-end gap-3 py-3"><div class="min-w-0 flex-1"><p class="text-sm font-medium">{{l.description}}</p><div class="mt-2 grid grid-cols-[100px_130px_1fr] gap-2"><input hlmInput type="number" min="1" [ngModel]="l.quantity" (ngModelChange)="setLine($index,{quantity:+$event})" /><input hlmInput type="number" min="0" step="0.01" [ngModel]="l.unitPrice" (ngModelChange)="setLine($index,{unitPrice:+$event})" /><div class="text-right text-sm tabular-nums">{{currency()}} {{l.quantity*l.unitPrice|number:'1.2-2'}}</div></div></div><button hlmBtn variant="ghost" size="sm" (click)="removeLine($index)"><ng-icon name="tablerX" /></button></div>}</div>}@else{<p class="text-muted-foreground mt-3 text-sm">Agrega productos para construir la cotización.</p>}
-    </div>
-    <div hlmCard class="p-4">
-      <div class="flex items-center justify-between"><div><h3 class="text-sm font-semibold">Envío</h3><p class="text-muted-foreground mt-1 text-xs">Agrega una o varias direcciones y el costo correspondiente.</p></div><button hlmBtn variant="outline" size="sm" (click)="addDelivery()"><ng-icon name="tablerPlus" /> Agregar envío</button></div>
-      @if(deliveries().length){<div class="mt-3 divide-y border-t">@for(d of deliveries();track d.id){<div class="grid grid-cols-[1fr_140px_auto] items-end gap-2 py-3"><div class="flex flex-col gap-1.5"><label hlmLabel>Dirección</label><input hlmInput [ngModel]="d.address" (ngModelChange)="setDelivery($index,{address:$event})" placeholder="Dirección de entrega" /></div><div class="flex flex-col gap-1.5"><label hlmLabel>Costo</label><input hlmInput type="number" min="0" step="0.01" [ngModel]="d.cost" (ngModelChange)="setDelivery($index,{cost:+$event})" /></div><button hlmBtn variant="ghost" size="sm" (click)="removeDelivery($index)"><ng-icon name="tablerX" /></button></div>}</div>}@else{<p class="text-muted-foreground mt-3 text-sm">No se ha agregado costo de envío.</p>}
+      @if(lines().length){<div class="mt-3 divide-y border-t">@for(l of lines();track l.salesProductId){<div class="flex items-end gap-3 py-3"><div class="min-w-0 flex-1"><p class="text-sm font-medium">{{l.description}}</p><div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3"><div class="flex flex-col gap-1"><label hlmLabel>Cantidad</label><input hlmInput type="number" min="1" [ngModel]="l.quantity" (ngModelChange)="setLine($index,{quantity:+$event})" /></div><div class="flex flex-col gap-1"><label hlmLabel>Precio unitario</label><input hlmInput type="number" min="0" step="0.01" [ngModel]="l.unitPrice" (ngModelChange)="setLine($index,{unitPrice:+$event})" /></div>@if(includesShipping()){<div class="flex flex-col gap-1"><label hlmLabel>Costo de envío</label><input hlmInput type="number" min="0" step="0.01" [ngModel]="l.shippingCost ?? 0" (ngModelChange)="setLine($index,{shippingCost:+$event})" /></div>}</div>@if(includesShipping()){<div class="mt-3 flex flex-col gap-1"><label hlmLabel>Materiales</label><textarea hlmInput rows="3" placeholder="Indica los materiales para esta línea" [ngModel]="l.materials ?? ''" (ngModelChange)="setLine($index,{materials:$event})"></textarea></div>}<div class="mt-2 text-right text-sm tabular-nums">Subtotal: {{currency()}} {{l.quantity*l.unitPrice|number:'1.2-2'}}</div></div><button hlmBtn variant="ghost" size="sm" (click)="removeLine($index)" aria-label="Quitar línea"><ng-icon name="tablerX" /></button></div>}</div>}@else{<p class="text-muted-foreground mt-3 text-sm">Agrega productos para construir la cotización.</p>}
     </div>
     <div hlmCard class="p-4"><label hlmLabel>Observaciones</label><textarea hlmInput rows="3" [ngModel]="notes()" (ngModelChange)="notes.set($event)"></textarea></div>
   </div>

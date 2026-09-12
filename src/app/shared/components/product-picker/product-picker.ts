@@ -222,7 +222,6 @@ export class ProductPicker {
     this.category.set('all');
     this.activeIndex.set(0);
     this.open.set(false);
-    if (this.resetAfterPick()) this.focusInput();
   }
 
   protected pickActive(): void {
@@ -242,7 +241,6 @@ export class ProductPicker {
     this.freeText.emit(text);
     if (this.resetAfterPick()) {
       this.query.set('');
-      this.focusInput();
     }
     this.category.set('all');
     this.activeIndex.set(0);

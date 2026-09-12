@@ -149,6 +149,7 @@ export function createQuotation(input: {
   expiresAt?: string;
   lines: SalesQuotation['lines'];
   deliveries?: SalesQuotationDelivery[];
+  paymentTerms?: string;
   glosa?: string;
   notes?: string;
 }): SalesQuotation {
@@ -170,6 +171,7 @@ export function createQuotation(input: {
     total,
     deliveries: input.deliveries,
     shippingTotal: (input.deliveries ?? []).reduce((sum, d) => sum + d.cost, 0),
+    paymentTerms: input.paymentTerms,
     notes: input.notes,
   };
   saveQuotation(quotation);
@@ -203,6 +205,7 @@ export function createQuotationFromOpportunity(opportunity: {
 
 export function createSalesOrderFromQuotation(quotation: {
   id: string;
+  number: string;
   customerId: string;
   customerName: string;
   contactId?: string;
@@ -220,7 +223,7 @@ export function createSalesOrderFromQuotation(quotation: {
     customerName: quotation.customerName,
     contactId: quotation.contactId ?? salesContacts().find((c) => c.customerId === quotation.customerId)?.id,
     quotationId: quotation.id,
-    status: cashSale ? 'pending_payment' : 'confirmed',
+    status: cashSale ? 'pending_payment' : 'pending',
     currency: quotation.currency,
     confirmedAt: TODAY,
     committedDeliveryDate: TODAY,
@@ -230,7 +233,7 @@ export function createSalesOrderFromQuotation(quotation: {
     workSheetId: cashSale ? undefined : `HT-2026-${String(1000 + seq).slice(1)}`,
     paymentGate: cashSale ? { status: 'pending_docs', advancePct: 50 } : { status: 'not_required', advancePct: 0 },
     relatedDocuments: [
-      { id: `DOC-${seq}-Q`, type: 'cotizacion', label: 'Cotización', number: quotation.id, date: TODAY },
+      { id: `DOC-${seq}-Q`, type: 'cotizacion', label: 'Cotización', number: quotation.number, date: TODAY },
       ...(!cashSale ? [{ id: `DOC-${seq}-HT`, type: 'hoja_trabajo' as const, label: 'Hoja de trabajo', number: `HT-2026-${String(1000 + seq).slice(1)}`, date: TODAY }] : []),
     ],
   };

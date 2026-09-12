@@ -42,7 +42,7 @@ export class QuotationList {
   private readonly router = inject(Router);
 
   protected readonly search = signal('');
-  protected readonly view = signal<'list' | 'grid' | 'kanban'>('kanban');
+  protected readonly view = signal<'list' | 'grid' | 'kanban'>('list');
   protected readonly groupBy = signal('none');
   protected readonly page = signal(1);
   protected readonly pageSize = signal(10);
@@ -64,6 +64,7 @@ export class QuotationList {
     { key: 'number', header: 'Cotización', width: '150px' },
     { key: 'customerName', header: 'Cliente' },
     { key: 'contactName', header: 'Contacto', width: '170px' },
+    { key: 'issuedAt', header: 'Fecha de creación', width: '150px' },
     { key: 'expiresAt', header: 'Vigente hasta', width: '130px' },
     { key: 'currency', header: 'Moneda', width: '90px' },
     { key: 'total', header: 'Total', width: '110px', align: 'end' },
